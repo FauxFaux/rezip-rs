@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use errors::*;
 
 pub struct CircularBuffer {
@@ -7,6 +9,8 @@ pub struct CircularBuffer {
 
 impl CircularBuffer {
     pub fn with_capacity(cap: usize) -> Self {
+        assert!(cap > 0);
+
         CircularBuffer {
             idx: 0,
             data: vec![0; cap],
@@ -18,7 +22,18 @@ impl CircularBuffer {
         self.idx = (self.idx + 1) % self.data.len();
     }
 
-    pub fn copy(&mut self, dist: u32, len: u32, into: ()) -> Result<()> {
-        unimplemented!()
+    pub fn copy<W: Write>(&mut self, dist: u32, len: u32, mut into: W) -> Result<()> {
+        ensure!(dist > 0 && dist as usize <= self.data.len(), "dist must fit");
+
+        let mut read_from = (self.idx - dist as usize + self.data.len()) % self.data.len();
+
+        for i in 0..len {
+            let b = self.data[read_from];
+            read_from = (read_from + 1) % self.data.len();
+            into.write_all(&[b])?;
+            self.append(b);
+        }
+
+        Ok(())
     }
 }

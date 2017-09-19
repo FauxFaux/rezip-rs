@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate error_chain;
 
+use std::io::Cursor;
 use std::io::Read;
+use std::io::Write;
 
 mod bit;
 mod circles;
@@ -17,18 +19,18 @@ fn dump<R: Read>(mut from: R) -> Result<()> {
     from.read_exact(&mut header)?;
 
     let mut reader = bit::BitReader::new(from);
+    let mut writer = Cursor::new(vec![]);
+    let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
 
     loop {
         let final_block = reader.read_always()?;
 
-        println!("final block: {}", final_block);
-
         match reader.read_part_u8(2)? {
             0 => read_uncompressed()?,
-            1 => read_huffman(&mut reader, unimplemented!(), unimplemented!())?,
+            1 => read_huffman(&mut reader, &mut writer, &mut dictionary,unimplemented!(), unimplemented!())?,
             2 => {
                 let (length, distance) = read_huffman_codes(&mut reader)?;
-                read_huffman(&mut reader, &length, distance.as_ref())?
+                read_huffman(&mut reader, &mut writer, &mut dictionary, &length, distance.as_ref())?
             }
             3 => bail!("reserved block type"),
             _ => unreachable!(),
@@ -65,7 +67,7 @@ fn read_huffman_codes<R: Read>(
 
     let code_lens_len = num_lit_len_codes as usize + num_distance_codes as usize;
     let mut code_lens = vec![];
-    for i in 0..code_lens_len {
+    for _ in 0..code_lens_len {
         code_lens.push(0);
     }
 
@@ -106,7 +108,7 @@ fn read_huffman_codes<R: Read>(
         }
     }
 
-    ensure!(run_len <= 0, "run exceeds number of codes");
+    ensure!(run_len == 0, "run exceeds number of codes");
 
     let lit_len_code = CodeTree::new(&code_lens[0..num_lit_len_codes as usize])?;
     let dist_code_len = &code_lens[num_lit_len_codes as usize..];
@@ -154,14 +156,15 @@ fn read_uncompressed() -> Result<()> {
     unimplemented!()
 }
 
-fn read_huffman<R: Read>(
+fn read_huffman<R: Read, W: Write>(
     reader: &mut bit::BitReader<R>,
+    mut output: W,
+    dictionary: &mut CircularBuffer,
     length: &CodeTree,
     distance: Option<&CodeTree>,
 ) -> Result<()> {
-    let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
     loop {
-        let sym = decode_symbol(reader, &length)?;
+        let sym = decode_symbol(reader, length)?;
         if sym == 256 {
             // end of block
             return Ok(());
@@ -169,7 +172,7 @@ fn read_huffman<R: Read>(
 
         if sym < 256 {
             // literal byte
-            println!("byte: {}", sym);
+            output.write_all(&[sym as u8])?;
             dictionary.append(sym as u8);
             continue;
         }
@@ -178,14 +181,14 @@ fn read_huffman<R: Read>(
         let run = decode_run_length(sym)?;
         ensure!(run >= 3 && run <= 258, "invalid run length");
         let dist_sym = match distance {
-            Some(dist_code) => decode_symbol(reader, &dist_code)?,
+            Some(dist_code) => decode_symbol(reader, dist_code)?,
             None => bail!("length symbol encountered but no table"),
         };
 
         let dist = decode_distance(dist_sym)?;
 
         ensure!(dist >= 1 && dist <= 32786, "invalid distance");
-        dictionary.copy(dist, run, ())?;
+        dictionary.copy(dist, run, &mut output)?;
     }
 }
 

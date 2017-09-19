@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate error_chain;
 
+#[macro_use]
+extern crate lazy_static;
+
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
@@ -55,12 +58,33 @@ fn read_block<R: Read>(
     match reader.read_part_u8(2)? {
         0 => read_uncompressed()?,
         1 => {
+            // TODO: this really should be static
+            let static_length: CodeTree = {
+                let mut lens = [0u32; 288];
+                for i in 0..144 {
+                    lens[i] = 8;
+                }
+                for i in 144..256 {
+                    lens[i] = 9;
+                }
+                for i in 256..280 {
+                    lens[i] = 7;
+                }
+                for i in 280..288 {
+                    lens[i] = 8;
+                }
+
+                CodeTree::new(&lens).expect("static data is valid")
+            };
+
+            let static_distance: CodeTree = CodeTree::new(&[5u32; 32]).expect("static data is valid");
+
             read_huffman(
                 reader,
                 &mut writer,
                 dictionary,
-                unimplemented!(),
-                unimplemented!(),
+                &static_length,
+                Some(&static_distance),
             )?
         }
         2 => {
@@ -211,7 +235,7 @@ fn read_huffman<R: Read, W: Write>(
         }
 
         // length and distance encoding
-        let run = decode_run_length(sym)?;
+        let run = decode_run_length(reader, sym)?;
         ensure!(run >= 3 && run <= 258, "invalid run length");
         let dist_sym = match distance {
             Some(dist_code) => decode_symbol(reader, dist_code)?,
@@ -225,8 +249,26 @@ fn read_huffman<R: Read, W: Write>(
     }
 }
 
-fn decode_run_length(sym: u32) -> Result<u32> {
-    unimplemented!()
+fn decode_run_length<R: Read>(reader: &mut bit::BitReader<R>, sym: u32) -> Result<u32> {
+    ensure!(sym >= 257 && sym <= 287, "decompressor bug");
+
+    if sym <= 264 {
+        return Ok(sym - 254);
+    }
+
+    if sym <= 284 {
+        // 284 - 261 == 23
+        // 23 / 4 == 5.7 -> 5.
+        let extra_bits = ((sym - 261) / 4) as u8;
+        return Ok((((sym - 265) % 4 + 4) << extra_bits) + 3 + reader.read_part_u8(extra_bits)? as u32);
+    }
+
+    if sym == 285 {
+        return Ok(258);
+    }
+
+    // sym is 286 or 287
+    bail!("reserved symbol: {}", sym);
 }
 
 fn decode_distance(sym: u32) -> Result<u32> {
@@ -242,10 +284,14 @@ mod tests {
     fn dump() {
         let mut output = Cursor::new(vec![]);
 
-        assert_eq!(1, process(
-            Cursor::new(&include_bytes!("../tests/data/seq-20.gz")[..]),
-            &mut output,
-        ).unwrap().len());
+        assert_eq!(
+            1,
+            process(
+                Cursor::new(&include_bytes!("../tests/data/seq-20.gz")[..]),
+                &mut output,
+            ).unwrap()
+                .len()
+        );
 
         let seq_20 = (1..21)
             .map(|x| x.to_string())

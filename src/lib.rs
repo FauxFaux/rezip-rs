@@ -4,10 +4,12 @@ extern crate error_chain;
 use std::io::Read;
 
 mod bit;
+mod circles;
 mod code_tree;
 mod errors;
 
 use code_tree::CodeTree;
+use circles::CircularBuffer;
 use errors::*;
 
 fn dump<R: Read>(mut from: R) -> Result<()> {
@@ -23,10 +25,10 @@ fn dump<R: Read>(mut from: R) -> Result<()> {
 
         match reader.read_part_u8(2)? {
             0 => read_uncompressed()?,
-            1 => read_huffman(unimplemented!(), unimplemented!())?,
+            1 => read_huffman(&mut reader, unimplemented!(), unimplemented!())?,
             2 => {
                 let (length, distance) = read_huffman_codes(&mut reader)?;
-                read_huffman(length, distance)?
+                read_huffman(&mut reader, &length, distance.as_ref())?
             }
             3 => bail!("reserved block type"),
             _ => unreachable!(),
@@ -152,7 +154,46 @@ fn read_uncompressed() -> Result<()> {
     unimplemented!()
 }
 
-fn read_huffman(length: CodeTree, distance: Option<CodeTree>) -> Result<()> {
+fn read_huffman<R: Read>(
+    reader: &mut bit::BitReader<R>,
+    length: &CodeTree,
+    distance: Option<&CodeTree>,
+) -> Result<()> {
+    let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
+    loop {
+        let sym = decode_symbol(reader, &length)?;
+        if sym == 256 {
+            // end of block
+            return Ok(());
+        }
+
+        if sym < 256 {
+            // literal byte
+            println!("byte: {}", sym);
+            dictionary.append(sym as u8);
+            continue;
+        }
+
+        // length and distance encoding
+        let run = decode_run_length(sym)?;
+        ensure!(run >= 3 && run <= 258, "invalid run length");
+        let dist_sym = match distance {
+            Some(dist_code) => decode_symbol(reader, &dist_code)?,
+            None => bail!("length symbol encountered but no table"),
+        };
+
+        let dist = decode_distance(dist_sym)?;
+
+        ensure!(dist >= 1 && dist <= 32786, "invalid distance");
+        dictionary.copy(dist, run, ())?;
+    }
+}
+
+fn decode_run_length(sym: u32) -> Result<u32> {
+    unimplemented!()
+}
+
+fn decode_distance(sym: u32) -> Result<u32> {
     unimplemented!()
 }
 

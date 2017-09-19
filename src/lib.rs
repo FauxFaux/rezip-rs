@@ -14,34 +14,67 @@ use code_tree::CodeTree;
 use circles::CircularBuffer;
 use errors::*;
 
-fn dump<R: Read>(mut from: R) -> Result<()> {
+pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<()>> {
     let mut header = [0u8; 10];
     from.read_exact(&mut header)?;
 
     let mut reader = bit::BitReader::new(from);
-    let mut writer = Cursor::new(vec![]);
     let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
 
-    loop {
-        let final_block = reader.read_always()?;
+    let mut ret = vec![];
 
-        match reader.read_part_u8(2)? {
-            0 => read_uncompressed()?,
-            1 => read_huffman(&mut reader, &mut writer, &mut dictionary,unimplemented!(), unimplemented!())?,
-            2 => {
-                let (length, distance) = read_huffman_codes(&mut reader)?;
-                read_huffman(&mut reader, &mut writer, &mut dictionary, &length, distance.as_ref())?
-            }
-            3 => bail!("reserved block type"),
-            _ => unreachable!(),
-        }
+    loop {
+        let BlockDone { final_block, data, .. } = read_block(&mut reader, &mut dictionary)?;
+
+        ret.push(());
+
+        // ensure reproducibility
+
+        into.write_all(&data)?;
 
         if final_block {
             break;
         }
     }
 
-    Ok(())
+    Ok(ret)
+}
+
+struct BlockDone {
+    final_block: bool,
+    data: Vec<u8>,
+}
+
+fn read_block<R: Read>(
+    reader: &mut bit::BitReader<R>,
+    dictionary: &mut CircularBuffer,
+) -> Result<BlockDone> {
+    let final_block = reader.read_always()?;
+    let mut writer = Cursor::new(vec![]);
+
+    match reader.read_part_u8(2)? {
+        0 => read_uncompressed()?,
+        1 => {
+            read_huffman(
+                reader,
+                &mut writer,
+                dictionary,
+                unimplemented!(),
+                unimplemented!(),
+            )?
+        }
+        2 => {
+            let (length, distance) = read_huffman_codes(reader)?;
+            read_huffman(reader, &mut writer, dictionary, &length, distance.as_ref())?
+        }
+        3 => bail!("reserved block type"),
+        _ => unreachable!(),
+    }
+
+    Ok(BlockDone {
+        final_block,
+        data: writer.into_inner(),
+    })
 }
 
 fn read_huffman_codes<R: Read>(
@@ -203,9 +236,25 @@ fn decode_distance(sym: u32) -> Result<u32> {
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
+    use ::*;
 
     #[test]
     fn dump() {
-        ::dump(Cursor::new(&include_bytes!("../tests/data/seq-20.gz")[..])).unwrap();
+        let mut output = Cursor::new(vec![]);
+
+        assert_eq!(1, process(
+            Cursor::new(&include_bytes!("../tests/data/seq-20.gz")[..]),
+            &mut output,
+        ).unwrap().len());
+
+        let seq_20 = (1..21)
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join("\n") + "\n";
+
+        assert_eq!(
+            seq_20,
+            String::from_utf8(output.into_inner().into_iter().collect()).unwrap()
+        );
     }
 }

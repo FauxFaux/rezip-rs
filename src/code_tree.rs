@@ -24,6 +24,7 @@ impl CodeTree {
 
             let mut new_nodes: Vec<Box<Node>> = Vec::with_capacity(16);
 
+            // add leaves for positive lengths
             if i > 0 {
                 for j in 0..canonical_code_lengths.len() {
                     if i == canonical_code_lengths[j] {
@@ -32,11 +33,16 @@ impl CodeTree {
                 }
             }
 
-            for j in 0..nodes.len() / 2 {
-                let j = j * 2;
+            let mut iter = nodes.into_iter();
+            loop {
+                let first = match iter.next() {
+                    Some(x) => x,
+                    None => break,
+                };
+
                 new_nodes.push(Box::new(Node::Internal(
-                    Box::clone(&nodes[j]),
-                    Box::clone(&nodes[j + 1]),
+                    first,
+                    iter.next().expect("list is even in length"),
                 )));
             }
 
@@ -50,7 +56,7 @@ impl CodeTree {
                 left: left.clone(),
                 right: right.clone(),
             }),
-            Node::Leaf(_) => bail!("root must be a node"),
+            Node::Leaf(_) => panic!("root must be a node"),
         }
     }
 }

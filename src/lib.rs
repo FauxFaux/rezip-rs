@@ -237,11 +237,25 @@ fn read_huffman_codes<R: Read>(
         }
     }
 
-    if 1 == one_count && 0 == other_positive_count {
-        unimplemented!()
-    }
+    let dist_tree = if 1 == one_count && 0 == other_positive_count {
+        // there's only one valid distance code, we have to fiddle with the
+        // data so that the build succeeds: we insert a dummy code at the end
 
-    Ok((lit_len_code, Some(CodeTree::new(dist_code_len)?)))
+        let mut new_lens = [0; 32];
+
+        for i in 0..(if dist_code_len.len() < 31 { dist_code_len.len() } else { 31 }) {
+            new_lens[i] = dist_code_len[i];
+        }
+
+        // dummy code
+        new_lens[31] = 1;
+
+        CodeTree::new(&new_lens)?
+    } else {
+        CodeTree::new(dist_code_len)?
+    };
+
+    Ok((lit_len_code, Some(dist_tree)))
 }
 
 fn decode_symbol<R: Read>(reader: &mut bit::BitReader<R>, code_tree: &CodeTree) -> Result<u32> {

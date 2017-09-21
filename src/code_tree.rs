@@ -3,8 +3,8 @@ use std;
 use errors::*;
 
 pub struct CodeTree {
-    pub left: Box<Node>,
-    pub right: Box<Node>,
+    pub left: Node,
+    pub right: Node,
 }
 
 
@@ -51,10 +51,10 @@ impl CodeTree {
 
         ensure!(1 == nodes.len(), "non-canonical code");
 
-        match *nodes[0] {
-            Node::Internal(ref left, ref right) => Ok(CodeTree {
-                left: left.clone(),
-                right: right.clone(),
+        match *nodes.into_iter().next().unwrap() {
+            Node::Internal(left, right) => Ok(CodeTree {
+                left: *left,
+                right: *right,
             }),
             Node::Leaf(_) => panic!("root must be a node"),
         }

@@ -36,7 +36,7 @@ impl CodeTree {
             for j in 0..nodes.len() / 2 {
                 let j = j * 2;
                 new_nodes.push(Rc::new(
-                    Node::Internal(nodes[j].clone(), nodes[j + 1].clone()),
+                    Node::Internal(Rc::clone(&nodes[j]), Rc::clone(&nodes[j + 1])),
                 ));
             }
 

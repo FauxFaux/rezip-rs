@@ -33,7 +33,7 @@ impl<R: Read> BitReader<R> {
             let mut buf = [0u8; 1];
             match self.inner.read(&mut buf)? {
                 0 => return Ok(None),
-                1 => self.current = buf[0] as i32,
+                1 => self.current = i32::from(buf[0]),
                 _ => unreachable!(),
             }
 
@@ -82,16 +82,16 @@ impl<R: Read> BitReader<R> {
     }
 
     pub fn read_aligned_u16(&mut self) -> Result<u16> {
-        assert!(0 == self.position());
+        assert_eq!(0, self.position());
 
         let mut buf = [0u8; 2];
         self.inner.read_exact(&mut buf)?;
 
-        Ok(((buf[1] as u16) << 8) | (buf[0] as u16))
+        Ok((u16::from(buf[1]) << 8) | u16::from(buf[0]))
     }
 
     pub fn read_aligned_u8(&mut self) -> Result<u8> {
-        assert!(0 == self.position());
+        assert_eq!(0, self.position());
 
         let mut buf = [0u8; 1];
         self.inner.read_exact(&mut buf)?;

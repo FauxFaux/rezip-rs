@@ -29,7 +29,7 @@ impl Write for NullWriter {
         Ok(())
     }
 
-    fn write_all(&mut self, mut buf: &[u8]) -> io::Result<()> {
+    fn write_all(&mut self, _: &[u8]) -> io::Result<()> {
         Ok(())
     }
 }

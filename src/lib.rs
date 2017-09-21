@@ -7,6 +7,7 @@ extern crate lazy_static;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
+use std::rc::Rc;
 
 mod bit;
 mod circles;
@@ -156,20 +157,20 @@ fn read_block<R: Read>(
 fn read_huffman_codes<R: Read>(
     reader: &mut bit::BitReader<R>,
 ) -> Result<(CodeTree, Option<CodeTree>)> {
-    let num_lit_len_codes = reader.read_part_u8(5)? as u16 + 257;
+    let num_lit_len_codes = u16::from(reader.read_part_u8(5)?) + 257;
     let num_distance_codes = reader.read_part_u8(5)? + 1;
 
     let num_code_len_codes = reader.read_part_u8(4)? + 4;
 
     let mut code_len_code_len = [0u32; 19];
-    code_len_code_len[16] = reader.read_part_u8(3)? as u32;
-    code_len_code_len[17] = reader.read_part_u8(3)? as u32;
-    code_len_code_len[18] = reader.read_part_u8(3)? as u32;
-    code_len_code_len[0] = reader.read_part_u8(3)? as u32;
+    code_len_code_len[16] = u32::from(reader.read_part_u8(3)?);
+    code_len_code_len[17] = u32::from(reader.read_part_u8(3)?);
+    code_len_code_len[18] = u32::from(reader.read_part_u8(3)?);
+    code_len_code_len[0] = u32::from(reader.read_part_u8(3)?);
 
     for i in 0..(num_code_len_codes as usize - 4) {
         let pos = if i % 2 == 0 { 8 + i / 2 } else { 7 - i / 2 };
-        code_len_code_len[pos] = reader.read_part_u8(3)? as u32;
+        code_len_code_len[pos] = u32::from(reader.read_part_u8(3)?);
     }
 
     let code_len_code = CodeTree::new(&code_len_code_len[..])?;
@@ -259,8 +260,8 @@ fn read_huffman_codes<R: Read>(
 }
 
 fn decode_symbol<R: Read>(reader: &mut bit::BitReader<R>, code_tree: &CodeTree) -> Result<u32> {
-    let mut left = code_tree.left.clone();
-    let mut right = code_tree.right.clone();
+    let mut left = Rc::clone(&code_tree.left);
+    let mut right = Rc::clone(&code_tree.right);
 
     use code_tree::Node::*;
 
@@ -268,8 +269,8 @@ fn decode_symbol<R: Read>(reader: &mut bit::BitReader<R>, code_tree: &CodeTree) 
         match *if reader.read_always()? { right } else { left } {
             Leaf(sym) => return Ok(sym),
             Internal(ref new_left, ref new_right) => {
-                left = new_left.clone();
-                right = new_right.clone();
+                left = Rc::clone(new_left);
+                right = Rc::clone(new_right);
             }
         }
     }
@@ -325,7 +326,7 @@ fn read_huffman<R: Read, W: Write>(
 
         let dist = decode_distance(reader, dist_sym)?;
 
-        ensure!(dist >= 1 && dist <= 32786, "invalid distance");
+        ensure!(dist >= 1 && dist <= 32_786, "invalid distance");
         dictionary.copy(dist, run, &mut output)?;
     }
 }
@@ -341,7 +342,7 @@ fn decode_run_length<R: Read>(reader: &mut bit::BitReader<R>, sym: u32) -> Resul
         // 284 - 261 == 23
         // 23 / 4 == 5.7 -> 5.
         let extra_bits = ((sym - 261) / 4) as u8;
-        return Ok((((sym - 265) % 4 + 4) << extra_bits) + 3 + reader.read_part_u8(extra_bits)? as u32);
+        return Ok((((sym - 265) % 4 + 4) << extra_bits) + 3 + u32::from(reader.read_part_u8(extra_bits)?));
     }
 
     if sym == 285 {
@@ -361,7 +362,7 @@ fn decode_distance<R: Read>(reader: &mut bit::BitReader<R>, sym: u32) -> Result<
 
     if sym <= 29 {
         let num_extra_bits = (sym / 2 - 1) as u8;
-        return Ok(((sym % 2 + 2) << num_extra_bits) + 1 + reader.read_part_u16(num_extra_bits)? as u32);
+        return Ok(((sym % 2 + 2) << num_extra_bits) + 1 + u32::from(reader.read_part_u16(num_extra_bits)?));
     }
 
     bail!("reserved distance symbol")

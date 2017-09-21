@@ -7,7 +7,6 @@ extern crate lazy_static;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
-use std::rc::Rc;
 
 mod bit;
 mod circles;
@@ -259,18 +258,16 @@ fn read_huffman_codes<R: Read>(
 }
 
 fn decode_symbol<R: Read>(reader: &mut bit::BitReader<R>, code_tree: &CodeTree) -> Result<u32> {
-    let mut left = Rc::clone(&code_tree.left);
-    let mut right = Rc::clone(&code_tree.right);
+    decode_symbol_impl(reader, &code_tree.left, &code_tree.right)
+}
 
+fn decode_symbol_impl<R: Read>(reader: &mut bit::BitReader<R>, left: &code_tree::Node, right: &code_tree::Node) -> Result<u32> {
     use code_tree::Node::*;
 
-    loop {
-        match *if reader.read_always()? { right } else { left } {
-            Leaf(sym) => return Ok(sym),
-            Internal(ref new_left, ref new_right) => {
-                left = Rc::clone(new_left);
-                right = Rc::clone(new_right);
-            }
+    match *if reader.read_always()? { right } else { left } {
+        Leaf(sym) => Ok(sym),
+        Internal(ref new_left, ref new_right) => {
+            decode_symbol_impl(reader, new_left, new_right)
         }
     }
 }

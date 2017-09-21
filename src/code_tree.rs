@@ -1,11 +1,10 @@
 use std;
-use std::rc::Rc;
 
 use errors::*;
 
 pub struct CodeTree {
-    pub left: Rc<Node>,
-    pub right: Rc<Node>,
+    pub left: Box<Node>,
+    pub right: Box<Node>,
 }
 
 
@@ -17,27 +16,27 @@ impl CodeTree {
             "too many lengths"
         );
 
-        let mut nodes: Vec<Rc<Node>> = Vec::with_capacity(16);
+        let mut nodes: Vec<Box<Node>> = Vec::with_capacity(16);
 
         let fifteen_to_zero_inclusive = (0..16).rev();
         for i in fifteen_to_zero_inclusive {
             ensure!(nodes.len() % 2 == 0, "not a tree");
 
-            let mut new_nodes: Vec<Rc<Node>> = Vec::with_capacity(16);
+            let mut new_nodes: Vec<Box<Node>> = Vec::with_capacity(16);
 
             if i > 0 {
                 for j in 0..canonical_code_lengths.len() {
                     if i == canonical_code_lengths[j] {
-                        new_nodes.push(Rc::new(Node::Leaf(j as u32)));
+                        new_nodes.push(Box::new(Node::Leaf(j as u32)));
                     }
                 }
             }
 
             for j in 0..nodes.len() / 2 {
                 let j = j * 2;
-                new_nodes.push(Rc::new(Node::Internal(
-                    Rc::clone(&nodes[j]),
-                    Rc::clone(&nodes[j + 1]),
+                new_nodes.push(Box::new(Node::Internal(
+                    Box::clone(&nodes[j]),
+                    Box::clone(&nodes[j + 1]),
                 )));
             }
 
@@ -56,7 +55,8 @@ impl CodeTree {
     }
 }
 
+#[derive(Clone)]
 pub enum Node {
     Leaf(u32),
-    Internal(Rc<Node>, Rc<Node>),
+    Internal(Box<Node>, Box<Node>),
 }

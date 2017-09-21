@@ -244,9 +244,8 @@ fn read_huffman_codes<R: Read>(
 
         let mut new_lens = [0; 32];
 
-        for i in 0..(if dist_code_len.len() < 31 { dist_code_len.len() } else { 31 }) {
-            new_lens[i] = dist_code_len[i];
-        }
+        let to_copy = std::cmp::min(dist_code_len.len(), 31);
+        new_lens[..to_copy].copy_from_slice(&dist_code_len[..to_copy]);
 
         // dummy code
         new_lens[31] = 1;

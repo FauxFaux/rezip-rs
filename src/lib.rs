@@ -50,7 +50,7 @@ fn discard_gzip<R: Read>(mut from: R) -> Result<()> {
     ensure!(0x08 == header[2], "unsupported compression method");
 
     let flags = header[3];
-    ensure!(0 == (flags &0b1110_0000), "reserved flags bits set");
+    ensure!(0 == (flags & 0b1110_0000), "reserved flags bits set");
     // 4, 5, 6, 7: mtime
     // 8: extra flags (compression level)
     // 9: OS
@@ -129,7 +129,8 @@ fn read_block<R: Read>(
                 CodeTree::new(&lens).expect("static data is valid")
             };
 
-            let static_distance: CodeTree = CodeTree::new(&[5u32; 32]).expect("static data is valid");
+            let static_distance: CodeTree =
+                CodeTree::new(&[5u32; 32]).expect("static data is valid");
 
             read_huffman(
                 reader,
@@ -261,25 +262,37 @@ fn decode_symbol<R: Read>(reader: &mut bit::BitReader<R>, code_tree: &CodeTree) 
     decode_symbol_impl(reader, &code_tree.left, &code_tree.right)
 }
 
-fn decode_symbol_impl<R: Read>(reader: &mut bit::BitReader<R>, left: &code_tree::Node, right: &code_tree::Node) -> Result<u32> {
+fn decode_symbol_impl<R: Read>(
+    reader: &mut bit::BitReader<R>,
+    left: &code_tree::Node,
+    right: &code_tree::Node,
+) -> Result<u32> {
     use code_tree::Node::*;
 
     match *if reader.read_always()? { right } else { left } {
         Leaf(sym) => Ok(sym),
-        Internal(ref new_left, ref new_right) => {
-            decode_symbol_impl(reader, new_left, new_right)
-        }
+        Internal(ref new_left, ref new_right) => decode_symbol_impl(reader, new_left, new_right),
     }
 }
 
-fn read_uncompressed<R: Read, W: Write>(reader: &mut bit::BitReader<R>, mut output: W, dictionary: &mut CircularBuffer,) -> Result<()> {
+fn read_uncompressed<R: Read, W: Write>(
+    reader: &mut bit::BitReader<R>,
+    mut output: W,
+    dictionary: &mut CircularBuffer,
+) -> Result<()> {
     while 0 != reader.position() {
-        ensure!(!reader.read_always()?, "padding bits should always be empty");
+        ensure!(
+            !reader.read_always()?,
+            "padding bits should always be empty"
+        );
     }
 
     let len = reader.read_aligned_u16()?;
     let ones_complement = reader.read_aligned_u16()?;
-    ensure!((len ^ 0xFFFF) == ones_complement, "uncompressed block length validation failed");
+    ensure!(
+        (len ^ 0xFFFF) == ones_complement,
+        "uncompressed block length validation failed"
+    );
 
     for _ in 0..len {
         let byte = reader.read_aligned_u8()?;
@@ -338,7 +351,10 @@ fn decode_run_length<R: Read>(reader: &mut bit::BitReader<R>, sym: u32) -> Resul
         // 284 - 261 == 23
         // 23 / 4 == 5.7 -> 5.
         let extra_bits = ((sym - 261) / 4) as u8;
-        return Ok((((sym - 265) % 4 + 4) << extra_bits) + 3 + u32::from(reader.read_part_u8(extra_bits)?));
+        return Ok(
+            (((sym - 265) % 4 + 4) << extra_bits) + 3 +
+                u32::from(reader.read_part_u8(extra_bits)?),
+        );
     }
 
     if sym == 285 {
@@ -358,7 +374,10 @@ fn decode_distance<R: Read>(reader: &mut bit::BitReader<R>, sym: u32) -> Result<
 
     if sym <= 29 {
         let num_extra_bits = (sym / 2 - 1) as u8;
-        return Ok(((sym % 2 + 2) << num_extra_bits) + 1 + u32::from(reader.read_part_u16(num_extra_bits)?));
+        return Ok(
+            ((sym % 2 + 2) << num_extra_bits) + 1 +
+                u32::from(reader.read_part_u16(num_extra_bits)?),
+        );
     }
 
     bail!("reserved distance symbol")
@@ -400,7 +419,9 @@ mod tests {
         assert_eq!(
             18,
             process(
-                Cursor::new(&include_bytes!("../tests/data/librole-basic-perl_0.13-1.debian.tar.gz")[..]),
+                Cursor::new(
+                    &include_bytes!("../tests/data/librole-basic-perl_0.13-1.debian.tar.gz")[..],
+                ),
                 &mut output,
             ).unwrap()
                 .len()
@@ -414,7 +435,9 @@ mod tests {
         assert_eq!(
             1, // TODO
             process(
-                Cursor::new(&include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[..]),
+                Cursor::new(
+                    &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[..],
+                ),
                 &mut output,
             ).unwrap()
                 .len()

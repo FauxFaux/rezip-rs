@@ -28,7 +28,9 @@ impl CircularBuffer {
             "dist must fit"
         );
 
-        let mut read_from = (self.idx.wrapping_sub(dist as usize).wrapping_add(self.data.len())) % self.data.len();
+        let mut read_from = (self.idx.wrapping_sub(dist as usize).wrapping_add(
+            self.data.len(),
+        )) % self.data.len();
 
         for _ in 0..len {
             let b = self.data[read_from];

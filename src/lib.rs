@@ -242,7 +242,7 @@ fn read_huffman<R: Read, W: Write>(
             None => bail!("length symbol encountered but no table"),
         };
 
-        let dist = decode_distance(dist_sym)?;
+        let dist = decode_distance(reader, dist_sym)?;
 
         ensure!(dist >= 1 && dist <= 32786, "invalid distance");
         dictionary.copy(dist, run, &mut output)?;
@@ -271,8 +271,19 @@ fn decode_run_length<R: Read>(reader: &mut bit::BitReader<R>, sym: u32) -> Resul
     bail!("reserved symbol: {}", sym);
 }
 
-fn decode_distance(sym: u32) -> Result<u32> {
-    unimplemented!()
+fn decode_distance<R: Read>(reader: &mut bit::BitReader<R>, sym: u32) -> Result<u32> {
+    ensure!(sym <= 31, "invalid distance symbol");
+
+    if sym <= 3 {
+        return Ok(sym + 1);
+    }
+
+    if sym <= 29 {
+        let num_extra_bits = (sym / 2 - 1) as u8;
+        return Ok(((sym % 2 + 2) << num_extra_bits) + 1 + reader.read_part_u16(num_extra_bits)? as u32);
+    }
+
+    bail!("reserved distance symbol")
 }
 
 #[cfg(test)]

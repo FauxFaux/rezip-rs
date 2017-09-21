@@ -67,4 +67,17 @@ impl<R: Read> BitReader<R> {
 
         Ok(res)
     }
+
+    pub fn read_part_u16(&mut self, bits: u8) -> Result<u16> {
+        assert!(bits <= 16);
+
+        let mut res = 0u16;
+        for i in 0..bits {
+            if self.read_always()? {
+                res |= 1 << i;
+            }
+        }
+
+        Ok(res)
+    }
 }

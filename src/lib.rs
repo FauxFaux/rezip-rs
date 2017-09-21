@@ -56,7 +56,7 @@ fn read_block<R: Read>(
     let mut writer = Cursor::new(vec![]);
 
     match reader.read_part_u8(2)? {
-        0 => read_uncompressed()?,
+        0 => read_uncompressed(reader, &mut writer, dictionary)?,
         1 => {
             // TODO: this really should be static
             let static_length: CodeTree = {
@@ -209,8 +209,23 @@ fn decode_symbol<R: Read>(reader: &mut bit::BitReader<R>, code_tree: &CodeTree) 
     }
 }
 
-fn read_uncompressed() -> Result<()> {
-    unimplemented!()
+fn read_uncompressed<R: Read, W: Write>(reader: &mut bit::BitReader<R>, mut output: W, dictionary: &mut CircularBuffer,) -> Result<()> {
+    while 0 != reader.position() {
+        ensure!(!reader.read_always()?, "padding bits should always be empty");
+    }
+
+    let len = reader.read_aligned_u16()?;
+    let ones_complement = reader.read_aligned_u16()?;
+    ensure!((len ^ 0xFFFF) == ones_complement, "uncompressed block length validation failed");
+
+    for _ in 0..len {
+        let byte = reader.read_aligned_u8()?;
+
+        output.write_all(&[byte])?;
+        dictionary.append(byte);
+    }
+
+    Ok(())
 }
 
 fn read_huffman<R: Read, W: Write>(
@@ -292,7 +307,7 @@ mod tests {
     use ::*;
 
     #[test]
-    fn dump() {
+    fn seq_20() {
         let mut output = Cursor::new(vec![]);
 
         assert_eq!(
@@ -313,5 +328,20 @@ mod tests {
             seq_20,
             String::from_utf8(output.into_inner().into_iter().collect()).unwrap()
         );
+    }
+
+    #[test]
+    fn stored_hunk() {
+        let mut output = Cursor::new(vec![]);
+
+        assert_eq!(
+            18,
+            process(
+                Cursor::new(&include_bytes!("../tests/data/librole-basic-perl_0.13-1.debian.tar.gz")[..]),
+                &mut output,
+            ).unwrap()
+                .len()
+        );
+
     }
 }

@@ -30,7 +30,7 @@ impl CircularBuffer {
 
         let mut read_from = (self.idx.wrapping_sub(dist as usize).wrapping_add(self.data.len())) % self.data.len();
 
-        for i in 0..len {
+        for _ in 0..len {
             let b = self.data[read_from];
             read_from = (read_from + 1) % self.data.len();
             into.write_all(&[b])?;

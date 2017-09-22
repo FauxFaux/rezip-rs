@@ -17,7 +17,7 @@ impl<R: Read> BitReader<R> {
         }
     }
 
-    pub fn position(&self) -> u8 {
+    fn position(&self) -> u8 {
         assert!(self.remaining_bits <= 7);
         (8 - self.remaining_bits) % 8
     }
@@ -34,6 +34,16 @@ impl<R: Read> BitReader<R> {
 
         let bit = (self.current >> (7 - self.remaining_bits)) & 1;
         Ok(1 == bit)
+    }
+
+    pub fn align(&mut self) -> Result<()> {
+        while 0 != self.position() {
+            ensure!(
+                !self.read_bit()?,
+                "padding bits should always be empty"
+            );
+        }
+        Ok(())
     }
 
     pub fn read_part(&mut self, bits: u8) -> Result<u16> {
@@ -66,7 +76,6 @@ impl<R: Read> BitReader<R> {
         Ok(buf)
     }
 
-    #[inline]
     fn read_aligned_u16(&mut self) -> Result<u16> {
         assert_eq!(0, self.position());
 

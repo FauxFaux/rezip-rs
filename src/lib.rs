@@ -87,12 +87,7 @@ fn read_uncompressed<R: Read, W: Write>(
     mut output: W,
     dictionary: &mut CircularBuffer,
 ) -> Result<()> {
-    while 0 != reader.position() {
-        ensure!(
-            !reader.read_bit()?,
-            "padding bits should always be empty"
-        );
-    }
+    reader.align()?;
 
     let buf = reader.read_length_prefixed()?;
 

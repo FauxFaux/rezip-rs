@@ -196,7 +196,7 @@ fn read_huffman_codes<R: Read>(
             run_len -= 1;
             i += 1;
         } else {
-            let sym = decode_symbol(reader, &code_len_code)?;
+            let sym = code_len_code.decode_symbol(reader)?;
             if sym <= 15 {
                 code_lens[i] = sym;
                 run_val = Some(sym);
@@ -260,23 +260,6 @@ fn read_huffman_codes<R: Read>(
     Ok((lit_len_code, Some(dist_tree)))
 }
 
-fn decode_symbol<R: Read>(reader: &mut bit::BitReader<R>, code_tree: &CodeTree) -> Result<u32> {
-    decode_symbol_impl(reader, &code_tree.left, &code_tree.right)
-}
-
-fn decode_symbol_impl<R: Read>(
-    reader: &mut bit::BitReader<R>,
-    left: &code_tree::Node,
-    right: &code_tree::Node,
-) -> Result<u32> {
-    use code_tree::Node::*;
-
-    match *if reader.read_always()? { right } else { left } {
-        Leaf(sym) => Ok(sym),
-        Internal(ref new_left, ref new_right) => decode_symbol_impl(reader, new_left, new_right),
-    }
-}
-
 fn read_uncompressed<R: Read, W: Write>(
     reader: &mut bit::BitReader<R>,
     mut output: W,
@@ -314,7 +297,7 @@ fn read_huffman<R: Read, W: Write>(
     distance: Option<&CodeTree>,
 ) -> Result<()> {
     loop {
-        let sym = decode_symbol(reader, length)?;
+        let sym = length.decode_symbol(reader)?;
         if sym == 256 {
             // end of block
             return Ok(());
@@ -331,7 +314,7 @@ fn read_huffman<R: Read, W: Write>(
         let run = decode_run_length(reader, sym)?;
         ensure!(run >= 3 && run <= 258, "invalid run length");
         let dist_sym = match distance {
-            Some(dist_code) => decode_symbol(reader, dist_code)?,
+            Some(dist_code) => dist_code.decode_symbol(reader)?,
             None => bail!("length symbol encountered but no table"),
         };
 

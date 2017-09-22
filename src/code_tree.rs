@@ -1,7 +1,9 @@
 use std;
+use std::io::Read;
 
 use itertools::Itertools;
 
+use bit;
 use errors::*;
 
 pub struct CodeTree {
@@ -54,6 +56,23 @@ impl CodeTree {
             }),
             Node::Leaf(_) => panic!("root must be a node"),
         }
+    }
+
+    pub fn decode_symbol<R: Read>(&self, reader: &mut bit::BitReader<R>) -> Result<u32> {
+        decode_symbol_impl(reader, &self.left, &self.right)
+    }
+}
+
+fn decode_symbol_impl<R: Read>(
+    reader: &mut bit::BitReader<R>,
+    left: &Node,
+    right: &Node,
+) -> Result<u32> {
+    use self::Node::*;
+
+    match *if reader.read_always()? { right } else { left } {
+        Leaf(sym) => Ok(sym),
+        Internal(ref new_left, ref new_right) => decode_symbol_impl(reader, new_left, new_right),
     }
 }
 

@@ -2,6 +2,7 @@ use std;
 use std::fmt;
 use std::io::Read;
 
+use bit_vec::BitVec;
 use itertools::Itertools;
 
 use bit;
@@ -62,6 +63,15 @@ impl CodeTree {
     pub fn decode_symbol<R: Read>(&self, reader: &mut bit::BitReader<R>) -> Result<u32> {
         decode_symbol_impl(reader, &self.left, &self.right)
     }
+
+    pub fn invert(&self) -> Vec<Option<BitVec>> {
+        let mut into = vec![None; 257];
+
+        store_code(&mut into, plus_bit(&BitVec::new(), false), &self.left);
+        store_code(&mut into, plus_bit(&BitVec::new(), true), &self.right);
+
+        into
+    }
 }
 
 fn decode_symbol_impl<R: Read>(
@@ -104,4 +114,28 @@ fn fmt(into: &mut fmt::Formatter, prefix: &str, node: &Node) -> fmt::Result {
             fmt(into, &format!("{}1", prefix), right)
         }
     }
+}
+
+fn store_code(into: &mut Vec<Option<BitVec>>, prefix: BitVec, node: &Node) {
+    match *node {
+        Node::Leaf(sym) => {
+            match sym {
+                0...256 => {
+                    assert!(into[sym as usize].is_none(), "duplicate code in tree");
+                    into[sym as usize] = Some(prefix);
+                }
+                _ => {} // ignoring distance codes
+            }
+        }
+        Node::Internal(ref left, ref right) => {
+            store_code(into, plus_bit(&prefix, false), left);
+            store_code(into, plus_bit(&prefix, true), right);
+        }
+    }
+}
+
+fn plus_bit(into: &BitVec, val: bool) -> BitVec {
+    let mut copy = into.clone();
+    copy.push(val);
+    copy
 }

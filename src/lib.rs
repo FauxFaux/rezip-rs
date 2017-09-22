@@ -202,7 +202,7 @@ fn read_uncompressed<R: Read, W: Write>(
 }
 
 fn write_block<R: Read, W: Write>(
-    reader: R,
+    mut reader: R,
     writer: &mut BitWriter<W>,
     dictionary: &mut CircularBuffer,
     block: &Instructions,
@@ -218,12 +218,40 @@ fn write_block<R: Read, W: Write>(
         }
         BlockType::Dynamic(ref tree, ref seen) => {
             writer.write_bits_val(2, 2)?;
-            let (length, distance) =
+            writer.write_vec(tree)?;
+            let (length, _) =
                 huffman::read_codes(&mut BitReader::new(Cursor::new(tree.to_bytes())))?;
-            unimplemented!();
+            let length = length.invert();
+
+            for item in &seen.stream {
+                write_literals(&mut reader, writer, &length, item.literals)?;
+                writer.write_vec(&item.symbol)?;
+            }
+
+            write_literals(&mut reader, writer, &length, seen.trailing_literals)?;
         }
     }
-    unimplemented!()
+
+    Ok(())
+}
+
+fn write_literals<R: Read, W: Write>(
+    mut reader: R,
+    writer: &mut BitWriter<W>,
+    length: &[Option<BitVec>],
+    literals: usize,
+) -> Result<()> {
+
+    let mut buf = vec![0u8; literals];
+    reader.read_exact(&mut buf)?;
+
+    for byte in buf {
+        writer.write_vec(length[usize::from(byte)].as_ref().expect(
+            "valid code",
+        ))?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

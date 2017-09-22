@@ -151,6 +151,13 @@ impl<W: Write> BitWriter<W> {
         Ok(())
     }
 
+    pub fn write_vec(&mut self, vec: &BitVec) -> Result<()> {
+        for bit in vec {
+            self.write_bit(bit)?;
+        }
+        Ok(())
+    }
+
     pub fn into_inner(self) -> W {
         assert_eq!(0, self.current.len());
 

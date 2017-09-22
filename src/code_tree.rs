@@ -98,7 +98,7 @@ fn fmt(into: &mut fmt::Formatter, prefix: &str, node: &Node) -> fmt::Result {
                 256 => write!(into, "EoS "),
                 other => write!(into, "d:{} ", other - 256),
             }
-        },
+        }
         Node::Internal(ref left, ref right) => {
             fmt(into, &format!("{}0", prefix), left)?;
             fmt(into, &format!("{}1", prefix), right)

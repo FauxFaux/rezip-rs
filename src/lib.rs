@@ -35,9 +35,16 @@ pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<Instru
     let mut ret = vec![];
 
     loop {
-        let BlockDone { final_block, data, block_type } = read_block(&mut reader, &mut dictionary)?;
+        let BlockDone {
+            final_block,
+            data,
+            block_type,
+        } = read_block(&mut reader, &mut dictionary)?;
 
-        ret.push(Instructions { block_type, len: data.len() });
+        ret.push(Instructions {
+            block_type,
+            len: data.len(),
+        });
 
         into.write_all(&data)?;
 
@@ -75,7 +82,7 @@ fn read_block<R: Read>(
         0 => {
             read_uncompressed(reader, &mut writer, dictionary)?;
             block_type = BlockType::Uncompressed;
-        },
+        }
         1 => {
             huffman::read_data(
                 reader,

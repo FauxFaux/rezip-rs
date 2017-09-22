@@ -136,14 +136,14 @@ pub fn read_codes<R: Read>(reader: &mut BitReader<R>) -> Result<(CodeTree, Optio
 }
 
 pub struct SeenDistanceSymbol {
-    literals: usize,
-    symbol: BitVec,
+    pub literals: usize,
+    pub symbol: BitVec,
 }
 
 #[derive(Debug)]
 pub struct SeenDistanceSymbols {
-    stream: Vec<SeenDistanceSymbol>,
-    trailing_literals: usize,
+    pub stream: Vec<SeenDistanceSymbol>,
+    pub trailing_literals: usize,
 }
 
 pub fn read_data<R: Read, W: Write>(

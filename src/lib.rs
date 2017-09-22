@@ -24,13 +24,15 @@ mod filter;
 mod gzip;
 mod huffman;
 
+pub use huffman::SeenDistanceSymbols;
+
 use circles::CircularBuffer;
 use errors::*;
 
 #[derive(Debug)]
 pub struct Instructions {
-    block_type: BlockType,
-    len: usize,
+    pub block_type: BlockType,
+    pub len: usize,
 }
 
 pub struct Processed {
@@ -87,7 +89,7 @@ pub fn process<R: Read, W: Write>(from: R, into: W) -> Result<Processed> {
 }
 
 #[derive(Debug)]
-enum BlockType {
+pub enum BlockType {
     Uncompressed,
     Fixed(huffman::SeenDistanceSymbols),
     Dynamic(BitVec, huffman::SeenDistanceSymbols),

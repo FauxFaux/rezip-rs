@@ -1,5 +1,7 @@
 extern crate librezip;
 
+use librezip::BlockType;
+
 use std::env;
 use std::fs;
 use std::io;
@@ -24,10 +26,34 @@ fn main() {
     println!("frames:");
 
     for result in results.instructions {
-        println!(" - {:?}", result);
+        match result.block_type {
+            BlockType::Uncompressed => {
+                println!(" - uncompressed run: {} bytes", result.len);
+            },
+            BlockType::Fixed(symbols) => {
+                println!(" - fixed huffman tree:");
+                print_symbols(&symbols);
+            },
+            BlockType::Dynamic(encoded, symbols) => {
+                println!(" - dynamic huffman tree:");
+                println!("   tree: {:?}", encoded);
+                print_symbols(&symbols);
+
+            },
+        }
     }
 
-    println!("footer: {:?}", hex_and_ascii(&results.tail));
+    println!("footer: {}", hex_and_ascii(&results.tail));
+}
+
+fn print_symbols(symbols: &librezip::SeenDistanceSymbols) {
+    println!("   symbols:");
+    for symbol in &symbols.stream {
+        println!("     - literals: {}", symbol.literals);
+        println!("         symbol: {:?}", symbol.symbol)
+    }
+
+    println!("   trailing literals: {}", symbols.trailing_literals);
 }
 
 fn hexify(buf: &[u8]) -> String {

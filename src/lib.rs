@@ -285,6 +285,18 @@ mod tests {
     }
 
     #[test]
+    fn seq_20_round_trip() {
+        let mut decompressed = Cursor::new(vec![]);
+        let orig = &include_bytes!("../tests/data/seq-20.gz")[..];
+
+        let spec = deconstruct(Cursor::new(orig), &mut decompressed).expect("deconstruct");
+        decompressed.set_position(0);
+
+        let mut recompressed = Cursor::new(vec![]);
+        reconstruct(decompressed, recompressed, spec).expect("reconstruct");
+    }
+
+    #[test]
     fn stored_hunk() {
         let mut output = Cursor::new(vec![]);
 

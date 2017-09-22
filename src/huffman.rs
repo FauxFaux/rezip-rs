@@ -1,6 +1,9 @@
 use std;
+use std::fmt;
 use std::io::Read;
 use std::io::Write;
+
+use bit_vec::BitVec;
 
 use bit::BitReader;
 use circles::CircularBuffer;
@@ -132,26 +135,46 @@ pub fn read_codes<R: Read>(reader: &mut BitReader<R>) -> Result<(CodeTree, Optio
     Ok((lit_len_code, Some(dist_tree)))
 }
 
+pub struct SeenDistanceSymbol {
+    literals: usize,
+    symbol: BitVec,
+}
+
+#[derive(Debug)]
+pub struct SeenDistanceSymbols {
+    stream: Vec<SeenDistanceSymbol>,
+    trailing_literals: usize,
+}
+
 pub fn read_data<R: Read, W: Write>(
     reader: &mut BitReader<R>,
     mut output: W,
     dictionary: &mut CircularBuffer,
     length: &CodeTree,
     distance: Option<&CodeTree>,
-) -> Result<()> {
+) -> Result<SeenDistanceSymbols> {
+    let mut distance_symbols = vec![];
+    let mut literals = 0usize;
+
     loop {
         let sym = length.decode_symbol(reader)?;
         if sym == 256 {
             // end of block
-            return Ok(());
+            return Ok(SeenDistanceSymbols {
+                stream: distance_symbols,
+                trailing_literals: literals,
+            });
         }
 
         if sym < 256 {
             // literal byte
             output.write_all(&[sym as u8])?;
             dictionary.append(sym as u8);
+            literals += 1;
             continue;
         }
+
+        reader.tracking_start();
 
         // length and distance encoding
         let run = decode_run_length(reader, sym)?;
@@ -162,6 +185,12 @@ pub fn read_data<R: Read, W: Write>(
         };
 
         let dist = decode_distance(reader, dist_sym)?;
+
+        distance_symbols.push(SeenDistanceSymbol {
+            literals,
+            symbol: reader.tracking_finish(),
+        });
+        literals = 0;
 
         ensure!(dist >= 1 && dist <= 32_786, "invalid distance");
         dictionary.copy(dist, run, &mut output)?;
@@ -207,4 +236,10 @@ fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32> 
     }
 
     bail!("reserved distance symbol")
+}
+
+impl fmt::Debug for SeenDistanceSymbol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}, {:?}]", self.literals, self.symbol)
+    }
 }

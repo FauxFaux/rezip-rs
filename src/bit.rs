@@ -1,4 +1,7 @@
+use std;
 use std::io::Read;
+
+use bit_vec::BitVec;
 
 use errors::*;
 
@@ -6,6 +9,7 @@ pub struct BitReader<R> {
     inner: R,
     current: u8,
     remaining_bits: u8,
+    track: Option<BitVec>,
 }
 
 impl<R: Read> BitReader<R> {
@@ -14,6 +18,7 @@ impl<R: Read> BitReader<R> {
             inner,
             current: 0,
             remaining_bits: 0,
+            track: None,
         }
     }
 
@@ -33,10 +38,18 @@ impl<R: Read> BitReader<R> {
         self.remaining_bits -= 1;
 
         let bit = (self.current >> (7 - self.remaining_bits)) & 1;
-        Ok(1 == bit)
+        let bit = 1 == bit;
+
+        if let Some(vec) = self.track.as_mut() {
+            vec.push(bit);
+        }
+
+        Ok(bit)
     }
 
     pub fn align(&mut self) -> Result<()> {
+        assert!(self.track.is_none());
+
         while 0 != self.position() {
             ensure!(!self.read_bit()?, "padding bits should always be empty");
         }
@@ -58,6 +71,7 @@ impl<R: Read> BitReader<R> {
 
     pub fn read_length_prefixed(&mut self) -> Result<Vec<u8>> {
         assert_eq!(0, self.position());
+        assert!(self.track.is_none());
 
         let len = self.read_aligned_u16()?;
         let ones_complement = self.read_aligned_u16()?;
@@ -73,8 +87,19 @@ impl<R: Read> BitReader<R> {
         Ok(buf)
     }
 
+    pub fn tracking_start(&mut self) {
+        assert!(self.track.is_none());
+        self.track = Some(BitVec::new());
+    }
+
+    pub fn tracking_finish(&mut self) -> BitVec {
+        // self.track.take() // :(
+        std::mem::replace(&mut self.track, None).expect("tracking wasn't started")
+    }
+
     fn read_aligned_u16(&mut self) -> Result<u16> {
         assert_eq!(0, self.position());
+        assert!(self.track.is_none());
 
         let mut buf = [0u8; 2];
         self.inner.read_exact(&mut buf)?;

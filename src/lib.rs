@@ -1,3 +1,5 @@
+extern crate bit_vec;
+
 #[macro_use]
 extern crate error_chain;
 
@@ -9,6 +11,8 @@ extern crate lazy_static;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
+
+use bit_vec::BitVec;
 
 mod bit;
 mod circles;
@@ -59,8 +63,8 @@ pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<Instru
 #[derive(Debug)]
 enum BlockType {
     Uncompressed,
-    Fixed,
-    Dynamic(code_tree::CodeTree, Option<code_tree::CodeTree>),
+    Fixed(huffman::SeenDistanceSymbols),
+    Dynamic(BitVec, huffman::SeenDistanceSymbols),
 }
 
 struct BlockDone {
@@ -84,19 +88,22 @@ fn read_block<R: Read>(
             block_type = BlockType::Uncompressed;
         }
         1 => {
-            huffman::read_data(
+            let symbols = huffman::read_data(
                 reader,
                 &mut writer,
                 dictionary,
                 &huffman::FIXED_LENGTH_TREE,
                 Some(&huffman::FIXED_DISTANCE_TREE),
             )?;
-            block_type = BlockType::Fixed;
+            block_type = BlockType::Fixed(symbols);
         }
         2 => {
+            reader.tracking_start();
             let (length, distance) = huffman::read_codes(reader)?;
-            huffman::read_data(reader, &mut writer, dictionary, &length, distance.as_ref())?;
-            block_type = BlockType::Dynamic(length, distance);
+            let tree = reader.tracking_finish();
+            let symbols =
+                huffman::read_data(reader, &mut writer, dictionary, &length, distance.as_ref())?;
+            block_type = BlockType::Dynamic(tree, symbols);
         }
         3 => bail!("reserved block type"),
         _ => unreachable!(),

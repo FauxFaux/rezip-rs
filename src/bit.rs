@@ -49,21 +49,30 @@ impl<R: Read> BitReader<R> {
         Ok(res)
     }
 
-    pub fn read_aligned_u16(&mut self) -> Result<u16> {
+    pub fn read_length_prefixed(&mut self) -> Result<Vec<u8>> {
+        assert_eq!(0, self.position());
+
+        let len = self.read_aligned_u16()?;
+        let ones_complement = self.read_aligned_u16()?;
+
+        ensure!(
+            (len ^ 0xFFFF) == ones_complement,
+            "uncompressed block length validation failed"
+        );
+
+        let mut buf = vec![0u8; len as usize];
+        self.inner.read_exact(&mut buf)?;
+
+        Ok(buf)
+    }
+
+    #[inline]
+    fn read_aligned_u16(&mut self) -> Result<u16> {
         assert_eq!(0, self.position());
 
         let mut buf = [0u8; 2];
         self.inner.read_exact(&mut buf)?;
 
         Ok((u16::from(buf[1]) << 8) | u16::from(buf[0]))
-    }
-
-    pub fn read_aligned_u8(&mut self) -> Result<u8> {
-        assert_eq!(0, self.position());
-
-        let mut buf = [0u8; 1];
-        self.inner.read_exact(&mut buf)?;
-
-        Ok(buf[0])
     }
 }

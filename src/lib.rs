@@ -94,17 +94,11 @@ fn read_uncompressed<R: Read, W: Write>(
         );
     }
 
-    let len = reader.read_aligned_u16()?;
-    let ones_complement = reader.read_aligned_u16()?;
-    ensure!(
-        (len ^ 0xFFFF) == ones_complement,
-        "uncompressed block length validation failed"
-    );
+    let buf = reader.read_length_prefixed()?;
 
-    for _ in 0..len {
-        let byte = reader.read_aligned_u8()?;
+    output.write_all(&buf)?;
 
-        output.write_all(&[byte])?;
+    for byte in buf {
         dictionary.append(byte);
     }
 

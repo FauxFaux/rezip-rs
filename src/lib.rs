@@ -57,7 +57,7 @@ fn read_block<R: Read>(
     let final_block = reader.read_bit()?;
     let mut writer = Cursor::new(vec![]);
 
-    match reader.read_part_u8(2)? {
+    match reader.read_part(2)? {
         0 => read_uncompressed(reader, &mut writer, dictionary)?,
         1 => {
             huffman::read_data(

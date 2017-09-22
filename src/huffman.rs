@@ -33,20 +33,20 @@ lazy_static! {
 pub fn read_codes<R: Read>(
     reader: &mut BitReader<R>,
 ) -> Result<(CodeTree, Option<CodeTree>)> {
-    let num_lit_len_codes = u16::from(reader.read_part_u8(5)?) + 257;
-    let num_distance_codes = reader.read_part_u8(5)? + 1;
+    let num_lit_len_codes = u16::from(reader.read_part(5)?) + 257;
+    let num_distance_codes = reader.read_part(5)? + 1;
 
-    let num_code_len_codes = reader.read_part_u8(4)? + 4;
+    let num_code_len_codes = reader.read_part(4)? + 4;
 
     let mut code_len_code_len = [0u32; 19];
-    code_len_code_len[16] = u32::from(reader.read_part_u8(3)?);
-    code_len_code_len[17] = u32::from(reader.read_part_u8(3)?);
-    code_len_code_len[18] = u32::from(reader.read_part_u8(3)?);
-    code_len_code_len[0] = u32::from(reader.read_part_u8(3)?);
+    code_len_code_len[16] = u32::from(reader.read_part(3)?);
+    code_len_code_len[17] = u32::from(reader.read_part(3)?);
+    code_len_code_len[18] = u32::from(reader.read_part(3)?);
+    code_len_code_len[0] = u32::from(reader.read_part(3)?);
 
     for i in 0..(num_code_len_codes as usize - 4) {
         let pos = if i % 2 == 0 { 8 + i / 2 } else { 7 - i / 2 };
-        code_len_code_len[pos] = u32::from(reader.read_part_u8(3)?);
+        code_len_code_len[pos] = u32::from(reader.read_part(3)?);
     }
 
     let code_len_code = CodeTree::new(&code_len_code_len[..])?;
@@ -77,13 +77,13 @@ pub fn read_codes<R: Read>(
                 i += 1;
             } else if sym == 16 {
                 ensure!(run_val.is_some(), "no value to copy");
-                run_len = reader.read_part_u8(2)? + 3;
+                run_len = reader.read_part(2)? + 3;
             } else if sym == 17 {
                 run_val = Some(0);
-                run_len = reader.read_part_u8(3)? + 3;
+                run_len = reader.read_part(3)? + 3;
             } else if sym == 18 {
                 run_val = Some(0);
-                run_len = reader.read_part_u8(7)? + 11;
+                run_len = reader.read_part(7)? + 11;
             } else {
                 panic!("symbol out of range");
             }
@@ -183,7 +183,7 @@ fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32
         let extra_bits = ((sym - 261) / 4) as u8;
         return Ok(
             (((sym - 265) % 4 + 4) << extra_bits) + 3 +
-                u32::from(reader.read_part_u8(extra_bits)?),
+                u32::from(reader.read_part(extra_bits)?),
         );
     }
 
@@ -206,7 +206,7 @@ fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32> 
         let num_extra_bits = (sym / 2 - 1) as u8;
         return Ok(
             ((sym % 2 + 2) << num_extra_bits) + 1 +
-                u32::from(reader.read_part_u16(num_extra_bits)?),
+                u32::from(reader.read_part(num_extra_bits)?),
         );
     }
 

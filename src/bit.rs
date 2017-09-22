@@ -36,19 +36,7 @@ impl<R: Read> BitReader<R> {
         Ok(1 == bit)
     }
 
-    pub fn read_part_u8(&mut self, bits: u8) -> Result<u8> {
-        assert!(bits <= 8);
-        let mut res = 0u8;
-        for i in 0..bits {
-            if self.read_bit()? {
-                res |= 1 << i;
-            }
-        }
-
-        Ok(res)
-    }
-
-    pub fn read_part_u16(&mut self, bits: u8) -> Result<u16> {
+    pub fn read_part(&mut self, bits: u8) -> Result<u16> {
         assert!(bits <= 16);
 
         let mut res = 0u16;

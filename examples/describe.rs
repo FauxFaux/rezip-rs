@@ -14,6 +14,7 @@ fn main() {
         NullWriter {},
     ).expect("processing");
 
+    println!("digest: sha512-256");
     println!(" input: {}", hexify(&results.sha512_compressed[0..256/8]));
     println!("output: {}", hexify(&results.sha512_decompressed[0..256/8]));
 

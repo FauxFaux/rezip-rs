@@ -8,6 +8,8 @@ extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate sha2;
+
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
@@ -18,6 +20,7 @@ mod bit;
 mod circles;
 mod code_tree;
 mod errors;
+mod filter;
 mod gzip;
 mod huffman;
 
@@ -34,9 +37,14 @@ pub struct Processed {
     pub header: Vec<u8>,
     pub instructions: Vec<Instructions>,
     pub tail: Vec<u8>,
+    pub sha512_compressed: Vec<u8>,
+    pub sha512_decompressed: Vec<u8>,
 }
 
-pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Processed> {
+pub fn process<R: Read, W: Write>(from: R, into: W) -> Result<Processed> {
+    let mut from = filter::FilterRead::new(from);
+    let mut into = filter::FilterWrite::new(into);
+
     let header = gzip::discard_header(&mut from)?;
 
     let mut reader = bit::BitReader::new(from);
@@ -73,6 +81,8 @@ pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Processed>
         header,
         instructions,
         tail,
+        sha512_compressed: from.hash(),
+        sha512_decompressed: into.hash(),
     })
 }
 
@@ -165,7 +175,8 @@ mod tests {
             process(
                 Cursor::new(&include_bytes!("../tests/data/seq-20.gz")[..]),
                 &mut output,
-            ).unwrap().instructions
+            ).unwrap()
+                .instructions
                 .len()
         );
 
@@ -191,7 +202,8 @@ mod tests {
                     &include_bytes!("../tests/data/librole-basic-perl_0.13-1.debian.tar.gz")[..],
                 ),
                 &mut output,
-            ).unwrap().instructions
+            ).unwrap()
+                .instructions
                 .len()
         );
     }
@@ -207,7 +219,8 @@ mod tests {
                     &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[..],
                 ),
                 &mut output,
-            ).unwrap().instructions
+            ).unwrap()
+                .instructions
                 .len()
         );
     }

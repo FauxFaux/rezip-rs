@@ -16,11 +16,41 @@ fn main() {
             .expect("output creatable"),
     ).expect("processing");
 
-    println!("{:?}", results.header);
+    println!(" input: {}", hexify(&results.sha512_compressed[0..256/8]));
+    println!("output: {}", hexify(&results.sha512_decompressed[0..256/8]));
+
+    println!("header: {}", hex_and_ascii(&results.header));
+
+    println!("frames:");
 
     for result in results.instructions {
-        println!("{:?}", result);
+        println!(" - {:?}", result);
     }
 
-    println!("{:?}", results.tail);
+    println!("footer: {:?}", hex_and_ascii(&results.tail));
 }
+
+fn hexify(buf: &[u8]) -> String {
+    let mut ret = String::with_capacity(buf.len() * 2);
+    for c in buf {
+        ret.push_str(&format!("{:02x}", c));
+    }
+
+    ret
+}
+
+fn hex_and_ascii(buf: &[u8]) -> String {
+    let mut hex = String::with_capacity(buf.len() * 2);
+    let mut ascii = hex.clone();
+
+    for c in buf {
+        hex.push_str(&format!("{:02x} ", c));
+        ascii.push(match *c as char {
+            c if c >= ' ' && c <= '~' => c as char,
+            _ => '.'
+        });
+    }
+
+    format!("{}    {}", hex, ascii)
+}
+

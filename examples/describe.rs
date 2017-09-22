@@ -15,8 +15,11 @@ fn main() {
     ).expect("processing");
 
     println!("digest: sha512-256");
-    println!(" input: {}", hexify(&results.sha512_compressed[0..256/8]));
-    println!("output: {}", hexify(&results.sha512_decompressed[0..256/8]));
+    println!(" input: {}", hexify(&results.sha512_compressed[0..256 / 8]));
+    println!(
+        "output: {}",
+        hexify(&results.sha512_decompressed[0..256 / 8])
+    );
 
     println!("header: {}", hex_and_ascii(&results.header));
 
@@ -27,17 +30,17 @@ fn main() {
             BlockType::Uncompressed => {
                 println!(" - type: uncompressed");
                 println!("   run: {} bytes", result.len);
-            },
+            }
             BlockType::Fixed(symbols) => {
                 println!(" - type: fixed huffman");
                 print_symbols(&symbols);
-            },
+            }
             BlockType::Dynamic(encoded, symbols) => {
                 println!(" - type: dynamic huffman");
                 println!("   tree: {:?}", encoded);
                 print_symbols(&symbols);
 
-            },
+            }
         }
     }
 
@@ -71,7 +74,7 @@ fn hex_and_ascii(buf: &[u8]) -> String {
         hex.push_str(&format!("{:02x} ", c));
         ascii.push(match *c as char {
             c if c >= ' ' && c <= '~' => c as char,
-            _ => '.'
+            _ => '.',
         });
     }
 
@@ -93,4 +96,3 @@ impl Write for NullWriter {
         Ok(())
     }
 }
-

@@ -54,7 +54,7 @@ fn read_block<R: Read>(
     reader: &mut bit::BitReader<R>,
     dictionary: &mut CircularBuffer,
 ) -> Result<BlockDone> {
-    let final_block = reader.read_always()?;
+    let final_block = reader.read_bit()?;
     let mut writer = Cursor::new(vec![]);
 
     match reader.read_part_u8(2)? {
@@ -89,7 +89,7 @@ fn read_uncompressed<R: Read, W: Write>(
 ) -> Result<()> {
     while 0 != reader.position() {
         ensure!(
-            !reader.read_always()?,
+            !reader.read_bit()?,
             "padding bits should always be empty"
         );
     }

@@ -22,7 +22,7 @@ impl<R: Read> BitReader<R> {
         (8 - self.remaining_bits) % 8
     }
 
-    pub fn read_always(&mut self) -> Result<bool> {
+    pub fn read_bit(&mut self) -> Result<bool> {
         if 0 == self.remaining_bits {
             let mut buf = [0u8; 1];
             self.inner.read_exact(&mut buf)?;
@@ -40,7 +40,7 @@ impl<R: Read> BitReader<R> {
         assert!(bits <= 8);
         let mut res = 0u8;
         for i in 0..bits {
-            if self.read_always()? {
+            if self.read_bit()? {
                 res |= 1 << i;
             }
         }
@@ -53,7 +53,7 @@ impl<R: Read> BitReader<R> {
 
         let mut res = 0u16;
         for i in 0..bits {
-            if self.read_always()? {
+            if self.read_bit()? {
                 res |= 1 << i;
             }
         }

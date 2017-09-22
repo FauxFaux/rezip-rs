@@ -70,7 +70,7 @@ fn decode_symbol_impl<R: Read>(
 ) -> Result<u32> {
     use self::Node::*;
 
-    match *if reader.read_always()? { right } else { left } {
+    match *if reader.read_bit()? { right } else { left } {
         Leaf(sym) => Ok(sym),
         Internal(ref new_left, ref new_right) => decode_symbol_impl(reader, new_left, new_right),
     }

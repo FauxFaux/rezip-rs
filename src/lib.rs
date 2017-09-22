@@ -87,6 +87,29 @@ fn has_bit(val: u8, bit: u8) -> bool {
     (val & (1 << bit)) == (1 << bit)
 }
 
+lazy_static! {
+    static ref FIXED_HUFFMAN_LENGTH_TREE: CodeTree = {
+        let mut lens = [0u32; 288];
+        for i in 0..144 {
+            lens[i] = 8;
+        }
+        for i in 144..256 {
+            lens[i] = 9;
+        }
+        for i in 256..280 {
+            lens[i] = 7;
+        }
+        for i in 280..288 {
+            lens[i] = 8;
+        }
+
+        CodeTree::new(&lens).expect("static data is valid")
+    };
+
+    static ref FIXED_HUFFMAN_DISTANCE_TREE: CodeTree =
+        CodeTree::new(&[5u32; 32]).expect("static data is valid");
+}
+
 fn read_null_terminated<R: Read>(mut from: R) -> Result<()> {
     loop {
         let mut buf = [0u8; 1];
@@ -112,34 +135,12 @@ fn read_block<R: Read>(
     match reader.read_part_u8(2)? {
         0 => read_uncompressed(reader, &mut writer, dictionary)?,
         1 => {
-            // TODO: this really should be static
-            let static_length: CodeTree = {
-                let mut lens = [0u32; 288];
-                for i in 0..144 {
-                    lens[i] = 8;
-                }
-                for i in 144..256 {
-                    lens[i] = 9;
-                }
-                for i in 256..280 {
-                    lens[i] = 7;
-                }
-                for i in 280..288 {
-                    lens[i] = 8;
-                }
-
-                CodeTree::new(&lens).expect("static data is valid")
-            };
-
-            let static_distance: CodeTree =
-                CodeTree::new(&[5u32; 32]).expect("static data is valid");
-
             read_huffman(
                 reader,
                 &mut writer,
                 dictionary,
-                &static_length,
-                Some(&static_distance),
+                &FIXED_HUFFMAN_LENGTH_TREE,
+                Some(&FIXED_HUFFMAN_DISTANCE_TREE),
             )?
         }
         2 => {

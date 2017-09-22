@@ -8,8 +8,8 @@ use bit;
 use errors::*;
 
 pub struct CodeTree {
-    pub left: Node,
-    pub right: Node,
+    left: Node,
+    right: Node,
 }
 
 impl CodeTree {
@@ -77,7 +77,7 @@ fn decode_symbol_impl<R: Read>(
     }
 }
 
-pub enum Node {
+enum Node {
     Leaf(u32),
     Internal(Box<Node>, Box<Node>),
 }

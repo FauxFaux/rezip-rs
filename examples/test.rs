@@ -13,9 +13,13 @@ fn main() {
         NullWriter {},
     ).expect("processing");
 
-    for result in results {
+    println!("{:?}", results.header);
+
+    for result in results.instructions {
         println!("{:?}", result);
     }
+
+    println!("{:?}", results.tail);
 }
 
 struct NullWriter {}

@@ -30,13 +30,19 @@ pub struct Instructions {
     len: usize,
 }
 
-pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<Instructions>> {
-    gzip::discard_header(&mut from)?;
+pub struct Processed {
+    pub header: Vec<u8>,
+    pub instructions: Vec<Instructions>,
+    pub tail: Vec<u8>,
+}
+
+pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Processed> {
+    let header = gzip::discard_header(&mut from)?;
 
     let mut reader = bit::BitReader::new(from);
     let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
 
-    let mut ret = vec![];
+    let mut instructions = vec![];
 
     loop {
         let BlockDone {
@@ -45,7 +51,7 @@ pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<Instru
             block_type,
         } = read_block(&mut reader, &mut dictionary)?;
 
-        ret.push(Instructions {
+        instructions.push(Instructions {
             block_type,
             len: data.len(),
         });
@@ -57,7 +63,17 @@ pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<Instru
         }
     }
 
-    Ok(ret)
+    reader.align()?;
+
+    let mut from = reader.into_inner();
+    let mut tail = vec![];
+    from.read_to_end(&mut tail)?;
+
+    Ok(Processed {
+        header,
+        instructions,
+        tail,
+    })
 }
 
 #[derive(Debug)]
@@ -149,7 +165,7 @@ mod tests {
             process(
                 Cursor::new(&include_bytes!("../tests/data/seq-20.gz")[..]),
                 &mut output,
-            ).unwrap()
+            ).unwrap().instructions
                 .len()
         );
 
@@ -175,7 +191,7 @@ mod tests {
                     &include_bytes!("../tests/data/librole-basic-perl_0.13-1.debian.tar.gz")[..],
                 ),
                 &mut output,
-            ).unwrap()
+            ).unwrap().instructions
                 .len()
         );
     }
@@ -191,7 +207,7 @@ mod tests {
                     &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[..],
                 ),
                 &mut output,
-            ).unwrap()
+            ).unwrap().instructions
                 .len()
         );
     }

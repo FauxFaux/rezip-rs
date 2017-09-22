@@ -1,4 +1,5 @@
 use std;
+use std::fmt;
 use std::io::Read;
 
 use itertools::Itertools;
@@ -6,7 +7,6 @@ use itertools::Itertools;
 use bit;
 use errors::*;
 
-#[derive(Debug)]
 pub struct CodeTree {
     pub left: Node,
     pub right: Node,
@@ -77,8 +77,31 @@ fn decode_symbol_impl<R: Read>(
     }
 }
 
-#[derive(Debug)]
 pub enum Node {
     Leaf(u32),
     Internal(Box<Node>, Box<Node>),
+}
+
+impl fmt::Debug for CodeTree {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt(f, "0", &self.left)?;
+        fmt(f, "1", &self.right)
+    }
+}
+
+fn fmt(into: &mut fmt::Formatter, prefix: &str, node: &Node) -> fmt::Result {
+    match *node {
+        Node::Leaf(sym) => {
+            write!(into, "{} => ", prefix)?;
+            match sym {
+                0...255 => write!(into, "{:?} ", sym as u8 as char),
+                256 => write!(into, "EoS "),
+                other => write!(into, "d:{} ", other - 256),
+            }
+        },
+        Node::Internal(ref left, ref right) => {
+            fmt(into, &format!("{}0", prefix), left)?;
+            fmt(into, &format!("{}1", prefix), right)
+        }
+    }
 }

@@ -20,7 +20,13 @@ mod huffman;
 use circles::CircularBuffer;
 use errors::*;
 
-pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<()>> {
+#[derive(Debug)]
+pub struct Instructions {
+    block_type: BlockType,
+    len: usize,
+}
+
+pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<Instructions>> {
     gzip::discard_header(&mut from)?;
 
     let mut reader = bit::BitReader::new(from);
@@ -29,11 +35,9 @@ pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<()>> {
     let mut ret = vec![];
 
     loop {
-        let BlockDone { final_block, data, .. } = read_block(&mut reader, &mut dictionary)?;
+        let BlockDone { final_block, data, block_type } = read_block(&mut reader, &mut dictionary)?;
 
-        ret.push(());
-
-        // ensure reproducibility
+        ret.push(Instructions { block_type, len: data.len() });
 
         into.write_all(&data)?;
 
@@ -45,8 +49,16 @@ pub fn process<R: Read, W: Write>(mut from: R, mut into: W) -> Result<Vec<()>> {
     Ok(ret)
 }
 
+#[derive(Debug)]
+enum BlockType {
+    Uncompressed,
+    Fixed,
+    Dynamic(code_tree::CodeTree, Option<code_tree::CodeTree>),
+}
+
 struct BlockDone {
     final_block: bool,
+    block_type: BlockType,
     data: Vec<u8>,
 }
 
@@ -57,8 +69,13 @@ fn read_block<R: Read>(
     let final_block = reader.read_bit()?;
     let mut writer = Cursor::new(vec![]);
 
+    let block_type;
+
     match reader.read_part(2)? {
-        0 => read_uncompressed(reader, &mut writer, dictionary)?,
+        0 => {
+            read_uncompressed(reader, &mut writer, dictionary)?;
+            block_type = BlockType::Uncompressed;
+        },
         1 => {
             huffman::read_data(
                 reader,
@@ -66,11 +83,13 @@ fn read_block<R: Read>(
                 dictionary,
                 &huffman::FIXED_LENGTH_TREE,
                 Some(&huffman::FIXED_DISTANCE_TREE),
-            )?
+            )?;
+            block_type = BlockType::Fixed;
         }
         2 => {
             let (length, distance) = huffman::read_codes(reader)?;
-            huffman::read_data(reader, &mut writer, dictionary, &length, distance.as_ref())?
+            huffman::read_data(reader, &mut writer, dictionary, &length, distance.as_ref())?;
+            block_type = BlockType::Dynamic(length, distance);
         }
         3 => bail!("reserved block type"),
         _ => unreachable!(),
@@ -78,6 +97,7 @@ fn read_block<R: Read>(
 
     Ok(BlockDone {
         final_block,
+        block_type,
         data: writer.into_inner(),
     })
 }

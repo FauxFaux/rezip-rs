@@ -6,6 +6,7 @@ use itertools::Itertools;
 use bit;
 use errors::*;
 
+#[derive(Debug)]
 pub struct CodeTree {
     pub left: Node,
     pub right: Node,
@@ -76,6 +77,7 @@ fn decode_symbol_impl<R: Read>(
     }
 }
 
+#[derive(Debug)]
 pub enum Node {
     Leaf(u32),
     Internal(Box<Node>, Box<Node>),

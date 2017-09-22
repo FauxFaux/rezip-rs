@@ -5,17 +5,13 @@ use librezip::BlockType;
 use std::env;
 use std::fs;
 use std::io;
+use std::io::Write;
 
 fn main() {
     let input = env::args().nth(1).expect("first argument: input-path.gz");
-    let output = env::args().nth(2).expect("second argument: output-path");
     let results = librezip::process(
         io::BufReader::new(fs::File::open(input).expect("input readable")),
-        fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(output)
-            .expect("output creatable"),
+        NullWriter {},
     ).expect("processing");
 
     println!(" input: {}", hexify(&results.sha512_compressed[0..256/8]));
@@ -28,14 +24,15 @@ fn main() {
     for result in results.instructions {
         match result.block_type {
             BlockType::Uncompressed => {
-                println!(" - uncompressed run: {} bytes", result.len);
+                println!(" - type: uncompressed");
+                println!("   run: {} bytes", result.len);
             },
             BlockType::Fixed(symbols) => {
-                println!(" - fixed huffman tree:");
+                println!(" - type: fixed huffman");
                 print_symbols(&symbols);
             },
             BlockType::Dynamic(encoded, symbols) => {
-                println!(" - dynamic huffman tree:");
+                println!(" - type: dynamic huffman");
                 println!("   tree: {:?}", encoded);
                 print_symbols(&symbols);
 
@@ -49,8 +46,8 @@ fn main() {
 fn print_symbols(symbols: &librezip::SeenDistanceSymbols) {
     println!("   symbols:");
     for symbol in &symbols.stream {
-        println!("     - literals: {}", symbol.literals);
-        println!("         symbol: {:?}", symbol.symbol)
+        println!("    - literals: {}", symbol.literals);
+        println!("      symbol: {:?}", symbol.symbol)
     }
 
     println!("   trailing literals: {}", symbols.trailing_literals);
@@ -78,5 +75,21 @@ fn hex_and_ascii(buf: &[u8]) -> String {
     }
 
     format!("{}    {}", hex, ascii)
+}
+
+struct NullWriter {}
+
+impl Write for NullWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+
+    fn write_all(&mut self, _: &[u8]) -> io::Result<()> {
+        Ok(())
+    }
 }
 

@@ -1,12 +1,10 @@
-use std::io;
 use std::io::Read;
 
 use errors::*;
 
 pub struct BitReader<R> {
     inner: R,
-    // negative one for eof, wtf
-    current: i32,
+    current: u8,
     remaining_bits: u8,
 }
 
@@ -24,36 +22,18 @@ impl<R: Read> BitReader<R> {
         (8 - self.remaining_bits) % 8
     }
 
-    pub fn read_or_eof(&mut self) -> Result<Option<bool>> {
-        if -1 == self.current {
-            return Ok(None);
-        }
-
+    pub fn read_always(&mut self) -> Result<bool> {
         if 0 == self.remaining_bits {
             let mut buf = [0u8; 1];
-            match self.inner.read(&mut buf)? {
-                0 => return Ok(None),
-                1 => self.current = i32::from(buf[0]),
-                _ => unreachable!(),
-            }
-
+            self.inner.read_exact(&mut buf)?;
+            self.current = buf[0];
             self.remaining_bits = 8;
         }
 
         self.remaining_bits -= 1;
 
         let bit = (self.current >> (7 - self.remaining_bits)) & 1;
-        Ok(Some(1 == bit))
-    }
-
-    pub fn read_always(&mut self) -> Result<bool> {
-        match self.read_or_eof() {
-            Ok(Some(bit)) => Ok(bit),
-            Ok(None) => Err(
-                io::Error::new(io::ErrorKind::UnexpectedEof, "read_always").into(),
-            ),
-            Err(e) => Err(e),
-        }
+        Ok(1 == bit)
     }
 
     pub fn read_part_u8(&mut self, bits: u8) -> Result<u8> {

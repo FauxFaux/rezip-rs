@@ -30,9 +30,7 @@ lazy_static! {
         CodeTree::new(&[5u32; 32]).expect("static data is valid");
 }
 
-pub fn read_codes<R: Read>(
-    reader: &mut BitReader<R>,
-) -> Result<(CodeTree, Option<CodeTree>)> {
+pub fn read_codes<R: Read>(reader: &mut BitReader<R>) -> Result<(CodeTree, Option<CodeTree>)> {
     let num_lit_len_codes = u16::from(reader.read_part(5)?) + 257;
     let num_distance_codes = reader.read_part(5)? + 1;
 
@@ -182,8 +180,7 @@ fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32
         // 23 / 4 == 5.7 -> 5.
         let extra_bits = ((sym - 261) / 4) as u8;
         return Ok(
-            (((sym - 265) % 4 + 4) << extra_bits) + 3 +
-                u32::from(reader.read_part(extra_bits)?),
+            (((sym - 265) % 4 + 4) << extra_bits) + 3 + u32::from(reader.read_part(extra_bits)?),
         );
     }
 
@@ -205,8 +202,7 @@ fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32> 
     if sym <= 29 {
         let num_extra_bits = (sym / 2 - 1) as u8;
         return Ok(
-            ((sym % 2 + 2) << num_extra_bits) + 1 +
-                u32::from(reader.read_part(num_extra_bits)?),
+            ((sym % 2 + 2) << num_extra_bits) + 1 + u32::from(reader.read_part(num_extra_bits)?),
         );
     }
 

@@ -38,10 +38,7 @@ impl<R: Read> BitReader<R> {
 
     pub fn align(&mut self) -> Result<()> {
         while 0 != self.position() {
-            ensure!(
-                !self.read_bit()?,
-                "padding bits should always be empty"
-            );
+            ensure!(!self.read_bit()?, "padding bits should always be empty");
         }
         Ok(())
     }

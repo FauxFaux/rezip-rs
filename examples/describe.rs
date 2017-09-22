@@ -9,7 +9,7 @@ use std::io::Write;
 
 fn main() {
     let input = env::args().nth(1).expect("first argument: input-path.gz");
-    let results = librezip::process(
+    let results = librezip::deconstruct(
         io::BufReader::new(fs::File::open(input).expect("input readable")),
         NullWriter {},
     ).expect("processing");

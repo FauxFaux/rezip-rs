@@ -24,6 +24,9 @@ mod filter;
 mod gzip;
 mod huffman;
 
+use bit::BitReader;
+use bit::BitWriter;
+
 pub use huffman::SeenDistanceSymbols;
 
 use circles::CircularBuffer;
@@ -43,13 +46,13 @@ pub struct Processed {
     pub sha512_decompressed: Vec<u8>,
 }
 
-pub fn process<R: Read, W: Write>(from: R, into: W) -> Result<Processed> {
+pub fn deconstruct<R: Read, W: Write>(from: R, into: W) -> Result<Processed> {
     let mut from = filter::FilterRead::new(from);
     let mut into = filter::FilterWrite::new(into);
 
     let header = gzip::discard_header(&mut from)?;
 
-    let mut reader = bit::BitReader::new(from);
+    let mut reader = BitReader::new(from);
     let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
 
     let mut instructions = vec![];
@@ -88,6 +91,42 @@ pub fn process<R: Read, W: Write>(from: R, into: W) -> Result<Processed> {
     })
 }
 
+pub fn reconstruct<R: Read, W: Write>(from: R, into: W, spec: Processed) -> Result<()> {
+    let mut from = filter::FilterRead::new(from);
+    let mut into = filter::FilterWrite::new(into);
+
+    let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
+
+    into.write_all(&spec.header)?;
+
+    let mut into = BitWriter::new(into);
+
+    for (pos, op) in spec.instructions.iter().enumerate() {
+
+        // final block marker
+        into.write_bit(pos != spec.instructions.len() - 1)?;
+
+        write_block(&mut from, &mut into, &mut dictionary, op)?;
+    }
+
+    into.align()?;
+
+    let mut into = into.into_inner();
+
+    into.write_all(&spec.tail)?;
+
+    ensure!(
+        from.hash() == spec.sha512_decompressed,
+        "source data hash mismatch"
+    );
+    ensure!(
+        into.hash() == spec.sha512_compressed,
+        "compressed data hash mismatch"
+    );
+
+    Ok(())
+}
+
 #[derive(Debug)]
 pub enum BlockType {
     Uncompressed,
@@ -102,7 +141,7 @@ struct BlockDone {
 }
 
 fn read_block<R: Read>(
-    reader: &mut bit::BitReader<R>,
+    reader: &mut BitReader<R>,
     dictionary: &mut CircularBuffer,
 ) -> Result<BlockDone> {
     let final_block = reader.read_bit()?;
@@ -145,7 +184,7 @@ fn read_block<R: Read>(
 }
 
 fn read_uncompressed<R: Read, W: Write>(
-    reader: &mut bit::BitReader<R>,
+    reader: &mut BitReader<R>,
     mut output: W,
     dictionary: &mut CircularBuffer,
 ) -> Result<()> {
@@ -162,6 +201,30 @@ fn read_uncompressed<R: Read, W: Write>(
     Ok(())
 }
 
+fn write_block<R: Read, W: Write>(
+    reader: R,
+    writer: &mut BitWriter<W>,
+    dictionary: &mut CircularBuffer,
+    block: &Instructions,
+) -> Result<()> {
+    match block.block_type {
+        BlockType::Uncompressed => {
+            writer.write_bits_val(2, 0)?;
+            unimplemented!();
+        }
+        BlockType::Fixed(ref seen) => {
+            writer.write_bits_val(2, 1)?;
+            unimplemented!();
+        }
+        BlockType::Dynamic(ref tree, ref seen) => {
+            writer.write_bits_val(2, 2)?;
+            let (length, distance) =
+                huffman::read_codes(&mut BitReader::new(Cursor::new(tree.to_bytes())))?;
+            unimplemented!();
+        }
+    }
+    unimplemented!()
+}
 
 #[cfg(test)]
 mod tests {
@@ -174,7 +237,7 @@ mod tests {
 
         assert_eq!(
             1,
-            process(
+            deconstruct(
                 Cursor::new(&include_bytes!("../tests/data/seq-20.gz")[..]),
                 &mut output,
             ).unwrap()
@@ -199,7 +262,7 @@ mod tests {
 
         assert_eq!(
             18,
-            process(
+            deconstruct(
                 Cursor::new(
                     &include_bytes!("../tests/data/librole-basic-perl_0.13-1.debian.tar.gz")[..],
                 ),
@@ -216,7 +279,7 @@ mod tests {
 
         assert_eq!(
             1, // TODO
-            process(
+            deconstruct(
                 Cursor::new(
                     &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[..],
                 ),

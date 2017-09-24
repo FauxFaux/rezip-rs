@@ -131,8 +131,20 @@ impl<W: Write> BitWriter<W> {
 
     pub fn write_bit(&mut self, bit: bool) -> Result<()> {
         self.current.push(bit);
-        if self.current.len() == 8 {
-            self.inner.write_all(&[self.current.to_bytes()[0]])?;
+        if self.current.len() >= 8 {
+            assert_eq!(8, self.current.len());
+
+            // TODO: this BitVec isn't really dragging its weight
+
+            let mut val = 0u8;
+            for (pos, bit) in self.current.iter().enumerate() {
+                if bit {
+                    val |= (1 << pos);
+                }
+            }
+
+            self.inner.write_all(&[val])?;
+            self.current.truncate(0);
         }
         Ok(())
     }
@@ -162,5 +174,89 @@ impl<W: Write> BitWriter<W> {
         assert_eq!(0, self.current.len());
 
         self.inner
+    }
+}
+
+pub fn vec_to_bytes(vec: &BitVec) -> Vec<u8> {
+    let mut vec = vec.clone();
+    while vec.len() % 8 != 0 {
+        vec.push(false);
+    }
+
+    let mut it = vec.iter();
+
+    let mut ret = vec![];
+
+    let mut done = false;
+    while !done {
+        let mut val = 0u8;
+        for i in 0..8 {
+            match it.next() {
+                Some(bit) => {
+                    if bit {
+                        val |= (1 << i);
+                    }
+                }
+                None => {
+                    done = true;
+                    break;
+                }
+            }
+        }
+        ret.push(val);
+    }
+
+    ret
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn write_read() {
+        let mut writer = BitWriter::new(Cursor::new(vec![]));
+        writer.write_bit(true).unwrap();
+        writer.write_bit(false).unwrap();
+        writer.write_bit(false).unwrap();
+        writer.write_bit(true).unwrap();
+        writer.write_bit(true).unwrap();
+        writer.write_bit(true).unwrap();
+        writer.write_bit(false).unwrap();
+        writer.write_bit(false).unwrap();
+
+        let mut cursor = writer.into_inner();
+        cursor.set_position(0);
+        println!("{:0b}", cursor.get_ref()[0]);
+
+        let mut reader = BitReader::new(cursor);
+        assert!(reader.read_bit().unwrap());
+        assert!(!reader.read_bit().unwrap());
+        assert!(!reader.read_bit().unwrap());
+        assert!(reader.read_bit().unwrap());
+        assert!(reader.read_bit().unwrap());
+        assert!(reader.read_bit().unwrap());
+        assert!(!reader.read_bit().unwrap());
+        assert!(!reader.read_bit().unwrap());
+    }
+
+    #[test]
+    fn tracking() {
+        let mut reader = BitReader::new(Cursor::new(vec![0b0001_1001]));
+        reader.tracking_start();
+        assert!(reader.read_bit().unwrap());
+        assert!(!reader.read_bit().unwrap());
+        assert!(!reader.read_bit().unwrap());
+        assert!(reader.read_bit().unwrap());
+        assert!(reader.read_bit().unwrap());
+        assert!(!reader.read_bit().unwrap());
+
+        let tracked = reader.tracking_finish();
+
+        assert_eq!(
+            &[true, false, false, true, true, false],
+            &tracked.iter().collect::<Vec<bool>>().as_slice()
+        );
     }
 }

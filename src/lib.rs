@@ -220,11 +220,13 @@ fn write_block<R: Read, W: Write>(
             writer.write_bits_val(2, 2)?;
             writer.write_vec(tree)?;
             let (length, _) =
-                huffman::read_codes(&mut BitReader::new(Cursor::new(tree.to_bytes())))?;
+                huffman::read_codes(&mut BitReader::new(Cursor::new(bit::vec_to_bytes(tree))))?;
             let length = length.invert();
 
             for item in &seen.stream {
                 write_literals(&mut reader, writer, &length, item.literals)?;
+
+                // TODO: need to advance the reader by the right number of bytes
                 writer.write_vec(&item.symbol)?;
             }
 

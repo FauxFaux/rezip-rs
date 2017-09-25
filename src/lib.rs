@@ -109,6 +109,8 @@ pub fn reconstruct<R: Read, W: Write>(from: R, into: W, spec: Processed) -> Resu
         write_block(&mut from, &mut into, &mut dictionary, op)?;
     }
 
+    assert!(from.read_exact(&mut [0u8; 1]).is_err());
+
     into.align()?;
 
     let mut into = into.into_inner();
@@ -232,6 +234,9 @@ fn write_block<R: Read, W: Write>(
             }
 
             write_literals(&mut reader, writer, &length, seen.trailing_literals)?;
+
+            // end of block
+            writer.write_vec(length[0x100].as_ref().unwrap())?;
         }
     }
 

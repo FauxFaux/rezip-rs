@@ -104,7 +104,7 @@ pub fn reconstruct<R: Read, W: Write>(from: R, into: W, spec: Processed) -> Resu
     for (pos, op) in spec.instructions.iter().enumerate() {
 
         // final block marker
-        into.write_bit(pos != spec.instructions.len() - 1)?;
+        into.write_bit(pos == spec.instructions.len() - 1)?;
 
         write_block(&mut from, &mut into, &mut dictionary, op)?;
     }
@@ -226,7 +226,8 @@ fn write_block<R: Read, W: Write>(
             for item in &seen.stream {
                 write_literals(&mut reader, writer, &length, item.literals)?;
 
-                // TODO: need to advance the reader by the right number of bytes
+                reader.read_exact(&mut vec![0u8; usize::from(item.run_minus_3) + 3])?;
+
                 writer.write_vec(&item.symbol)?;
             }
 
@@ -258,7 +259,9 @@ fn write_literals<R: Read, W: Write>(
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
     use std::io::Cursor;
+    use std::io::Write;
     use ::*;
 
     #[test]
@@ -295,7 +298,11 @@ mod tests {
         decompressed.set_position(0);
 
         let mut recompressed = Cursor::new(vec![]);
-        reconstruct(decompressed, recompressed, spec).expect("reconstruct");
+        let result = reconstruct(&mut decompressed, &mut recompressed, spec);
+
+        File::create("a").expect("create").write_all(&recompressed.into_inner()).expect("write");
+
+        result.expect("success");
     }
 
     #[test]

@@ -197,7 +197,8 @@ pub fn read_data<R: Read, W: Write>(
         literals = 0;
 
         ensure!(dist >= 1 && dist <= 32_786, "invalid distance");
-        dictionary.copy(dist, run, &mut output)?;
+        // TODO: usize >= 32bit
+        dictionary.copy(dist as usize, run as usize, &mut output)?;
     }
 }
 

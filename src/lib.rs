@@ -226,14 +226,24 @@ fn write_block<R: Read, W: Write>(
             let length = length.invert();
 
             for item in &seen.stream {
-                write_literals(&mut reader, writer, &length, item.literals)?;
+                write_literals(&mut reader, writer, dictionary, &length, item.literals)?;
 
-                reader.read_exact(&mut vec![0u8; usize::from(item.run_minus_3) + 3])?;
+                let mut run = vec![0u8; usize::from(item.run_minus_3) + 3];
+                reader.read_exact(&mut run)?;
+
+                let dist = dictionary.find_run(&run)? as u32;
+                assert_eq!(dist, item.dist);
 
                 writer.write_vec(&item.symbol)?;
             }
 
-            write_literals(&mut reader, writer, &length, seen.trailing_literals)?;
+            write_literals(
+                &mut reader,
+                writer,
+                dictionary,
+                &length,
+                seen.trailing_literals,
+            )?;
 
             // end of block
             writer.write_vec(length[0x100].as_ref().unwrap())?;
@@ -246,6 +256,7 @@ fn write_block<R: Read, W: Write>(
 fn write_literals<R: Read, W: Write>(
     mut reader: R,
     writer: &mut BitWriter<W>,
+    dictionary: &mut CircularBuffer,
     length: &[Option<BitVec>],
     literals: usize,
 ) -> Result<()> {
@@ -254,6 +265,7 @@ fn write_literals<R: Read, W: Write>(
     reader.read_exact(&mut buf)?;
 
     for byte in buf {
+        dictionary.append(byte);
         writer.write_vec(length[usize::from(byte)].as_ref().expect(
             "valid code",
         ))?;
@@ -305,7 +317,10 @@ mod tests {
         let mut recompressed = Cursor::new(vec![]);
         let result = reconstruct(&mut decompressed, &mut recompressed, spec);
 
-        File::create("a").expect("create").write_all(&recompressed.into_inner()).expect("write");
+        File::create("a")
+            .expect("create")
+            .write_all(&recompressed.into_inner())
+            .expect("write");
 
         result.expect("success");
     }

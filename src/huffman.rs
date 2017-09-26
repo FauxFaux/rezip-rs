@@ -138,7 +138,8 @@ pub fn read_codes<R: Read>(reader: &mut BitReader<R>) -> Result<(CodeTree, Optio
 pub struct SeenDistanceSymbol {
     pub literals: usize,
     pub symbol: BitVec,
-    pub run_minus_3: u8
+    pub dist: u32,
+    pub run_minus_3: u8,
 }
 
 #[derive(Debug)]
@@ -191,6 +192,7 @@ pub fn read_data<R: Read, W: Write>(
             literals,
             symbol: reader.tracking_finish(),
             run_minus_3: (run - 3) as u8,
+            dist,
         });
         literals = 0;
 

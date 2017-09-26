@@ -51,7 +51,9 @@ fn print_symbols(symbols: &librezip::SeenDistanceSymbols) {
     println!("   symbols:");
     for symbol in &symbols.stream {
         println!("    - literals: {}", symbol.literals);
-        println!("      symbol: {:?}", symbol.symbol)
+        println!("      symbol: {:?}", symbol.symbol);
+        println!("      run:    {}", symbol.run_minus_3 + 3);
+        println!("      dist:   {}", symbol.dist);
     }
 
     println!("   trailing literals: {}", symbols.trailing_literals);

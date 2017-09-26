@@ -258,5 +258,10 @@ mod test {
             &[true, false, false, true, true, false],
             &tracked.iter().collect::<Vec<bool>>().as_slice()
         );
+
+        let mut writer = BitWriter::new(Cursor::new(vec![]));
+        writer.write_vec(&tracked).unwrap();
+        writer.align().unwrap();
+        assert_eq!(vec![0b0001_1001u8; 1], writer.into_inner().into_inner());
     }
 }

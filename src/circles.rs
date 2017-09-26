@@ -46,13 +46,8 @@ impl CircularBuffer {
         let cap = self.data.len();
         ensure!(run.len() < cap, "can't have a run that long");
 
-        println!("{:?}", self.data);
-        println!("{:?}", run);
-
         for dist in (run.len() - 1)..cap {
-            println!("dist: {}", dist);
             let start = self.idx.wrapping_sub(dist).wrapping_add(cap) % cap;
-            println!("start: {}", start);
             if self.run_at(start, run) {
                 return Ok(dist);
             }

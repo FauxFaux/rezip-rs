@@ -216,41 +216,67 @@ fn write_block<R: Read, W: Write>(
         }
         BlockType::Fixed(ref seen) => {
             writer.write_bits_val(2, 1)?;
-            unimplemented!();
+            huffman_block(
+                reader,
+                writer,
+                dictionary,
+                (
+                    &huffman::FIXED_LENGTH_TREE,
+                    Some(&huffman::FIXED_DISTANCE_TREE),
+                ),
+                seen,
+            )?;
         }
         BlockType::Dynamic(ref tree, ref seen) => {
             writer.write_bits_val(2, 2)?;
             writer.write_vec(tree)?;
-            let (length, _) =
+            let (length, distance) =
                 huffman::read_codes(&mut BitReader::new(Cursor::new(bit::vec_to_bytes(tree))))?;
-            let length = length.invert();
 
-            for item in &seen.stream {
-                write_literals(&mut reader, writer, dictionary, &length, item.literals)?;
-
-                let mut run = vec![0u8; usize::from(item.run_minus_3) + 3];
-                reader.read_exact(&mut run)?;
-
-                let dist = dictionary.find_run(&run)? as u32;
-                assert_eq!(dist, item.dist);
-
-                writer.write_vec(&item.symbol)?;
-            }
-
-            write_literals(
-                &mut reader,
+            huffman_block(
+                reader,
                 writer,
                 dictionary,
-                &length,
-                seen.trailing_literals,
+                (&length, distance.as_ref()),
+                seen,
             )?;
-
-            // end of block
-            writer.write_vec(length[0x100].as_ref().unwrap())?;
         }
     }
 
     Ok(())
+}
+
+fn huffman_block<R: Read, W: Write>(
+    mut reader: R,
+    writer: &mut BitWriter<W>,
+    dictionary: &mut CircularBuffer,
+    (length, distance): (&code_tree::CodeTree, Option<&code_tree::CodeTree>),
+    seen: &huffman::SeenDistanceSymbols,
+) -> Result<()> {
+    let length = length.invert();
+
+    for item in &seen.stream {
+        write_literals(&mut reader, writer, dictionary, &length, item.literals)?;
+
+        let mut run = vec![0u8; usize::from(item.run_minus_3) + 3];
+        reader.read_exact(&mut run)?;
+
+        let dist = dictionary.find_run(&run)? as u32;
+        assert_eq!(dist, item.dist);
+
+        writer.write_vec(&item.symbol)?;
+    }
+
+    write_literals(
+        &mut reader,
+        writer,
+        dictionary,
+        &length,
+        seen.trailing_literals,
+    )?;
+
+    // end of block
+    writer.write_vec(length[0x100].as_ref().unwrap())
 }
 
 fn write_literals<R: Read, W: Write>(
@@ -308,8 +334,24 @@ mod tests {
 
     #[test]
     fn seq_20_round_trip() {
+        // no distance references at all, dynamic huffman
+        round_trip(&include_bytes!("../tests/data/seq-20.gz")[..]);
+    }
+
+    #[test]
+    fn like_love_round_trip() {
+        // fixed huffman, no backreferences
+        round_trip(&include_bytes!("../tests/data/like-love.gz")[..]);
+    }
+
+    #[test]
+    fn chicken_liver_round_trip() {
+        // single true backreference in the middle, fixed huffman
+        round_trip(&include_bytes!("../tests/data/chicken-liver.gz")[..]);
+    }
+
+    fn round_trip(orig: &[u8]) {
         let mut decompressed = Cursor::new(vec![]);
-        let orig = &include_bytes!("../tests/data/seq-20.gz")[..];
 
         let spec = deconstruct(Cursor::new(orig), &mut decompressed).expect("deconstruct");
         decompressed.set_position(0);

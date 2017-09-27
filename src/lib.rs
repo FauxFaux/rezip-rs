@@ -255,6 +255,12 @@ fn huffman_block<R: Read, W: Write>(
 ) -> Result<()> {
     let length = length.invert();
 
+    for (chr, enc) in length.iter().enumerate() {
+        if enc.is_some() {
+            println!("{:?}: {:?}", chr as u8 as char, enc);
+        }
+    }
+
     for item in &seen.stream {
         write_literals(&mut reader, writer, dictionary, &length, item.literals)?;
 

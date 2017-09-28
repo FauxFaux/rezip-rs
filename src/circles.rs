@@ -8,12 +8,12 @@ pub struct CircularBuffer {
 }
 
 impl CircularBuffer {
-    pub fn with_capacity(cap: usize) -> Self {
+    pub fn with_capacity(cap: u16) -> Self {
         assert!(cap > 0);
 
         CircularBuffer {
             idx: 0,
-            data: vec![0; cap],
+            data: vec![0; usize_from(cap)],
         }
     }
 
@@ -22,7 +22,7 @@ impl CircularBuffer {
         self.idx = (self.idx + 1) % self.data.len();
     }
 
-    pub fn copy<W: Write>(&mut self, dist: usize, len: usize, mut into: W) -> Result<()> {
+    pub fn copy<W: Write>(&mut self, dist: u16, len: u16, mut into: W) -> Result<()> {
         ensure!(
             dist > 0 && dist as usize <= self.data.len(),
             "dist must fit"
@@ -64,6 +64,10 @@ impl CircularBuffer {
         }
         true
     }
+}
+
+fn usize_from(val: u16) -> usize {
+    val as usize
 }
 
 #[cfg(test)]

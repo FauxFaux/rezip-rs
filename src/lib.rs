@@ -308,10 +308,7 @@ fn write_literals<R: Read, W: Write>(
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
     use std::io::Cursor;
-    use std::io::Write;
-    use bit::BitVec;
     use ::*;
 
     #[test]

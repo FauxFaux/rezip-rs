@@ -120,8 +120,6 @@ mod tests {
     use std::io::Cursor;
     use std::io::Read;
 
-    use bit::BitReader;
-
     use super::*;
 
     #[test]
@@ -134,9 +132,7 @@ mod tests {
             vec![
                 Block::FixedHuffman(vec![Literal(108), Literal(111), Literal(108)]),
             ],
-            parse_deflate(&mut BitReader::new(Cursor::new(
-                &include_bytes!("../tests/data/lol.gz")[10..],
-            ))).unwrap()
+            parse_deflate(Cursor::new(&include_bytes!("../tests/data/lol.gz")[10..])).unwrap()
         );
     }
 }

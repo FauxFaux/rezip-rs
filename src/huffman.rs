@@ -12,7 +12,7 @@ use errors::*;
 
 lazy_static! {
     pub static ref FIXED_LENGTH_TREE: CodeTree = {
-        let mut lens = [0u32; 288];
+        let mut lens = [0u8; 288];
         for i in 0..144 {
             lens[i] = 8;
         }
@@ -30,7 +30,7 @@ lazy_static! {
     };
 
     pub static ref FIXED_DISTANCE_TREE: CodeTree =
-        CodeTree::new(&[5u32; 32]).expect("static data is valid");
+        CodeTree::new(&[5u8; 32]).expect("static data is valid");
 }
 
 pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<CodeTree>)> {
@@ -39,15 +39,15 @@ pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<Code
 
     let num_code_len_codes = reader.read_part(4)? + 4;
 
-    let mut code_len_code_len = [0u32; 19];
-    code_len_code_len[16] = u32::from(reader.read_part(3)?);
-    code_len_code_len[17] = u32::from(reader.read_part(3)?);
-    code_len_code_len[18] = u32::from(reader.read_part(3)?);
-    code_len_code_len[0] = u32::from(reader.read_part(3)?);
+    let mut code_len_code_len = [0u8; 19];
+    code_len_code_len[16] = reader.read_part(3)? as u8;
+    code_len_code_len[17] = reader.read_part(3)? as u8;
+    code_len_code_len[18] = reader.read_part(3)? as u8;
+    code_len_code_len[0] = reader.read_part(3)? as u8;
 
     for i in 0..(num_code_len_codes as usize - 4) {
         let pos = if i % 2 == 0 { 8 + i / 2 } else { 7 - i / 2 };
-        code_len_code_len[pos] = u32::from(reader.read_part(3)?);
+        code_len_code_len[pos] = reader.read_part(3)? as u8;
     }
 
     let code_len_code = CodeTree::new(&code_len_code_len[..])?;
@@ -55,7 +55,7 @@ pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<Code
     let code_lens_len = num_lit_len_codes as usize + num_distance_codes as usize;
     let mut code_lens = vec![];
     for _ in 0..code_lens_len {
-        code_lens.push(0);
+        code_lens.push(0u8);
     }
 
     let mut run_val = None;
@@ -73,8 +73,8 @@ pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<Code
         } else {
             let sym = code_len_code.decode_symbol(reader)?;
             if sym <= 15 {
-                code_lens[i] = sym;
-                run_val = Some(sym);
+                code_lens[i] = sym as u8;
+                run_val = Some(sym as u8);
                 i += 1;
             } else if sym == 16 {
                 ensure!(run_val.is_some(), "no value to copy");
@@ -184,7 +184,6 @@ pub fn read_data<R: Read, W: Write>(
 
         // length and distance encoding
         let run = decode_run_length(reader, sym)?;
-        ensure!(run >= 3 && run <= 258, "invalid run length");
         let dist_sym = match distance {
             Some(dist_code) => dist_code.decode_symbol(reader)?,
             None => bail!("length symbol encountered but no table"),
@@ -201,25 +200,27 @@ pub fn read_data<R: Read, W: Write>(
         literals = 0;
 
         ensure!(dist >= 1 && dist <= 32_786, "invalid distance");
-        // TODO: usize >= 32bit
-        dictionary.copy(dist as usize, run as usize, &mut output)?;
+        dictionary.copy(dist, run, &mut output)?;
     }
 }
 
-pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32> {
+/// Returns a run length between 3 and 258 inclusive, all other values are invalid.
+pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16> {
     ensure!(sym >= 257 && sym <= 287, "decompressor bug");
 
     if sym <= 264 {
-        return Ok(sym - 254);
+        return Ok((sym - 254) as u16);
     }
 
     if sym <= 284 {
         // 284 - 261 == 23
         // 23 / 4 == 5.7 -> 5.
         let extra_bits = ((sym - 261) / 4) as u8;
-        return Ok(
-            (((sym - 265) % 4 + 4) << extra_bits) + 3 + u32::from(reader.read_part(extra_bits)?),
-        );
+        assert!(extra_bits < 6);
+
+        let high_part = (((sym - 265) as u8) % 4 + 4) << extra_bits;
+        let low_part = reader.read_part(extra_bits)? as u8;
+        return Ok(u16::from(high_part) + u16::from(low_part) + 3);
     }
 
     if sym == 285 {
@@ -230,7 +231,7 @@ pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result
     bail!("reserved symbol: {}", sym);
 }
 
-pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u16> {
+pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16> {
     ensure!(sym <= 31, "invalid distance symbol");
 
     if sym <= 3 {

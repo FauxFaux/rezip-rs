@@ -13,7 +13,7 @@ pub struct CodeTree {
 }
 
 impl CodeTree {
-    pub fn new(canonical_code_lengths: &[u32]) -> Result<Self> {
+    pub fn new(canonical_code_lengths: &[u8]) -> Result<Self> {
         ensure!(canonical_code_lengths.len() >= 2, "too few lengths");
 
         ensure!(
@@ -36,7 +36,7 @@ impl CodeTree {
                         .iter()
                         .enumerate()
                         .filter(|&(_, val)| i == *val)
-                        .map(|(pos, _)| Node::Leaf(pos as u32)),
+                        .map(|(pos, _)| Node::Leaf(pos as u16)),
                 );
             }
 
@@ -59,7 +59,7 @@ impl CodeTree {
         }
     }
 
-    pub fn decode_symbol<B: BitSource>(&self, reader: &mut B) -> Result<u32> {
+    pub fn decode_symbol<B: BitSource>(&self, reader: &mut B) -> Result<u16> {
         decode_symbol_impl(reader, &self.left, &self.right)
     }
 
@@ -73,7 +73,7 @@ impl CodeTree {
     }
 }
 
-fn decode_symbol_impl<B: BitSource>(reader: &mut B, left: &Node, right: &Node) -> Result<u32> {
+fn decode_symbol_impl<B: BitSource>(reader: &mut B, left: &Node, right: &Node) -> Result<u16> {
     use self::Node::*;
 
     match *if reader.read_bit()? { right } else { left } {
@@ -83,7 +83,7 @@ fn decode_symbol_impl<B: BitSource>(reader: &mut B, left: &Node, right: &Node) -
 }
 
 enum Node {
-    Leaf(u32),
+    Leaf(u16),
     Internal(Box<Node>, Box<Node>),
 }
 

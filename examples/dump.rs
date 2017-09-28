@@ -7,8 +7,8 @@ use std::fs;
 use std::io;
 
 use librezip::Result;
-use librezip::parse::Block;
-use librezip::parse::Code;
+use librezip::Block;
+use librezip::Code;
 
 fn run() -> Result<()> {
     let input = env::args().nth(1).ok_or("first argument: input-path.gz")?;

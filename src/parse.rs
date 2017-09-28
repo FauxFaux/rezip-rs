@@ -2,23 +2,12 @@ use std::io::Read;
 
 use bit::BitCollector;
 use bit::BitReader;
-use bit::BitVec;
 use code_tree::CodeTree;
 use errors::*;
 use huffman;
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Code {
-    Literal(u8),
-    Reference { dist: u16, run_minus_3: u8 },
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Block {
-    Uncompressed(Vec<u8>),
-    FixedHuffman(Vec<Code>),
-    DynamicHuffman { trees: BitVec, codes: Vec<Code> },
-}
+use Block;
+use Code;
 
 pub fn parse_deflate<R: Read>(bytes: R) -> BlockIter<R> {
     BlockIter {

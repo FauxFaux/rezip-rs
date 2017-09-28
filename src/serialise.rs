@@ -6,8 +6,8 @@ use circles::CircularBuffer;
 use code_tree::CodeTree;
 use errors::*;
 use huffman;
-use parse::Code;
-use parse::Block;
+use Block;
+use Code;
 
 pub fn decompressed_block<W: Write>(
     mut into: W,

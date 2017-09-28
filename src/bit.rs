@@ -84,20 +84,6 @@ impl<R: Read> BitReader<R> {
         Ok(buf)
     }
 
-    pub fn tracking_start(&mut self) {
-        assert!(self.track.is_none());
-        self.track = Some(BitVec::new());
-    }
-
-    pub fn tracking_finish(&mut self) -> BitVec {
-        // self.track.take() // :(
-        std::mem::replace(&mut self.track, None).expect("tracking wasn't started")
-    }
-
-    pub fn tracking_abort(&mut self) {
-        self.track = None;
-    }
-
     fn read_aligned_u16(&mut self) -> Result<u16> {
         assert_eq!(0, self.position());
         assert!(self.track.is_none());
@@ -178,38 +164,6 @@ impl<W: Write> BitWriter<W> {
 
         self.inner
     }
-}
-
-pub fn vec_to_bytes(vec: &BitVec) -> Vec<u8> {
-    let mut vec = vec.clone();
-    while vec.len() % 8 != 0 {
-        vec.push(false);
-    }
-
-    let mut it = vec.iter();
-
-    let mut ret = vec![];
-
-    let mut done = false;
-    while !done {
-        let mut val = 0u8;
-        for i in 0..8 {
-            match it.next() {
-                Some(bit) => {
-                    if bit {
-                        val |= 1 << i;
-                    }
-                }
-                None => {
-                    done = true;
-                    break;
-                }
-            }
-        }
-        ret.push(val);
-    }
-
-    ret
 }
 
 const WORD_SIZE: usize = 8;
@@ -457,29 +411,6 @@ mod test {
         assert!(!reader.read_bit().unwrap());
     }
 
-    #[test]
-    fn tracking() {
-        let mut reader = BitReader::new(Cursor::new(vec![0b0001_1001]));
-        reader.tracking_start();
-        assert!(reader.read_bit().unwrap());
-        assert!(!reader.read_bit().unwrap());
-        assert!(!reader.read_bit().unwrap());
-        assert!(reader.read_bit().unwrap());
-        assert!(reader.read_bit().unwrap());
-        assert!(!reader.read_bit().unwrap());
-
-        let tracked = reader.tracking_finish();
-
-        assert_eq!(
-            &[true, false, false, true, true, false],
-            &tracked.iter().collect::<Vec<bool>>().as_slice()
-        );
-
-        let mut writer = BitWriter::new(Cursor::new(vec![]));
-        writer.write_vec(&tracked).unwrap();
-        writer.align().unwrap();
-        assert_eq!(vec![0b0001_1001u8; 1], writer.into_inner().into_inner());
-    }
 
     #[test]
     fn vec_push() {

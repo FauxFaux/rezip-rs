@@ -1,12 +1,8 @@
 use std;
-use std::fmt;
 use std::io::Read;
-use std::io::Write;
 
 use bit::BitReader;
 use bit::BitSource;
-use bit::BitVec;
-use circles::CircularBuffer;
 use code_tree::CodeTree;
 use errors::*;
 
@@ -135,75 +131,6 @@ pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<Code
     Ok((lit_len_code, Some(dist_tree)))
 }
 
-pub struct SeenDistanceSymbol {
-    pub literals: usize,
-    pub symbol: BitVec,
-    pub dist: u16,
-    pub run_minus_3: u8,
-}
-
-#[derive(Debug)]
-pub struct SeenDistanceSymbols {
-    pub stream: Vec<SeenDistanceSymbol>,
-    pub trailing_literals: usize,
-}
-
-pub fn read_data<R: Read, W: Write>(
-    reader: &mut BitReader<R>,
-    mut output: W,
-    dictionary: &mut CircularBuffer,
-    length: &CodeTree,
-    distance: Option<&CodeTree>,
-) -> Result<SeenDistanceSymbols> {
-    let mut distance_symbols = vec![];
-    let mut literals = 0usize;
-
-    loop {
-        reader.tracking_start();
-
-        let sym = length.decode_symbol(reader)?;
-        if sym == 256 {
-            reader.tracking_abort();
-
-            // end of block
-            return Ok(SeenDistanceSymbols {
-                stream: distance_symbols,
-                trailing_literals: literals,
-            });
-        }
-
-        if sym < 256 {
-            // literal byte
-            output.write_all(&[sym as u8])?;
-            dictionary.append(sym as u8);
-            literals += 1;
-
-            reader.tracking_abort();
-            continue;
-        }
-
-        // length and distance encoding
-        let run = decode_run_length(reader, sym)?;
-        let dist_sym = match distance {
-            Some(dist_code) => dist_code.decode_symbol(reader)?,
-            None => bail!("length symbol encountered but no table"),
-        };
-
-        let dist = decode_distance(reader, dist_sym)?;
-
-        distance_symbols.push(SeenDistanceSymbol {
-            literals,
-            symbol: reader.tracking_finish(),
-            run_minus_3: (run - 3) as u8,
-            dist,
-        });
-        literals = 0;
-
-        ensure!(dist >= 1 && dist <= 32_786, "invalid distance");
-        dictionary.copy(dist, run, &mut output)?;
-    }
-}
-
 pub fn encode_run_length(length: u16) -> u16 {
     match length {
         3...10 => 257 + length - 3,
@@ -297,10 +224,4 @@ pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u
     }
 
     bail!("reserved distance symbol")
-}
-
-impl fmt::Debug for SeenDistanceSymbol {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}, {:?}]", self.literals, self.symbol)
-    }
 }

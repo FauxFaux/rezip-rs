@@ -137,7 +137,7 @@ pub fn read_codes<R: Read>(reader: &mut BitReader<R>) -> Result<(CodeTree, Optio
 pub struct SeenDistanceSymbol {
     pub literals: usize,
     pub symbol: BitVec,
-    pub dist: u32,
+    pub dist: u16,
     pub run_minus_3: u8,
 }
 
@@ -205,7 +205,7 @@ pub fn read_data<R: Read, W: Write>(
     }
 }
 
-fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32> {
+pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32> {
     ensure!(sym >= 257 && sym <= 287, "decompressor bug");
 
     if sym <= 264 {
@@ -229,17 +229,17 @@ fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32
     bail!("reserved symbol: {}", sym);
 }
 
-fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u32> {
+pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u32) -> Result<u16> {
     ensure!(sym <= 31, "invalid distance symbol");
 
     if sym <= 3 {
-        return Ok(sym + 1);
+        return Ok(sym as u16 + 1);
     }
 
     if sym <= 29 {
         let num_extra_bits = (sym / 2 - 1) as u8;
         return Ok(
-            ((sym % 2 + 2) << num_extra_bits) + 1 + u32::from(reader.read_part(num_extra_bits)?),
+            (((sym % 2 + 2) as u16) << num_extra_bits) + 1 + reader.read_part(num_extra_bits)?,
         );
     }
 

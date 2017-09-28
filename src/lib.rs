@@ -19,6 +19,7 @@ mod errors;
 mod filter;
 mod gzip;
 mod huffman;
+mod parse;
 
 use bit::BitReader;
 use bit::BitVec;
@@ -264,7 +265,7 @@ fn huffman_block<R: Read, W: Write>(
         let mut run = vec![0u8; usize::from(item.run_minus_3) + 3];
         reader.read_exact(&mut run)?;
 
-        let dist = dictionary.find_run(&run)? as u32;
+        let dist = dictionary.find_run(&run)? as u16;
         assert_eq!(dist, item.dist);
 
         writer.write_vec(&item.symbol)?;

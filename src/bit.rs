@@ -205,7 +205,7 @@ pub fn vec_to_bytes(vec: &BitVec) -> Vec<u8> {
 
 const WORD_SIZE: usize = 8;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct BitVec {
     bytes: Vec<u8>,
     len: usize,

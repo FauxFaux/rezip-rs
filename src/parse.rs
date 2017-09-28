@@ -20,22 +20,36 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
-pub fn parse_deflate<R: Read>(bytes: R) -> Result<Vec<Block>> {
-    let mut reader = BitReader::new(bytes);
-
-    let mut blocks = Vec::new();
-
-    loop {
-        let last_block = reader.read_bit()?;
-        blocks.push(read_block(&mut reader)?);
-
-        if last_block {
-            reader.align()?;
-            break;
-        }
+pub fn parse_deflate<R: Read>(bytes: R) -> BlockIter<R> {
+    BlockIter {
+        inner: BitReader::new(bytes),
+        end: false,
     }
+}
 
-    Ok(blocks)
+pub struct BlockIter<R: Read> {
+    inner: BitReader<R>,
+    end: bool,
+}
+
+impl<R: Read> Iterator for BlockIter<R> {
+    type Item = Result<Block>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.end {
+            return match self.inner.align() {
+                Ok(()) => None,
+                Err(e) => Some(Err(e)),
+            };
+        }
+
+        self.end = match self.inner.read_bit() {
+            Ok(end) => end,
+            Err(e) => return Some(Err(e)),
+        };
+
+        Some(read_block(&mut self.inner))
+    }
 }
 
 fn read_block<R: Read>(reader: &mut BitReader<R>) -> Result<Block> {
@@ -113,6 +127,7 @@ fn scan_huffman_data<R: Read>(
     Ok(ret)
 }
 
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
@@ -130,7 +145,9 @@ mod tests {
             vec![
                 Block::FixedHuffman(vec![Literal(108), Literal(111), Literal(108)]),
             ],
-            parse_deflate(Cursor::new(&include_bytes!("../tests/data/lol.gz")[10..])).unwrap()
+            parse_deflate(Cursor::new(&include_bytes!("../tests/data/lol.gz")[10..]))
+                .map(|val| val.unwrap())
+                .collect::<Vec<Block>>()
         );
     }
 }

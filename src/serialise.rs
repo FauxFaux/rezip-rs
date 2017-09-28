@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use bit::BitVec;
 use bit::BitWriter;
 use circles::CircularBuffer;
 use code_tree::CodeTree;
@@ -104,33 +105,52 @@ fn compressed_codes<W: Write>(
             Reference { dist, run_minus_3 } => {
                 let run = u16::from(run_minus_3) + 3;
 
-                into.write_vec(
-                    length_tree[huffman::encode_run_length(run) as usize]
-                        .as_ref()
-                        .unwrap(),
-                )?;
-
-                if let Some((bits, val)) = huffman::extra_run_length(run) {
-                    into.write_bits_val(bits, val)?;
-                }
-
-                if let Some((code, bits, val)) = huffman::encode_distance(dist) {
-                    let distance_tree = distance_tree.as_ref().ok_or(
-                        "reference but not distance tree",
-                    )?;
-                    into.write_vec(
-                        distance_tree[code as usize].as_ref().unwrap(),
-                    )?;
-                    if bits > 0 {
-                        into.write_bits_val(bits, val)?;
-                    }
-                }
+                encode_run(into, &length_tree, run)?;
+                encode_distance(into, distance_tree.as_ref(), dist)?;
             }
         }
     }
 
     // End of stream marker
     into.write_vec(length_tree[256].as_ref().unwrap())?;
+
+    Ok(())
+}
+
+fn encode_run<W: Write>(
+    into: &mut BitWriter<W>,
+    length_tree: &[Option<BitVec>],
+    run: u16,
+) -> Result<()> {
+    into.write_vec(
+        length_tree[huffman::encode_run_length(run) as usize]
+            .as_ref()
+            .unwrap(),
+    )?;
+
+    if let Some((bits, val)) = huffman::extra_run_length(run) {
+        into.write_bits_val(bits, val)?;
+    }
+
+    Ok(())
+}
+
+fn encode_distance<W: Write>(
+    into: &mut BitWriter<W>,
+    tree: Option<&Vec<Option<BitVec>>>,
+    dist: u16,
+) -> Result<()> {
+    if let Some((code, bits, val)) = huffman::encode_distance(dist) {
+        let distance_tree = tree.as_ref().ok_or("reference but not distance tree")?;
+
+        into.write_vec(
+            distance_tree[code as usize].as_ref().unwrap(),
+        )?;
+
+        if bits > 0 {
+            into.write_bits_val(bits, val)?;
+        }
+    }
 
     Ok(())
 }
@@ -147,23 +167,31 @@ mod tests {
         let mut reco = BitWriter::new(Cursor::new(vec![]));
 
         let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
-        let raw = Cursor::new(
-            &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[37..],
+        let mut raw = Cursor::new(
+            &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")
+                [37..],
         );
-        let mut it = parse::parse_deflate(raw).peekable();
-        loop {
-            let block = match it.next() {
-                Some(block) => block.unwrap(),
-                None => break,
-            };
 
-            let last = it.peek().is_none();
+        {
+            let mut it = parse::parse_deflate(&mut raw).peekable();
 
-            decompressed_block(&mut into, &mut dictionary, &block).unwrap();
-            reco.write_bit(last).unwrap();
-            compressed_block(&mut reco, &block).unwrap();
+            loop {
+                let block = match it.next() {
+                    Some(block) => block.unwrap(),
+                    None => break,
+                };
+
+                let last = it.peek().is_none();
+
+                decompressed_block(&mut into, &mut dictionary, &block).unwrap();
+                reco.write_bit(last).unwrap();
+                compressed_block(&mut reco, &block).unwrap();
+            }
+            reco.align().unwrap();
         }
-        reco.align().unwrap();
+        let raw = raw.into_inner().to_vec();
+        let reco: Vec<u8> = reco.into_inner().into_inner();
+        assert_eq!(&raw[..raw.len() - 8], &reco[..]);
 
         assert_eq!(20480, into.into_inner().len());
     }

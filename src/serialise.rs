@@ -28,7 +28,7 @@ pub fn decompressed_block<W: Write>(
     }
 }
 
-fn decompressed_codes<W: Write>(
+pub fn decompressed_codes<W: Write>(
     mut into: W,
     dictionary: &mut CircularBuffer,
     codes: &[Code],

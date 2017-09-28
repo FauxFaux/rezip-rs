@@ -1,4 +1,5 @@
 use std;
+use std::fmt;
 use std::io::Read;
 use std::io::Write;
 use std::ops::BitOrAssign;
@@ -200,7 +201,7 @@ pub fn vec_to_bytes(vec: &BitVec) -> Vec<u8> {
 
 const WORD_SIZE: usize = 8;
 
-#[derive(Debug, Clone)] // TODO: Debug is useless
+#[derive(Clone)]
 pub struct BitVec {
     bytes: Vec<u8>,
     len: usize,
@@ -312,6 +313,16 @@ impl<'a> Iterator for StackIterator<'a> {
         self.pos += 1;
 
         Some(ret)
+    }
+}
+
+impl fmt::Debug for BitVec {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "BitVec: {}: ", self.len())?;
+        for bit in self.iter() {
+            write!(f, "{}", if bit { "1" } else { "0" })?;
+        }
+        Ok(())
     }
 }
 

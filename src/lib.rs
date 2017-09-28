@@ -13,6 +13,7 @@ mod circles;
 mod code_tree;
 mod errors;
 pub mod filter;
+mod guess;
 pub mod gzip;
 mod huffman;
 pub mod parse;
@@ -71,6 +72,22 @@ mod tests {
         round_trip(&include_bytes!("../tests/data/abcdef-bcdefg.gz")[..], 13);
     }
 
+    #[test]
+    fn libcgi_round_trip() {
+        round_trip(
+            &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[..],
+            20480,
+        );
+    }
+
+    #[test]
+    fn librole_round_trip() {
+        round_trip(
+            &include_bytes!("../tests/data/librole-basic-perl_0.13-1.debian.tar.gz")[..],
+            20480,
+        );
+    }
+
     fn round_trip(orig: &[u8], expected_len: usize) {
         let mut raw = Cursor::new(orig);
         let header = gzip::discard_header(&mut raw).unwrap();
@@ -96,6 +113,12 @@ mod tests {
 
                 recompressed.write_bit(last).unwrap();
                 compressed_block(&mut recompressed, &block).unwrap();
+
+                match block {
+                    Block::FixedHuffman(codes) |
+                    Block::DynamicHuffman { codes, .. } => guess::guess_huffman(&codes),
+                    _ => {}
+                }
             }
             recompressed.align().unwrap();
         }

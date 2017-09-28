@@ -155,6 +155,24 @@ impl<W: Write> BitWriter<W> {
         Ok(())
     }
 
+    pub fn write_length_prefixed(&mut self, data: &[u8]) -> Result<()> {
+        self.align()?;
+        ensure!(
+            data.len() <= std::u16::MAX as usize,
+            "data too long to store"
+        );
+
+        self.write_aligned_u16(data.len() as u16)?;
+        self.write_aligned_u16((data.len() ^ 0xFFFF) as u16)?;
+        self.inner.write_all(data)?;
+        Ok(())
+    }
+
+    pub fn write_aligned_u16(&mut self, val: u16) -> Result<()> {
+        self.inner.write_all(&[(val >> 8) as u8, val as u8])?;
+        Ok(())
+    }
+
     pub fn into_inner(self) -> W {
         assert_eq!(0, self.current.len());
 

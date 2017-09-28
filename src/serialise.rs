@@ -1,5 +1,6 @@
 use std::io::Write;
 
+use bit::BitWriter;
 use circles::CircularBuffer;
 use code_tree::CodeTree;
 use errors::*;
@@ -7,7 +8,7 @@ use huffman;
 use parse::Code;
 use parse::Block;
 
-pub fn decompress_block<W: Write>(
+pub fn decompressed_block<W: Write>(
     mut into: W,
     dictionary: &mut CircularBuffer,
     block: &Block,
@@ -22,11 +23,11 @@ pub fn decompress_block<W: Write>(
             )
         }
         FixedHuffman(ref codes) |
-        DynamicHuffman { ref codes, .. } => decompress_codes(into, dictionary, codes),
+        DynamicHuffman { ref codes, .. } => decompressed_codes(into, dictionary, codes),
     }
 }
 
-fn decompress_codes<W: Write>(
+fn decompressed_codes<W: Write>(
     mut into: W,
     dictionary: &mut CircularBuffer,
     codes: &[Code],
@@ -50,16 +51,18 @@ fn decompress_codes<W: Write>(
 }
 
 
-pub fn write_compressed<W: Write>(mut into: W, block: &Block) -> Result<()> {
+pub fn compressed_block<W: Write>(into: &mut BitWriter<W>, block: &Block) -> Result<()> {
     use self::Block::*;
 
     match *block {
         Uncompressed(ref data) => {
-            into.write_all(data)?;
+            into.write_bits_val(2, 0)?;
+            into.write_length_prefixed(data)?;
             Ok(())
         }
         FixedHuffman(ref codes) => {
-            encode(
+            into.write_bits_val(2, 1)?;
+            compressed_codes(
                 into,
                 &huffman::FIXED_LENGTH_TREE,
                 Some(&huffman::FIXED_DISTANCE_TREE),
@@ -70,19 +73,45 @@ pub fn write_compressed<W: Write>(mut into: W, block: &Block) -> Result<()> {
             ref trees,
             ref codes,
         } => {
+            into.write_bits_val(2, 2)?;
+            into.write_vec(trees)?;
             let (length, distance) = huffman::read_codes(&mut trees.iter())?;
-            encode(into, &length, distance.as_ref(), codes)
+            compressed_codes(into, &length, distance.as_ref(), codes)
         }
     }
 }
 
-fn encode<W: Write>(
-    into: W,
-    length: &CodeTree,
-    distance: Option<&CodeTree>,
+fn compressed_codes<W: Write>(
+    into: &mut BitWriter<W>,
+    length_tree: &CodeTree,
+    distance_tree: Option<&CodeTree>,
     codes: &[Code],
 ) -> Result<()> {
-    unimplemented!()
+    let length_tree = length_tree.invert();
+
+    assert!(length_tree.len() > 256);
+
+    use self::Code::*;
+
+    for code in codes {
+        match *code {
+            Literal(byte) => {
+                into.write_vec(length_tree[byte as usize].as_ref().ok_or(
+                    "invalid literal",
+                )?)?;
+            }
+            Reference { dist, run_minus_3 } => {
+                let distance_tree = distance_tree.ok_or("reference but not distance tree")?;
+                let run = u16::from(run_minus_3) + 3;
+                unimplemented!();
+            }
+        }
+    }
+
+    // End of stream marker
+    into.write_vec(length_tree[256].as_ref().unwrap())?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -99,7 +128,7 @@ mod tests {
             &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[37..],
         );
         for block in parse::parse_deflate(raw) {
-            decompress_block(&mut into, &mut dictionary, &block.unwrap()).unwrap();
+            decompressed_block(&mut into, &mut dictionary, &block.unwrap()).unwrap();
         }
 
         assert_eq!(20480, into.into_inner().len());

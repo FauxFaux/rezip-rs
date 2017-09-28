@@ -28,7 +28,7 @@ use bit::BitWriter;
 
 pub use huffman::SeenDistanceSymbols;
 pub use parse::parse_deflate;
-pub use serialise::decompress_block;
+pub use serialise::decompressed_block;
 
 use circles::CircularBuffer;
 pub use errors::*;

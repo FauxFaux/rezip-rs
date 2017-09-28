@@ -2,6 +2,8 @@ use std;
 use std::io::Read;
 use std::io::Write;
 
+use std::ops::BitOrAssign;
+
 use bit_vec::BitVec;
 
 use errors::*;
@@ -209,6 +211,122 @@ pub fn vec_to_bytes(vec: &BitVec) -> Vec<u8> {
     ret
 }
 
+const WORD_SIZE: usize = 8;
+
+pub struct BitStack {
+    bytes: Vec<u8>,
+    len: usize,
+}
+
+impl BitStack {
+    pub fn new() -> Self {
+        BitStack {
+            bytes: Vec::new(),
+            len: 0,
+        }
+    }
+
+    pub fn push(&mut self, val: bool) {
+        let word = self.len / WORD_SIZE;
+        let bit = self.len % WORD_SIZE;
+
+        self.len += 1;
+
+        if word >= self.bytes.len() {
+            assert_eq!(word, self.bytes.len());
+            self.bytes.push(0);
+        }
+
+        if val {
+            let word = self.bytes.get_mut(word).unwrap();
+            word.bitor_assign(1 << (bit));
+        }
+    }
+
+    pub fn get(&self, pos: usize) -> bool {
+        assert!(pos < self.len, "out of range");
+
+        let word = pos / WORD_SIZE;
+        let bit = pos % WORD_SIZE;
+
+        self.bytes[word] & (1 << bit) == (1 << bit)
+    }
+
+    pub fn pop(&mut self) -> Option<bool> {
+        if 0 == self.len {
+            return None;
+        }
+
+        let answer = self.get(self.len - 1);
+
+        self.len -= 1;
+
+        if self.len % WORD_SIZE == 0 {
+            self.bytes.pop();
+        }
+
+        Some(answer)
+    }
+
+    fn bytes(&self) -> &Vec<u8> {
+        &self.bytes
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        assert_eq!(self.len == 0, self.bytes.is_empty());
+        self.len == 0
+    }
+
+    pub fn pop_byte(&mut self) -> Option<u8> {
+        if self.len < 8 {
+            return None;
+        }
+
+        let mut ret = 0u8;
+
+        for pos in 0..8 {
+            if self.pop().unwrap() {
+                ret |= 1 << (7 - pos);
+            }
+        }
+
+        Some(ret)
+    }
+
+    pub fn iter(&self) -> StackIterator {
+        StackIterator {
+            inner: self,
+            pos: 0,
+        }
+    }
+}
+
+struct StackIterator<'a> {
+    inner: &'a BitStack,
+    pos: usize,
+}
+
+impl<'a> Iterator for StackIterator<'a> {
+    type Item = bool;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos >= self.inner.len() {
+            assert_eq!(self.pos, self.inner.len());
+            return None;
+        }
+
+        let ret = self.inner.get(self.pos);
+
+        self.pos += 1;
+
+        Some(ret)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -263,5 +381,64 @@ mod test {
         writer.write_vec(&tracked).unwrap();
         writer.align().unwrap();
         assert_eq!(vec![0b0001_1001u8; 1], writer.into_inner().into_inner());
+    }
+
+    #[test]
+    fn vec_push() {
+        let mut v = BitStack::new();
+        for i in 0..100 {
+            v.push(i % 2 == 0);
+        }
+    }
+
+    #[test]
+    fn vec_push_pop() {
+        let mut v = BitStack::new();
+        v.push(true);
+        v.push(false);
+        assert_eq!(2, v.len());
+        assert!(!v.pop().unwrap());
+        assert!(v.pop().unwrap());
+        assert_eq!(0, v.len());
+
+        v = eight_bits();
+        assert!(v.pop().unwrap());
+        assert!(v.pop().unwrap());
+        assert!(v.pop().unwrap());
+        assert!(!v.pop().unwrap());
+        assert!(v.pop().unwrap());
+        assert!(!v.pop().unwrap());
+        assert!(!v.pop().unwrap());
+        assert!(v.pop().unwrap());
+        assert!(v.pop().is_none());
+    }
+
+    #[test]
+    fn vec_pop_byte() {
+        let mut v = eight_bits();
+
+        let by = v.pop_byte().unwrap();
+        assert_eq!(0b1110_1001, by);
+        assert_eq!(0, v.len());
+    }
+
+    #[test]
+    fn vec_iter() {
+        let arr: Vec<bool> = eight_bits().iter().collect();
+        assert_eq!(vec![true, false, false, true, false, true, true, true], arr);
+    }
+
+    fn eight_bits() -> BitStack {
+        let mut v = BitStack::new();
+        v.push(true);
+        v.push(false);
+        v.push(false);
+        v.push(true);
+        v.push(false);
+        v.push(true);
+        v.push(true);
+        v.push(true);
+
+        v
     }
 }

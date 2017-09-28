@@ -15,6 +15,7 @@ use std::io::Write;
 mod bit;
 mod circles;
 mod code_tree;
+mod encode;
 mod errors;
 mod filter;
 pub mod gzip;
@@ -27,6 +28,7 @@ use bit::BitWriter;
 
 pub use huffman::SeenDistanceSymbols;
 pub use parse::parse_deflate;
+pub use encode::decompress_block;
 
 use circles::CircularBuffer;
 pub use errors::*;
@@ -367,8 +369,6 @@ mod tests {
 
         let mut recompressed = Cursor::new(vec![]);
         let result = reconstruct(&mut decompressed, &mut recompressed, &spec);
-
-        let reco = &recompressed.into_inner();
 
         result.expect("success");
     }

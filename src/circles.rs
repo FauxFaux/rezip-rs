@@ -22,7 +22,17 @@ impl CircularBuffer {
         self.idx = (self.idx + 1) % self.data.len();
     }
 
+    pub fn extend(&mut self, val: &[u8]) {
+        // TODO: optimise
+
+        for byte in val {
+            self.append(*byte);
+        }
+    }
+
     pub fn copy<W: Write>(&mut self, dist: u16, len: u16, mut into: W) -> Result<()> {
+        // TODO: optimise
+
         ensure!(
             dist > 0 && dist as usize <= self.data.len(),
             "dist must fit"

@@ -375,6 +375,12 @@ impl<R: Read> BitSource for BitReader<R> {
     }
 }
 
+impl<'a> BitSource for StackIterator<'a> {
+    fn read_bit(&mut self) -> Result<bool> {
+        Ok(self.next().expect("TODO: EOF"))
+    }
+}
+
 pub struct BitCollector<'a, B: BitSource + 'a> {
     inner: &'a mut B,
     data: BitVec,

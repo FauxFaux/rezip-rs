@@ -14,10 +14,7 @@ fn run() -> Result<()> {
     let input = env::args().nth(1).ok_or("first argument: input-path.gz")?;
     let mut reader = io::BufReader::new(fs::File::open(input)?);
     librezip::gzip::discard_header(&mut reader)?;
-    for (id, block) in librezip::parse_deflate(&mut reader)
-        .into_iter()
-        .enumerate()
-    {
+    for (id, block) in librezip::parse_deflate(&mut reader).into_iter().enumerate() {
         let block = block?;
 
         println!("block {}:", id);

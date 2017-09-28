@@ -370,16 +370,6 @@ mod tests {
 
         let reco = &recompressed.into_inner();
 
-        println!("Orig:");
-        BitVec::from_slice(orig).pretty_print();
-
-        println!("\n\n\nReco:");
-        BitVec::from_slice(reco).pretty_print();
-
-        File::create("a").expect("create").write_all(reco).expect(
-            "write",
-        );
-
         result.expect("success");
     }
 

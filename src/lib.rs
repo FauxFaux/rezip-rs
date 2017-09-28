@@ -15,12 +15,12 @@ use std::io::Write;
 mod bit;
 mod circles;
 mod code_tree;
-mod encode;
 mod errors;
 mod filter;
 pub mod gzip;
 mod huffman;
 pub mod parse;
+mod serialise;
 
 use bit::BitReader;
 use bit::BitVec;
@@ -28,7 +28,7 @@ use bit::BitWriter;
 
 pub use huffman::SeenDistanceSymbols;
 pub use parse::parse_deflate;
-pub use encode::decompress_block;
+pub use serialise::decompress_block;
 
 use circles::CircularBuffer;
 pub use errors::*;

@@ -64,7 +64,7 @@ impl CodeTree {
     }
 
     pub fn invert(&self) -> Vec<Option<BitVec>> {
-        let mut into = vec![None; 286];
+        let mut into = vec![None; 288];
 
         store_code(&mut into, plus_bit(&BitVec::new(), false), &self.left);
         store_code(&mut into, plus_bit(&BitVec::new(), true), &self.right);

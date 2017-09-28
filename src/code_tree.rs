@@ -64,7 +64,7 @@ impl CodeTree {
     }
 
     pub fn invert(&self) -> Vec<Option<BitVec>> {
-        let mut into = vec![None; 257];
+        let mut into = vec![None; 286];
 
         store_code(&mut into, plus_bit(&BitVec::new(), false), &self.left);
         store_code(&mut into, plus_bit(&BitVec::new(), true), &self.right);
@@ -113,11 +113,10 @@ fn fmt(into: &mut fmt::Formatter, prefix: &str, node: &Node) -> fmt::Result {
 
 fn store_code(into: &mut Vec<Option<BitVec>>, prefix: BitVec, node: &Node) {
     match *node {
-        Node::Leaf(sym) if sym <= 256 => {
+        Node::Leaf(sym) => {
             assert!(into[sym as usize].is_none(), "duplicate code in tree");
             into[sym as usize] = Some(prefix);
         }
-        Node::Leaf(_) => {} // ignoring distance codes
         Node::Internal(ref left, ref right) => {
             store_code(into, plus_bit(&prefix, false), left);
             store_code(into, plus_bit(&prefix, true), right);

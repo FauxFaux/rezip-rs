@@ -144,13 +144,26 @@ mod tests {
     #[test]
     fn decompress() {
         let mut into = Cursor::new(vec![]);
+        let mut reco = BitWriter::new(Cursor::new(vec![]));
+
         let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
         let raw = Cursor::new(
             &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[37..],
         );
-        for block in parse::parse_deflate(raw) {
-            decompressed_block(&mut into, &mut dictionary, &block.unwrap()).unwrap();
+        let mut it = parse::parse_deflate(raw).peekable();
+        loop {
+            let block = match it.next() {
+                Some(block) => block.unwrap(),
+                None => break,
+            };
+
+            let last = it.peek().is_none();
+
+            decompressed_block(&mut into, &mut dictionary, &block).unwrap();
+            reco.write_bit(last).unwrap();
+            compressed_block(&mut reco, &block).unwrap();
         }
+        reco.align().unwrap();
 
         assert_eq!(20480, into.into_inner().len());
     }

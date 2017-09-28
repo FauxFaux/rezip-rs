@@ -1,11 +1,10 @@
 use std;
 use std::fmt;
-use std::io::Read;
 
 use itertools::Itertools;
 
+use bit::BitSource;
 use bit::BitVec;
-use bit::BitReader;
 use errors::*;
 
 pub struct CodeTree {
@@ -60,7 +59,7 @@ impl CodeTree {
         }
     }
 
-    pub fn decode_symbol<R: Read>(&self, reader: &mut BitReader<R>) -> Result<u32> {
+    pub fn decode_symbol<B: BitSource>(&self, reader: &mut B) -> Result<u32> {
         decode_symbol_impl(reader, &self.left, &self.right)
     }
 
@@ -74,8 +73,8 @@ impl CodeTree {
     }
 }
 
-fn decode_symbol_impl<R: Read>(
-    reader: &mut BitReader<R>,
+fn decode_symbol_impl<B: BitSource>(
+    reader: &mut B,
     left: &Node,
     right: &Node,
 ) -> Result<u32> {

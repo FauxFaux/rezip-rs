@@ -4,6 +4,7 @@ use std::io::Read;
 use std::io::Write;
 
 use bit::BitReader;
+use bit::BitSource;
 use bit::BitVec;
 use circles::CircularBuffer;
 use code_tree::CodeTree;
@@ -32,7 +33,7 @@ lazy_static! {
         CodeTree::new(&[5u32; 32]).expect("static data is valid");
 }
 
-pub fn read_codes<R: Read>(reader: &mut BitReader<R>) -> Result<(CodeTree, Option<CodeTree>)> {
+pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<CodeTree>)> {
     let num_lit_len_codes = u16::from(reader.read_part(5)?) + 257;
     let num_distance_codes = reader.read_part(5)? + 1;
 

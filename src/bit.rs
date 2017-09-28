@@ -63,16 +63,7 @@ impl<R: Read> BitReader<R> {
     }
 
     pub fn read_part(&mut self, bits: u8) -> Result<u16> {
-        assert!(bits <= 16);
-
-        let mut res = 0u16;
-        for i in 0..bits {
-            if self.read_bit()? {
-                res |= 1 << i;
-            }
-        }
-
-        Ok(res)
+        BitSource::read_part(self, bits)
     }
 
     pub fn read_length_prefixed(&mut self) -> Result<Vec<u8>> {
@@ -358,6 +349,30 @@ impl fmt::Debug for BitVec {
             write!(f, "{}", if bit { "1" } else { "0" })?;
         }
         Ok(())
+    }
+}
+
+pub trait BitSource {
+    fn read_bit(&mut self) -> Result<bool>;
+
+    fn read_part(&mut self, bits: u8) -> Result<u16> {
+        assert!(bits <= 16);
+
+        let mut res = 0u16;
+        for i in 0..bits {
+            if self.read_bit()? {
+                res |= 1 << i;
+            }
+        }
+
+        Ok(res)
+    }
+
+}
+
+impl<R: Read> BitSource for BitReader<R> {
+    fn read_bit(&mut self) -> Result<bool> {
+        self.read_bit()
     }
 }
 

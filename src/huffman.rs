@@ -204,6 +204,32 @@ pub fn read_data<R: Read, W: Write>(
     }
 }
 
+pub fn encode_run_length(length: u16) -> u16 {
+    match length {
+        3...10 => 257 + length - 3,
+        11...18 => 265 + (length - 11) / 2,
+        19...34 => 269 + (length - 19) / 4,
+        35...66 => 273 + (length - 35) / 8,
+        67...130 => 277 + (length - 67) / 16,
+        131...257 => 281 + (length - 131) / 32,
+        258 => 285,
+        _ => panic!("insane run length"),
+    }
+}
+
+pub fn extra_run_length(length: u16) -> Option<(u8, u16)> {
+    match length {
+        3...10 => None,
+        11...18 => Some((1, (length - 11) % 2)),
+        19...34 => Some((2, (length - 19) % 4)),
+        35...66 => Some((3, (length - 35) % 8)),
+        67...130 => Some((4, (length - 67) % 16)),
+        131...257 => Some((5, (length - 131) % 32)),
+        258 => None,
+        _ => panic!("insane run length"),
+    }
+}
+
 /// Returns a run length between 3 and 258 inclusive, all other values are invalid.
 pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16> {
     ensure!(sym >= 257 && sym <= 287, "decompressor bug");
@@ -229,6 +255,31 @@ pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result
 
     // sym is 286 or 287
     bail!("reserved symbol: {}", sym);
+}
+
+pub fn encode_distance(distance: u16) -> Option<(u8, u8, u16)> {
+    if distance <= 4 {
+        Some((distance as u8 - 1, 0, 0))
+    } else {
+        let mut extra_bits = 1;
+        let mut code = 4;
+        let mut base = 4;
+
+        while base * 2 < distance {
+            extra_bits += 1;
+            code += 2;
+            base *= 2;
+        }
+
+        let half = base / 2;
+        let delta = distance - base - 1;
+
+        if distance <= base + half {
+            Some((code, extra_bits, delta % half))
+        } else {
+            Some((code + 1, extra_bits, delta % half))
+        }
+    }
 }
 
 pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16> {

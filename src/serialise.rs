@@ -88,6 +88,7 @@ fn compressed_codes<W: Write>(
     codes: &[Code],
 ) -> Result<()> {
     let length_tree = length_tree.invert();
+    let distance_tree = distance_tree.map(|tree| tree.invert());
 
     assert!(length_tree.len() > 256);
 
@@ -101,9 +102,29 @@ fn compressed_codes<W: Write>(
                 )?)?;
             }
             Reference { dist, run_minus_3 } => {
-                let distance_tree = distance_tree.ok_or("reference but not distance tree")?;
                 let run = u16::from(run_minus_3) + 3;
-                unimplemented!();
+
+                into.write_vec(
+                    length_tree[huffman::encode_run_length(run) as usize]
+                        .as_ref()
+                        .unwrap(),
+                )?;
+
+                if let Some((bits, val)) = huffman::extra_run_length(run) {
+                    into.write_bits_val(bits, val)?;
+                }
+
+                if let Some((code, bits, val)) = huffman::encode_distance(dist) {
+                    let distance_tree = distance_tree.as_ref().ok_or(
+                        "reference but not distance tree",
+                    )?;
+                    into.write_vec(
+                        distance_tree[code as usize].as_ref().unwrap(),
+                    )?;
+                    if bits > 0 {
+                        into.write_bits_val(bits, val)?;
+                    }
+                }
             }
         }
     }

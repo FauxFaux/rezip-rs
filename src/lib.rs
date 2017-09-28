@@ -20,7 +20,7 @@ mod filter;
 pub mod gzip;
 mod huffman;
 pub mod parse;
-mod serialise;
+pub mod serialise;
 
 use bit::BitReader;
 use bit::BitVec;

@@ -73,11 +73,7 @@ impl CodeTree {
     }
 }
 
-fn decode_symbol_impl<B: BitSource>(
-    reader: &mut B,
-    left: &Node,
-    right: &Node,
-) -> Result<u32> {
+fn decode_symbol_impl<B: BitSource>(reader: &mut B, left: &Node, right: &Node) -> Result<u32> {
     use self::Node::*;
 
     match *if reader.read_bit()? { right } else { left } {

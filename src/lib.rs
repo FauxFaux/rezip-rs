@@ -17,18 +17,20 @@ mod circles;
 mod code_tree;
 mod errors;
 mod filter;
-mod gzip;
+pub mod gzip;
 mod huffman;
-mod parse;
+pub mod parse;
 
 use bit::BitReader;
 use bit::BitVec;
 use bit::BitWriter;
 
 pub use huffman::SeenDistanceSymbols;
+pub use parse::parse_deflate;
 
 use circles::CircularBuffer;
-use errors::*;
+pub use errors::*;
+
 
 #[derive(Debug)]
 pub struct Instructions {

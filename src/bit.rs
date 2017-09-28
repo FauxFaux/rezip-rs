@@ -367,12 +367,37 @@ pub trait BitSource {
 
         Ok(res)
     }
-
 }
 
 impl<R: Read> BitSource for BitReader<R> {
     fn read_bit(&mut self) -> Result<bool> {
         self.read_bit()
+    }
+}
+
+pub struct BitCollector<'a, B: BitSource + 'a> {
+    inner: &'a mut B,
+    data: BitVec,
+}
+
+impl<'a, B: BitSource> BitCollector<'a, B> {
+    pub fn new(inner: &'a mut B) -> Self {
+        BitCollector {
+            inner,
+            data: BitVec::new(),
+        }
+    }
+
+    pub fn into_data(self) -> BitVec {
+        self.data
+    }
+}
+
+impl<'a, B: BitSource> BitSource for BitCollector<'a, B> {
+    fn read_bit(&mut self) -> Result<bool> {
+        let bit = self.inner.read_bit()?;
+        self.data.push(bit);
+        Ok(bit)
     }
 }
 

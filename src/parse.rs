@@ -1,5 +1,6 @@
 use std::io::Read;
 
+use bit::BitCollector;
 use bit::BitReader;
 use bit::BitVec;
 use code_tree::CodeTree;
@@ -16,16 +17,17 @@ pub enum Code {
 pub enum Block {
     Uncompressed(Vec<u8>),
     FixedHuffman(Vec<Code>),
-    DynamicHuffman { trees: BitVec, items: Vec<Code> },
+    DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
-pub fn parse_deflate<R: Read>(reader: &mut BitReader<R>) -> Result<Vec<Block>> {
+pub fn parse_deflate<R: Read>(bytes: R) -> Result<Vec<Block>> {
+    let mut reader = BitReader::new(bytes);
 
     let mut blocks = Vec::new();
 
     loop {
         let last_block = reader.read_bit()?;
-        blocks.push(read_block(reader)?);
+        blocks.push(read_block(&mut reader)?);
 
         if last_block {
             reader.align()?;
@@ -52,11 +54,14 @@ fn read_block<R: Read>(reader: &mut BitReader<R>) -> Result<Block> {
             ).map(|data| Block::FixedHuffman(data))
         }
         2 => {
-            reader.tracking_start();
-            let (length, distance) = huffman::read_codes(reader)?;
-            let trees = reader.tracking_finish();
+            // scope-based borrow sigh
+            let ((length, distance), trees) = {
+                let mut tracker = BitCollector::new(reader);
+                (huffman::read_codes(&mut tracker)?, tracker.into_data())
+            };
+
             scan_huffman_data(reader, &length, distance.as_ref()).map(
-                |items| Block::DynamicHuffman { trees, items },
+                |codes| Block::DynamicHuffman { trees, codes },
             )
         }
         3 => bail!("reserved block type"),

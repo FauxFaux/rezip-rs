@@ -1,5 +1,3 @@
-extern crate bit_vec;
-
 #[macro_use]
 extern crate error_chain;
 
@@ -14,8 +12,6 @@ use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
 
-use bit_vec::BitVec;
-
 mod bit;
 mod circles;
 mod code_tree;
@@ -25,6 +21,7 @@ mod gzip;
 mod huffman;
 
 use bit::BitReader;
+use bit::BitVec;
 use bit::BitWriter;
 
 pub use huffman::SeenDistanceSymbols;

@@ -3,9 +3,8 @@ use std::fmt;
 use std::io::Read;
 use std::io::Write;
 
-use bit_vec::BitVec;
-
 use bit::BitReader;
+use bit::BitVec;
 use circles::CircularBuffer;
 use code_tree::CodeTree;
 use errors::*;

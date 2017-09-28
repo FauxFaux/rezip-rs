@@ -1,10 +1,7 @@
 use std;
 use std::io::Read;
 use std::io::Write;
-
 use std::ops::BitOrAssign;
-
-use bit_vec::BitVec;
 
 use errors::*;
 
@@ -136,17 +133,7 @@ impl<W: Write> BitWriter<W> {
         if self.current.len() >= 8 {
             assert_eq!(8, self.current.len());
 
-            // TODO: this BitVec isn't really dragging its weight
-
-            let mut val = 0u8;
-            for (pos, bit) in self.current.iter().enumerate() {
-                if bit {
-                    val |= (1 << pos);
-                }
-            }
-
-            self.inner.write_all(&[val])?;
-            self.current.truncate(0);
+            self.inner.write_all(&[self.current.pop_byte().unwrap()])?;
         }
         Ok(())
     }
@@ -166,7 +153,7 @@ impl<W: Write> BitWriter<W> {
     }
 
     pub fn write_vec(&mut self, vec: &BitVec) -> Result<()> {
-        for bit in vec {
+        for bit in vec.iter() {
             self.write_bit(bit)?;
         }
         Ok(())
@@ -213,14 +200,15 @@ pub fn vec_to_bytes(vec: &BitVec) -> Vec<u8> {
 
 const WORD_SIZE: usize = 8;
 
-pub struct BitStack {
+#[derive(Debug, Clone)] // TODO: Debug is useless
+pub struct BitVec {
     bytes: Vec<u8>,
     len: usize,
 }
 
-impl BitStack {
+impl BitVec {
     pub fn new() -> Self {
-        BitStack {
+        BitVec {
             bytes: Vec::new(),
             len: 0,
         }
@@ -305,8 +293,8 @@ impl BitStack {
     }
 }
 
-struct StackIterator<'a> {
-    inner: &'a BitStack,
+pub struct StackIterator<'a> {
+    inner: &'a BitVec,
     pos: usize,
 }
 
@@ -385,7 +373,7 @@ mod test {
 
     #[test]
     fn vec_push() {
-        let mut v = BitStack::new();
+        let mut v = BitVec::new();
         for i in 0..100 {
             v.push(i % 2 == 0);
         }
@@ -393,7 +381,7 @@ mod test {
 
     #[test]
     fn vec_push_pop() {
-        let mut v = BitStack::new();
+        let mut v = BitVec::new();
         v.push(true);
         v.push(false);
         assert_eq!(2, v.len());
@@ -428,8 +416,8 @@ mod test {
         assert_eq!(vec![true, false, false, true, false, true, true, true], arr);
     }
 
-    fn eight_bits() -> BitStack {
-        let mut v = BitStack::new();
+    fn eight_bits() -> BitVec {
+        let mut v = BitVec::new();
         v.push(true);
         v.push(false);
         v.push(false);

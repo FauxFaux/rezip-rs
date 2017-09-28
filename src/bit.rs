@@ -215,6 +215,13 @@ impl BitVec {
         }
     }
 
+    pub fn from_slice(bytes: &[u8]) -> Self {
+        BitVec {
+            bytes: bytes.to_vec(),
+            len: bytes.len() * WORD_SIZE,
+        }
+    }
+
     pub fn push(&mut self, val: bool) {
         let word = self.len / WORD_SIZE;
         let bit = self.len % WORD_SIZE;
@@ -291,6 +298,30 @@ impl BitVec {
         StackIterator {
             inner: self,
             pos: 0,
+        }
+    }
+
+    pub fn pretty_print(&self) {
+        let mut it = self.iter();
+        loop {
+            let mut line = String::with_capacity(8);
+            loop {
+                match it.next() {
+                    Some(bit) => line.push(if bit { '1' } else { '0' }),
+                    None => break,
+                }
+
+                if line.len() == 8 {
+                    break;
+                }
+            }
+
+            if line.is_empty() {
+                break;
+            }
+
+            println!("{}", line);
+
         }
     }
 }

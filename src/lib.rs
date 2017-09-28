@@ -308,6 +308,7 @@ mod tests {
     use std::fs::File;
     use std::io::Cursor;
     use std::io::Write;
+    use bit::BitVec;
     use ::*;
 
     #[test]
@@ -362,9 +363,17 @@ mod tests {
         let mut recompressed = Cursor::new(vec![]);
         let result = reconstruct(&mut decompressed, &mut recompressed, &spec);
 
+        let reco = &recompressed.into_inner();
+
+        println!("Orig:");
+        BitVec::from_slice(orig).pretty_print();
+
+        println!("\n\n\nReco:");
+        BitVec::from_slice(reco).pretty_print();
+
         File::create("a")
             .expect("create")
-            .write_all(&recompressed.into_inner())
+            .write_all(reco)
             .expect("write");
 
         result.expect("success");

@@ -88,7 +88,7 @@ pub fn deconstruct<R: Read, W: Write>(from: R, into: W) -> Result<Processed> {
     })
 }
 
-pub fn reconstruct<R: Read, W: Write>(from: R, into: W, spec: Processed) -> Result<()> {
+pub fn reconstruct<R: Read, W: Write>(from: R, into: W, spec: &Processed) -> Result<()> {
     let mut from = filter::FilterRead::new(from);
     let mut into = filter::FilterWrite::new(into);
 
@@ -360,7 +360,7 @@ mod tests {
         decompressed.set_position(0);
 
         let mut recompressed = Cursor::new(vec![]);
-        let result = reconstruct(&mut decompressed, &mut recompressed, spec);
+        let result = reconstruct(&mut decompressed, &mut recompressed, &spec);
 
         File::create("a")
             .expect("create")

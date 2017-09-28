@@ -147,7 +147,7 @@ impl<W: Write> BitWriter<W> {
     }
 
     pub fn align(&mut self) -> Result<()> {
-        while 0 != self.current.len() {
+        while !self.current.is_empty() {
             self.write_bit(false)?;
         }
         Ok(())
@@ -227,7 +227,7 @@ impl BitVec {
         }
 
         if val {
-            let word = self.bytes.get_mut(word).unwrap();
+            let word = &mut self.bytes[word];
             word.bitor_assign(1 << (bit));
         }
     }

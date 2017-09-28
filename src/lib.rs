@@ -201,7 +201,7 @@ fn read_uncompressed<R: Read, W: Write>(
 }
 
 fn write_block<R: Read, W: Write>(
-    mut reader: R,
+    reader: R,
     writer: &mut BitWriter<W>,
     dictionary: &mut CircularBuffer,
     block: &Instructions,

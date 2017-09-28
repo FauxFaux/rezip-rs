@@ -184,7 +184,7 @@ pub fn vec_to_bytes(vec: &BitVec) -> Vec<u8> {
             match it.next() {
                 Some(bit) => {
                     if bit {
-                        val |= (1 << i);
+                        val |= 1 << i;
                     }
                 }
                 None => {
@@ -257,6 +257,7 @@ impl BitVec {
         Some(answer)
     }
 
+    #[allow(unused)]
     fn bytes(&self) -> &Vec<u8> {
         &self.bytes
     }

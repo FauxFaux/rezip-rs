@@ -158,8 +158,12 @@ pub fn read_data<R: Read, W: Write>(
     let mut literals = 0usize;
 
     loop {
+        reader.tracking_start();
+
         let sym = length.decode_symbol(reader)?;
         if sym == 256 {
+            reader.tracking_abort();
+
             // end of block
             return Ok(SeenDistanceSymbols {
                 stream: distance_symbols,
@@ -172,10 +176,10 @@ pub fn read_data<R: Read, W: Write>(
             output.write_all(&[sym as u8])?;
             dictionary.append(sym as u8);
             literals += 1;
+
+            reader.tracking_abort();
             continue;
         }
-
-        reader.tracking_start();
 
         // length and distance encoding
         let run = decode_run_length(reader, sym)?;

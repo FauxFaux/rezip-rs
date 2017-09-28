@@ -343,15 +343,20 @@ mod tests {
     }
 
     #[test]
-    fn like_love_round_trip() {
+    fn lol_round_trip() {
         // fixed huffman, no backreferences
+        round_trip(&include_bytes!("../tests/data/lol.gz")[..]);
+    }
+
+    #[test]
+    fn like_love_round_trip() {
+        // single true backreference in the middle, fixed huffman
         round_trip(&include_bytes!("../tests/data/like-love.gz")[..]);
     }
 
     #[test]
-    fn chicken_liver_round_trip() {
-        // single true backreference in the middle, fixed huffman
-        round_trip(&include_bytes!("../tests/data/chicken-liver.gz")[..]);
+    fn simple_backreference_round_trip() {
+        round_trip(&include_bytes!("../tests/data/abcdef-bcdefg.gz")[..]);
     }
 
     fn round_trip(orig: &[u8]) {
@@ -371,10 +376,9 @@ mod tests {
         println!("\n\n\nReco:");
         BitVec::from_slice(reco).pretty_print();
 
-        File::create("a")
-            .expect("create")
-            .write_all(reco)
-            .expect("write");
+        File::create("a").expect("create").write_all(reco).expect(
+            "write",
+        );
 
         result.expect("success");
     }

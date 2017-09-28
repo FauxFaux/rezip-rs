@@ -103,6 +103,10 @@ impl<R: Read> BitReader<R> {
         std::mem::replace(&mut self.track, None).expect("tracking wasn't started")
     }
 
+    pub fn tracking_abort(&mut self) {
+        self.track = None;
+    }
+
     fn read_aligned_u16(&mut self) -> Result<u16> {
         assert_eq!(0, self.position());
         assert!(self.track.is_none());
@@ -321,7 +325,6 @@ impl BitVec {
             }
 
             println!("{}", line);
-
         }
     }
 }

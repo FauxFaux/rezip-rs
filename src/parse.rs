@@ -42,16 +42,14 @@ fn read_block<R: Read>(reader: &mut BitReader<R>) -> Result<Block> {
     match reader.read_part(2)? {
         0 => {
             reader.align()?;
-            reader.read_length_prefixed().map(|data| {
-                Block::Uncompressed(data)
-            })
+            reader.read_length_prefixed().map(Block::Uncompressed)
         }
         1 => {
             scan_huffman_data(
                 reader,
                 &huffman::FIXED_LENGTH_TREE,
                 Some(&huffman::FIXED_DISTANCE_TREE),
-            ).map(|data| Block::FixedHuffman(data))
+            ).map(Block::FixedHuffman)
         }
         2 => {
             // scope-based borrow sigh

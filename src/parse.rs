@@ -28,6 +28,7 @@ pub fn parse_deflate<R: Read>(reader: &mut BitReader<R>) -> Result<Vec<Block>> {
         blocks.push(read_block(reader)?);
 
         if last_block {
+            reader.align()?;
             break;
         }
     }

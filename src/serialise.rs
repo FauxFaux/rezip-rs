@@ -1,3 +1,4 @@
+use std;
 use std::io::Write;
 
 use bit::BitVec;
@@ -49,6 +50,41 @@ pub fn decompressed_codes<W: Write>(
     }
 
     Ok(())
+}
+
+struct DecompressedBytes<C> {
+    cap: usize,
+    dictionary: CircularBuffer,
+    codes: C,
+}
+
+impl<C> Iterator for DecompressedBytes<C>
+    where
+        C: Iterator<Item=Code> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if 0 == self.cap {
+            use self::Code::*;
+
+            self.cap += match self.codes.next() {
+                Some(Literal(byte)) => {
+                    self.dictionary.append(byte);
+                    1
+                }
+                Some(Reference { dist, run_minus_3 }) => {
+                    let run = u16::from(run_minus_3) + 3;
+                    self.dictionary.copy(dist, run, NullWriter {}).expect("run (<258) < 32kb");
+                    run as usize
+                }
+                None => return None
+            };
+        }
+
+        assert!(self.cap < (std::u16::MAX as usize));
+        Some(self.dictionary.get_at_dist(self.cap as u16))
+
+    }
 }
 
 
@@ -153,6 +189,24 @@ fn encode_distance<W: Write>(
     }
 
     Ok(())
+}
+
+use std::io;
+
+struct NullWriter {}
+
+impl Write for NullWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+
+    fn write_all(&mut self, _: &[u8]) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::mem;
 
 use circles::CircularBuffer;
 use errors::*;
@@ -128,6 +129,51 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
     Ok(())
 }
 
+/// Unlike Peekable, this is not lazy.
+struct ThreePeek<I: Iterator> {
+    inner: I,
+    second: Option<I::Item>,
+    third: Option<I::Item>,
+}
+
+impl<I: Iterator> Iterator for ThreePeek<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        mem::replace(
+            &mut self.second,
+            mem::replace(&mut self.third, self.inner.next()),
+        )
+    }
+}
+
+impl<I: Iterator> ThreePeek<I>
+where
+    I::Item: Copy,
+{
+    fn new(mut inner: I) -> Self {
+        let second = inner.next();
+        let third = inner.next();
+        ThreePeek {
+            inner,
+            second,
+            third,
+        }
+    }
+
+    fn next_three(&mut self) -> Option<(I::Item, I::Item, I::Item)> {
+        if let Some(first) = self.second {
+            if let Some(second) = self.third {
+                self.next().unwrap();
+                if let Some(third) = self.third {
+                    return Some((first, second, third));
+                }
+            }
+        }
+
+        return None;
+    }
+}
 
 fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
     window_size: u16,
@@ -349,6 +395,19 @@ mod tests {
             L(b'i'),
         ];
         assert_eq!(exp, single_block_mem(32, exp).as_slice());
+    }
+
+    #[test]
+    fn three() {
+        let a: Vec<u8> = (0..7).collect();
+        let mut it = ThreePeek::new(a.into_iter());
+        assert_eq!(Some(0), it.next());
+        assert_eq!(Some((1, 2, 3)), it.next_three());
+        assert_eq!(Some((2)), it.next());
+        assert_eq!(Some((3)), it.next());
+        assert_eq!(Some((4, 5, 6)), it.next_three());
+        assert_eq!(None, it.next_three());
+        assert_eq!(Some((5)), it.next());
     }
 }
 

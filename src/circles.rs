@@ -54,7 +54,9 @@ impl CircularBuffer {
 
     pub fn get_at_dist(&self, dist: u16) -> u8 {
         assert!((dist as usize) < self.data.len());
-        self.data[self.idx.wrapping_sub(dist as usize).wrapping_add(self.data.len()) % self.data.len()]
+        self.data[self.idx.wrapping_sub(dist as usize).wrapping_add(
+            self.data.len(),
+        ) % self.data.len()]
     }
 
     pub fn find_run(&self, run: &[u8]) -> Result<usize> {

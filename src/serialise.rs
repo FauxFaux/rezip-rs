@@ -52,15 +52,29 @@ pub fn decompressed_codes<W: Write>(
     Ok(())
 }
 
-struct DecompressedBytes<C> {
+pub struct DecompressedBytes<C> {
     cap: usize,
     dictionary: CircularBuffer,
     codes: C,
 }
 
-impl<C> Iterator for DecompressedBytes<C>
-    where
-        C: Iterator<Item=Code> {
+impl<'a, C> DecompressedBytes<C>
+where
+    C: Iterator<Item = &'a Code>,
+{
+    pub fn new(codes: C) -> Self {
+        DecompressedBytes {
+            cap: 0,
+            dictionary: CircularBuffer::with_capacity(256 + 3 + 1),
+            codes,
+        }
+    }
+}
+
+impl<'a, C> Iterator for DecompressedBytes<C>
+where
+    C: Iterator<Item = &'a Code>,
+{
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -68,22 +82,29 @@ impl<C> Iterator for DecompressedBytes<C>
             use self::Code::*;
 
             self.cap += match self.codes.next() {
-                Some(Literal(byte)) => {
+                Some(&Literal(byte)) => {
                     self.dictionary.append(byte);
                     1
                 }
-                Some(Reference { dist, run_minus_3 }) => {
+                Some(&Reference { dist, run_minus_3 }) => {
                     let run = u16::from(run_minus_3) + 3;
-                    self.dictionary.copy(dist, run, NullWriter {}).expect("run (<258) < 32kb");
+                    self.dictionary.copy(dist, run, NullWriter {}).expect(
+                        "run (<258) < 32kb",
+                    );
                     run as usize
                 }
-                None => return None
+                None => return None,
             };
         }
 
         assert!(self.cap < (std::u16::MAX as usize));
         Some(self.dictionary.get_at_dist(self.cap as u16))
 
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (lower, upper) = self.codes.size_hint();
+        (lower, upper.and_then(|val| val.checked_mul(258)))
     }
 }
 

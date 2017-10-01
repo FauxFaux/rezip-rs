@@ -8,6 +8,8 @@ extern crate lazy_static;
 
 extern crate sha2;
 
+use std::fmt;
+
 mod bit;
 mod circles;
 mod code_tree;
@@ -27,7 +29,7 @@ pub use serialise::compressed_block;
 pub use serialise::decompressed_block;
 
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub enum Code {
     Literal(u8),
     Reference { dist: u16, run_minus_3: u8 },
@@ -38,6 +40,17 @@ pub enum Block {
     Uncompressed(Vec<u8>),
     FixedHuffman(Vec<Code>),
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
+}
+
+impl fmt::Debug for Code {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Code::Literal(byte) => write!(f, "L(0x{:02x} {:?})", byte, byte as char),
+            Code::Reference { dist, run_minus_3 } => {
+                write!(f, "R(-{}, {})", dist, u16::from(run_minus_3) + 3)
+            }
+        }
+    }
 }
 
 #[cfg(test)]

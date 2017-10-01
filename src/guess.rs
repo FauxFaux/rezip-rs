@@ -33,6 +33,20 @@ fn outside_range(codes: &[Code]) -> bool {
     })
 }
 
+fn single_block_mem(window_size: u16, codes: &[Code]) -> Vec<Code> {
+    let mut ret = Vec::with_capacity(codes.len());
+    single_block_encode_helper(
+        window_size,
+        serialise::DecompressedBytes::new(codes.iter()),
+        |code| {
+            ret.push(code);
+            Ok(())
+        },
+    ).expect("fails only if closure fails");
+
+    ret
+}
+
 fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
     let mut expected = codes.iter();
 
@@ -316,25 +330,23 @@ mod tests {
     fn find_single_lits() {
         use Code::Literal as L;
         use Code::Reference as R;
-        single_block_encode(
-            32,
-            &[
-                L(b'a'),
-                L(b'b'),
-                L(b'c'),
-                L(b'd'),
-                L(b'e'),
-                L(b'f'),
-                L(b' '),
-                R {
-                    dist: 6,
-                    run_minus_3: 2,
-                },
-                L(b'g'),
-                L(b'h'),
-                L(b'i'),
-            ],
-        ).unwrap()
+        let exp = &[
+            L(b'a'),
+            L(b'b'),
+            L(b'c'),
+            L(b'd'),
+            L(b'e'),
+            L(b'f'),
+            L(b' '),
+            R {
+                dist: 6,
+                run_minus_3: 2,
+            },
+            L(b'g'),
+            L(b'h'),
+            L(b'i'),
+        ];
+        assert_eq!(exp, single_block_mem(32, exp).as_slice());
     }
 }
 

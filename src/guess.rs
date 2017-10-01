@@ -37,67 +37,81 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
     let mut expected = codes.iter();
 
     use Code::*;
+    let mut seen = 0usize;
 
     single_block_encode_helper(
         window_size,
         serialise::DecompressedBytes::new(codes.iter()),
-        |code| match expected.next() {
-            Some(&Literal(expected_byte)) => {
-                match code {
-                    Literal(byte) => {
-                        ensure!(
-                            expected_byte == byte,
-                            "emitted the wrong literal, 0x{:02x} != 0x{:02x} ({:?} != {:?})",
-                            expected_byte,
-                            byte,
-                            expected_byte as char,
-                            byte as char,
-                        );
-                        Ok(())
-                    }
-                    Reference { dist, run_minus_3 } => {
-                        let run = u16::from(run_minus_3) + 3;
-                        bail!(
-                            "we found a run ({}, {}) that the original encoder missed",
-                            dist,
-                            run
-                        )
+        |code| {
+            seen += 1;
+
+            match expected.next() {
+                Some(&Literal(expected_byte)) => {
+                    match code {
+                        Literal(byte) => {
+                            ensure!(
+                                expected_byte == byte,
+                                "emitted the wrong literal, 0x{:02x} != 0x{:02x} ({:?} != {:?})",
+                                expected_byte,
+                                byte,
+                                expected_byte as char,
+                                byte as char,
+                            );
+                            Ok(())
+                        }
+                        Reference { dist, run_minus_3 } => {
+                            let run = u16::from(run_minus_3) + 3;
+                            bail!(
+                                "we found a run ({}, {}) that the original encoder missed",
+                                dist,
+                                run
+                            )
+                        }
                     }
                 }
-            }
-            Some(&Reference {
-                     dist: expected_dist,
-                     run_minus_3,
-                 }) => {
-                let expected_run = u16::from(run_minus_3) + 3;
+                Some(&Reference {
+                         dist: expected_dist,
+                         run_minus_3,
+                     }) => {
+                    let expected_run = u16::from(run_minus_3) + 3;
 
-                match code {
-                    Literal(byte) => {
-                        bail!(
-                            "we failed to spot the ({}, {}) backreference, wrote a 0x{:02x} literal instead",
-                            expected_dist,
-                            expected_run,
-                            byte
-                        )
-                    }
-                    Reference { dist, run_minus_3 } => {
-                        let run = u16::from(run_minus_3) + 3;
-                        if expected_dist != dist || expected_run != run {
+                    match code {
+                        Literal(byte) => {
                             bail!(
-                                "we found a different run: ({}, {}) != ({}, {})",
+                                "we failed to spot the ({}, {}) backreference, wrote a 0x{:02x} literal instead",
                                 expected_dist,
                                 expected_run,
-                                dist,
-                                run,
-                            );
+                                byte
+                            )
                         }
-                        Ok(())
+                        Reference { dist, run_minus_3 } => {
+                            let run = u16::from(run_minus_3) + 3;
+                            if expected_dist != dist || expected_run != run {
+                                bail!(
+                                    "we found a different run: ({}, {}) != ({}, {})",
+                                    expected_dist,
+                                    expected_run,
+                                    dist,
+                                    run,
+                                );
+                            }
+                            Ok(())
+                        }
                     }
                 }
+                None => bail!("we emitted a code that isn't supposed to be there"),
             }
-            None => bail!("we emitted a code that isn't supposed to be there"),
         },
-    )
+    )?;
+
+    ensure!(
+        seen == codes.len(),
+        "wrong number of codes were emitted, expected: {} != {}",
+        codes.len(),
+        seen
+    );
+
+    Ok(())
 }
 
 
@@ -132,7 +146,7 @@ where
             emit(Code::Literal(evicted))?;
         }
 
-//        #[cfg(never)]
+        //        #[cfg(never)]
         println!("pos: {}, key: {:?}, map: {:?}", pos, key, map);
 
         // the map tracks pointers to the *end* of where the block is,
@@ -146,7 +160,7 @@ where
             }
         };
 
-//        #[cfg(never)]
+        //        #[cfg(never)]
         println!(
             "think we've found a run, we're at {} and the old was at {}",
             pos,
@@ -172,7 +186,7 @@ where
 
             let &(pos, byte) = coderator.peek().expect("TODO");
 
-//            #[cfg(never)]
+            //            #[cfg(never)]
             println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
 
             if buf.get_at_dist(dist) != byte {
@@ -302,19 +316,25 @@ mod tests {
     fn find_single_lits() {
         use Code::Literal as L;
         use Code::Reference as R;
-        single_block_encode(32, &[
-            L(b'a'),
-            L(b'b'),
-            L(b'c'),
-            L(b'd'),
-            L(b'e'),
-            L(b'f'),
-            L(b' '),
-            R{ dist: 6, run_minus_3: 2 },
-            L(b'g'),
-            L(b'h'),
-            L(b'i'),
-        ]).unwrap()
+        single_block_encode(
+            32,
+            &[
+                L(b'a'),
+                L(b'b'),
+                L(b'c'),
+                L(b'd'),
+                L(b'e'),
+                L(b'f'),
+                L(b' '),
+                R {
+                    dist: 6,
+                    run_minus_3: 2,
+                },
+                L(b'g'),
+                L(b'h'),
+                L(b'i'),
+            ],
+        ).unwrap()
     }
 }
 

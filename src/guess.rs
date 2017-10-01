@@ -257,10 +257,17 @@ fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
                 break;
             }
 
-            let key = coderator.next_three().expect("TODO three failed");
+            match coderator.next_three() {
+                Some(key) => {
+                    buf.append(key.0);
+                    map.insert(key, pos);
+                }
+                None => match coderator.next() {
+                    Some(byte) => buf.append(byte),
+                    None => break,
+                }
+            }
 
-            buf.append(key.0);
-            map.insert(key, pos);
             pos += 1;
 
             run += 1;

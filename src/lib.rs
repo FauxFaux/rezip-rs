@@ -15,7 +15,7 @@ mod circles;
 mod code_tree;
 mod errors;
 pub mod filter;
-mod guess;
+pub mod guess;
 pub mod gzip;
 mod huffman;
 pub mod parse;
@@ -129,7 +129,7 @@ mod tests {
 
                 match block {
                     Block::FixedHuffman(codes) |
-                    Block::DynamicHuffman { codes, .. } => guess::guess_huffman(&codes),
+                    Block::DynamicHuffman { codes, .. } => {},
                     _ => {}
                 }
             }

@@ -65,7 +65,7 @@ where
     pub fn new(codes: C) -> Self {
         DecompressedBytes {
             cap: 0,
-            dictionary: CircularBuffer::with_capacity(256 + 3 + 1),
+            dictionary: CircularBuffer::with_capacity(32 * 1024 + 256 + 3 + 1),
             codes,
         }
     }
@@ -89,7 +89,10 @@ where
                 Some(&Reference { dist, run_minus_3 }) => {
                     let run = u16::from(run_minus_3) + 3;
                     self.dictionary.copy(dist, run, NullWriter {}).expect(
-                        "run (<258) < 32kb",
+                        &format!("dist ({}), run (<258: {}) < 32kb ({})",
+                        dist,
+                        run,
+                        self.dictionary.capacity())
                     );
                     run as usize
                 }

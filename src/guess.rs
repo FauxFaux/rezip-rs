@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt;
 use std::mem;
 
 use circles::CircularBuffer;
@@ -8,11 +7,7 @@ use serialise;
 
 use Code;
 
-pub fn guess_huffman(codes: &[Code]) {
-    println!("{:?}", max_distance(codes))
-}
-
-fn max_distance(codes: &[Code]) -> Option<u16> {
+pub fn max_distance(codes: &[Code]) -> Option<u16> {
     codes
         .iter()
         .flat_map(|code| if let Code::Reference { dist, .. } = *code {
@@ -24,10 +19,10 @@ fn max_distance(codes: &[Code]) -> Option<u16> {
 }
 
 /// checks if any code references before the start of this block
-fn outside_range(codes: &[Code]) -> bool {
+pub fn outside_range(codes: &[Code]) -> bool {
     codes.iter().enumerate().any(|(pos, code)| {
         if let Code::Reference { dist, .. } = *code {
-            dist as usize >= pos // off-by-one?
+            dist as usize > pos // off-by-one?
         } else {
             false
         }
@@ -48,7 +43,7 @@ fn single_block_mem(window_size: u16, codes: &[Code]) -> Vec<Code> {
     ret
 }
 
-fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
+pub fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
     let mut expected = codes.iter();
 
     use Code::*;
@@ -66,7 +61,8 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
                         Literal(byte) => {
                             ensure!(
                                 expected_byte == byte,
-                                "emitted the wrong literal, 0x{:02x} != 0x{:02x} ({:?} != {:?})",
+                                "{}: emitted the wrong literal, 0x{:02x} != 0x{:02x} ({:?} != {:?})",
+                                seen,
                                 expected_byte,
                                 byte,
                                 expected_byte as char,
@@ -77,7 +73,8 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
                         Reference { dist, run_minus_3 } => {
                             let run = u16::from(run_minus_3) + 3;
                             bail!(
-                                "we found a run ({}, {}) that the original encoder missed",
+                                "{}: we found a run ({}, {}) that the original encoder missed",
+                                seen,
                                 dist,
                                 run
                             )
@@ -93,7 +90,8 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
                     match code {
                         Literal(byte) => {
                             bail!(
-                                "we failed to spot the ({}, {}) backreference, wrote a 0x{:02x} literal instead",
+                                "{}: we failed to spot the ({}, {}) backreference, wrote a 0x{:02x} literal instead",
+                                seen,
                                 expected_dist,
                                 expected_run,
                                 byte
@@ -103,7 +101,8 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
                             let run = u16::from(run_minus_3) + 3;
                             if expected_dist != dist || expected_run != run {
                                 bail!(
-                                    "we found a different run: ({}, {}) != ({}, {})",
+                                    "{}: we found a different run: ({}, {}) != ({}, {})",
+                                    seen,
                                     expected_dist,
                                     expected_run,
                                     dist,
@@ -114,7 +113,7 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
                         }
                     }
                 }
-                None => bail!("we emitted a code that isn't supposed to be there"),
+                None => bail!("{}: we emitted a code that isn't supposed to be there", seen),
             }
         },
     )?;
@@ -248,7 +247,10 @@ fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
                 break;
             }
 
-            let byte = coderator.peek().expect("TODO peek failed");
+            let byte = match coderator.peek() {
+                Some(byte) => byte,
+                None => break,
+            };
 
             //            #[cfg(never)]
             println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
@@ -280,76 +282,15 @@ fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
     }
 }
 
-#[derive(Clone, Copy, Default, Eq, Hash, PartialEq)]
-struct Key {
-    vals: [u8; 3],
-}
-
-impl Key {
-    fn push(&mut self, val: u8) -> u8 {
-        let evicted = self.vals[0];
-        self.vals[0] = self.vals[1];
-        self.vals[1] = self.vals[2];
-        self.vals[2] = val;
-        evicted
-    }
-}
-
-impl fmt::Debug for Key {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Key{{ {:?} {:?} {:?} 0x{:02x}{:02x}{:02x}}}",
-            self.vals[0] as char,
-            self.vals[1] as char,
-            self.vals[2] as char,
-            self.vals[0],
-            self.vals[1],
-            self.vals[2],
-        )
-    }
-}
-
-
-#[cfg(never)]
-fn search(window_size: u16, old_data: &[u8], codes: &[Code]) -> Result<Option<(u16, u16)>> {
-
-    let data = {
-        use std::io::Cursor;
-        use std::io::Write;
-
-        let mut data = Cursor::new(Vec::with_capacity(old_data.len() + codes.len()));
-        data.write_all(old_data)?;
-
-        let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
-        serialise::decompressed_codes(&mut data, &mut dictionary, codes)?;
-        data.into_inner()
-    };
-
-    let run_max = 256 + 3;
-
-    let start = old_data.len();
-
-    let mut pos = 0;
-    while start + pos < data.len() {
-        let window = &data[start.saturating_sub(usize_from(window_size))..start + pos];
-        let next_three = window[pos..pos + 3];
-        window.windows(3).filter(|window| next_three == window);
-
-        // this is dumb
-
-        pos += 1;
-    }
-
-    unimplemented!()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
     use parse;
     use Block;
+
+    use Code::Literal as L;
+    use Code::Reference as R;
 
     #[test]
     fn find_single_ref_from_file() {
@@ -363,8 +304,6 @@ mod tests {
 
     #[test]
     fn find_single_lits() {
-        use Code::Literal as L;
-        use Code::Reference as R;
         let exp = &[
             L(b'a'),
             L(b'b'),
@@ -385,6 +324,18 @@ mod tests {
     }
 
     #[test]
+    fn zero_run() {
+        let exp = &[
+            L(b'0'),
+            R {
+                dist: 1,
+                run_minus_3: 10,
+            },
+        ];
+        assert_eq!(exp, single_block_mem(3, exp).as_slice());
+    }
+
+    #[test]
     fn three() {
         let a: Vec<u8> = (0..7).collect();
         let mut it = ThreePeek::new(a.into_iter());
@@ -397,6 +348,13 @@ mod tests {
         assert_eq!(Some(5), it.next());
         assert_eq!(Some(6), it.next());
         assert_eq!(None, it.next());
+    }
+
+    #[test]
+    fn range() {
+        assert!(!outside_range(&[L(5)]));
+        assert!(outside_range(&[R { dist: 1, run_minus_3: 3}]));
+        assert!(!outside_range(&[L(5), R { dist: 1, run_minus_3: 3}]));
     }
 }
 

@@ -17,7 +17,7 @@ impl CircularBuffer {
         }
     }
 
-    pub fn append(&mut self, val: u8) {
+        pub fn append(&mut self, val: u8) {
         self.data[self.idx] = val;
         self.idx = (self.idx + 1) % self.data.len();
     }
@@ -57,6 +57,10 @@ impl CircularBuffer {
         self.data[self.idx.wrapping_sub(dist as usize).wrapping_add(
             self.data.len(),
         ) % self.data.len()]
+    }
+
+    pub fn capacity(&self) -> u16 {
+        self.data.len() as u16
     }
 
     pub fn find_run(&self, run: &[u8]) -> Result<usize> {

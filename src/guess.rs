@@ -143,6 +143,8 @@ where
     let mut key = Key::default();
 
     loop {
+        println!(".");
+
         let (pos, byte) = match coderator.next() {
             Some(x) => x,
             None => return Ok(()),
@@ -227,9 +229,8 @@ where
                 Some(val) => val,
                 None => {
                     // hit the end of the stream, flush the key as literals
-                    for i in 0..(3 - waste) {
-                        key.push(0xff);
-                    }
+
+                    println!("end!");
 
                     for i in 0..waste {
                         emit(Code::Literal(key.push(0xff)))?;
@@ -238,7 +239,8 @@ where
                     return Ok(());
                 }
             };
-            key.push(byte);
+
+            println!("waste: {:?}", key.push(byte) as char);
             buf.append(byte);
             map.insert(key, pos);
         }

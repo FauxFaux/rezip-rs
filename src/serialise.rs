@@ -98,7 +98,9 @@ where
         }
 
         assert!(self.cap < (std::u16::MAX as usize));
-        Some(self.dictionary.get_at_dist(self.cap as u16))
+        let pos = self.cap as u16;
+        self.cap -= 1;
+        Some(self.dictionary.get_at_dist(pos))
 
     }
 

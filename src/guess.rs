@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use circles::CircularBuffer;
 use errors::*;
@@ -50,11 +51,14 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
         key.push(byte);
         buf.append(byte);
 
-        if pos < 3 {
+        if pos < 2 {
             continue;
         }
 
-        let old = match map.insert(key, pos - 3) {
+        #[cfg(never)]
+        println!("pos: {}, map: {:?}", pos, map);
+
+        let old = match map.insert(key, pos - 2) {
             Some(old) => old,
             None => {
                 // we decided to emit a literal
@@ -73,7 +77,14 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
             }
         };
 
-        let dist = pos - old;
+        #[cfg(never)]
+        println!(
+            "think we've found a run, we're at {} and the old was at {}",
+            pos,
+            old
+        );
+
+        let dist = pos - old - 2;
 
         if dist > (window_size as usize) {
             // TODO: off-by-one
@@ -82,7 +93,7 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
 
         let dist = dist as u16;
 
-        let mut run = 0;
+        let mut run = 3;
 
         loop {
             if run >= 258 {
@@ -92,9 +103,14 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
 
             let &(pos, byte) = coderator.peek().expect("TODO");
 
-            println!("{:?} != {:?}", buf.get_at_dist(dist - 1) as char, byte as char);
+            #[cfg(never)]
+            println!(
+                "{:?} != {:?}",
+                buf.get_at_dist(dist) as char,
+                byte as char
+            );
 
-            if buf.get_at_dist(dist - 1) != byte {
+            if buf.get_at_dist(dist) != byte {
                 break;
             }
 
@@ -153,6 +169,21 @@ impl Key {
     }
 }
 
+impl fmt::Debug for Key {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Key{{ {:?} {:?} {:?} 0x{:02x}{:02x}{:02x}}}",
+            self.vals[0] as char,
+            self.vals[1] as char,
+            self.vals[2] as char,
+            self.vals[0],
+            self.vals[1],
+            self.vals[2],
+        )
+    }
+}
+
 
 #[cfg(never)]
 fn search(window_size: u16, old_data: &[u8], codes: &[Code]) -> Result<Option<(u16, u16)>> {
@@ -197,7 +228,7 @@ mod tests {
     #[test]
     fn find_single_ref() {
         match parse::parse_deflate(Cursor::new(
-            &include_bytes!("../tests/data/like-love.gz")[10..],
+            &include_bytes!("../tests/data/abcdef-bcdefg.gz")[10..],
         )).next() {
             Some(Ok(Block::FixedHuffman(codes))) => single_block_encode(32, &codes).unwrap(),
             _ => unreachable!(),

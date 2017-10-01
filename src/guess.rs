@@ -179,56 +179,52 @@ where
 
         return None;
     }
+
+    fn peek(&self) -> Option<I::Item> {
+        self.first
+    }
 }
+
 
 fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
     window_size: u16,
     coderator: B,
     mut emit: F,
 ) -> Result<()>
-where
-    F: FnMut(Code) -> Result<()>,
+    where
+        F: FnMut(Code) -> Result<()>,
 {
-    let mut coderator = coderator.enumerate().peekable();
+    let mut coderator = ThreePeek::new(coderator);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
     let mut map = HashMap::new();
-    let mut key = Key::default();
+
+    let mut pos = 0usize;
 
     loop {
         println!(".");
 
-        let (pos, byte) = match coderator.next() {
+        let key = match coderator.next_three() {
             Some(x) => x,
-            None => return Ok(()),
+            None => {
+                // drain the last few bytes as literals
+                for byte in coderator {
+                    emit(Code::Literal(byte))?;
+                }
+                return Ok(())
+            },
         };
 
-        let evicted = key.push(byte);
-        buf.append(byte);
-
-        println!("evicted: {}", evicted as char);
-
-        if pos < 2 {
-            // don't confuse the map code with a half-initialised key
-            continue;
-        } else if pos > 2 {
-            emit(Code::Literal(evicted))?;
-        }
-
-        //        #[cfg(never)]
-        println!("pos: {}, key: {:?}, map: {:?}", pos, key, map);
-
-        // the map tracks pointers to the *end* of where the block is,
-        // as this removes a load of +1s and -2s from the code, not because
-        // it's essentially very clear. I think.
+        buf.append(key.0);
 
         let old = match map.insert(key, pos) {
             Some(old) => old,
             None => {
+                emit(Code::Literal(key.0))?;
+                pos += 1;
                 continue;
             }
         };
 
-        //        #[cfg(never)]
         println!(
             "think we've found a run, we're at {} and the old was at {}",
             pos,
@@ -244,7 +240,7 @@ where
 
         let dist = dist as u16;
 
-        let mut run = 3u16;
+        let mut run = 1u16;
 
         loop {
             if run >= 258 {
@@ -252,7 +248,7 @@ where
                 break;
             }
 
-            let &(pos, byte) = coderator.peek().expect("TODO");
+            let byte = coderator.peek().expect("TODO peek failed");
 
             //            #[cfg(never)]
             println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
@@ -261,11 +257,11 @@ where
                 break;
             }
 
-            let (pos, byte) = coderator.next().expect("consuming peek'd value");
+            let key = coderator.next_three().expect("TODO three failed");
 
-            key.push(byte);
-            buf.append(byte);
+            buf.append(key.0);
             map.insert(key, pos);
+            pos += 1;
 
             run += 1;
         }
@@ -274,28 +270,6 @@ where
             dist,
             run_minus_3: (run - 3) as u8,
         })?;
-
-        // and reset the state inside 'key' to what the rest of the code expects
-        for waste in 0..3 {
-            let (pos, byte) = match coderator.next() {
-                Some(val) => val,
-                None => {
-                    // hit the end of the stream, flush the key as literals
-
-                    println!("end!");
-
-                    for i in 0..waste {
-                        emit(Code::Literal(key.push(0xff)))?;
-                    }
-
-                    return Ok(());
-                }
-            };
-
-            println!("waste: {:?}", key.push(byte) as char);
-            buf.append(byte);
-            map.insert(key, pos);
-        }
     }
 }
 

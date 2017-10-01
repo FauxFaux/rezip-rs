@@ -34,10 +34,82 @@ fn outside_range(codes: &[Code]) -> bool {
 }
 
 fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
-    let mut coderator = serialise::DecompressedBytes::new(codes.iter())
-        .enumerate()
-        .peekable();
     let mut expected = codes.iter();
+
+    use Code::*;
+
+    single_block_encode_helper(
+        window_size,
+        serialise::DecompressedBytes::new(codes.iter()),
+        |code| match expected.next() {
+            Some(&Literal(expected_byte)) => {
+                match code {
+                    Literal(byte) => {
+                        ensure!(
+                            expected_byte == byte,
+                            "emitted the wrong literal, 0x{:02x} != 0x{:02x} ({:?} != {:?})",
+                            expected_byte,
+                            byte,
+                            expected_byte as char,
+                            byte as char,
+                        );
+                        Ok(())
+                    }
+                    Reference { dist, run_minus_3 } => {
+                        let run = u16::from(run_minus_3) + 3;
+                        bail!(
+                            "we found a run ({}, {}) that the original encoder missed",
+                            dist,
+                            run
+                        )
+                    }
+                }
+            }
+            Some(&Reference {
+                     dist: expected_dist,
+                     run_minus_3,
+                 }) => {
+                let expected_run = u16::from(run_minus_3) + 3;
+
+                match code {
+                    Literal(byte) => {
+                        bail!(
+                            "we failed to spot the ({}, {}) backreference, wrote a 0x{:02x} literal instead",
+                            expected_dist,
+                            expected_run,
+                            byte
+                        )
+                    }
+                    Reference { dist, run_minus_3 } => {
+                        let run = u16::from(run_minus_3) + 3;
+                        if expected_dist != dist || expected_run != run {
+                            bail!(
+                                "we found a different run: ({}, {}) != ({}, {})",
+                                expected_dist,
+                                expected_run,
+                                dist,
+                                run,
+                            );
+                        }
+                        Ok(())
+                    }
+                }
+            }
+            None => bail!("we emitted a code that isn't supposed to be there"),
+        },
+    )
+}
+
+
+fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
+    window_size: u16,
+    coderator: B,
+    mut emit: F,
+) -> Result<()>
+where
+    F: FnMut(Code) -> Result<()>,
+{
+    let mut coderator = coderator.enumerate().peekable();
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
     let mut map = HashMap::new();
     let mut key = Key::default();
@@ -45,18 +117,23 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
     loop {
         let (pos, byte) = match coderator.next() {
             Some(x) => x,
-            None => break,
+            None => return Ok(()),
         };
 
-        key.push(byte);
+        let evicted = key.push(byte);
         buf.append(byte);
 
+        println!("evicted: {}", evicted as char);
+
         if pos < 2 {
+            // don't confuse the map code with a half-initialised key
             continue;
+        } else if pos > 2 {
+            emit(Code::Literal(evicted))?;
         }
 
-        #[cfg(never)]
-        println!("pos: {}, map: {:?}", pos, map);
+//        #[cfg(never)]
+        println!("pos: {}, key: {:?}, map: {:?}", pos, key, map);
 
         // the map tracks pointers to the *end* of where the block is,
         // as this removes a load of +1s and -2s from the code, not because
@@ -65,23 +142,11 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
         let old = match map.insert(key, pos) {
             Some(old) => old,
             None => {
-                // we decided to emit a literal
-                match expected.next() {
-                    Some(&Code::Literal(_)) => continue,
-                    Some(&Code::Reference { dist, run_minus_3 }) => {
-                        bail!(
-                            "we failed to spot the dist: {} run: {} backreference at {}",
-                            dist,
-                            run_minus_3 + 3,
-                            pos
-                        )
-                    }
-                    None => bail!("we think there's more codes at {} but there isn't", pos),
-                }
+                continue;
             }
         };
 
-        #[cfg(never)]
+//        #[cfg(never)]
         println!(
             "think we've found a run, we're at {} and the old was at {}",
             pos,
@@ -97,7 +162,7 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
 
         let dist = dist as u16;
 
-        let mut run = 3;
+        let mut run = 3u16;
 
         loop {
             if run >= 258 {
@@ -107,12 +172,8 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
 
             let &(pos, byte) = coderator.peek().expect("TODO");
 
-            #[cfg(never)]
-            println!(
-                "{:?} != {:?}",
-                buf.get_at_dist(dist) as char,
-                byte as char
-            );
+//            #[cfg(never)]
+            println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
 
             if buf.get_at_dist(dist) != byte {
                 break;
@@ -127,37 +188,33 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
             run += 1;
         }
 
-        match expected.next() {
-            Some(&Code::Reference {
-                     dist: expected_dist,
-                     run_minus_3,
-                 }) => {
-                let expected_run = u16::from(run_minus_3) + 3;
-                if expected_dist != dist || expected_run != run {
-                    bail!(
-                        "we found a different run: ({}, {}) != ({}, {}) at {}",
-                        expected_dist,
-                        expected_run,
-                        dist,
-                        run,
-                        pos
-                    );
+        emit(Code::Reference {
+            dist,
+            run_minus_3: (run - 3) as u8,
+        })?;
+
+        // and reset the state inside 'key' to what the rest of the code expects
+        for waste in 0..3 {
+            let (pos, byte) = match coderator.next() {
+                Some(val) => val,
+                None => {
+                    // hit the end of the stream, flush the key as literals
+                    for i in 0..(3 - waste) {
+                        key.push(0xff);
+                    }
+
+                    for i in 0..waste {
+                        emit(Code::Literal(key.push(0xff)))?;
+                    }
+
+                    return Ok(());
                 }
-            }
-            Some(&Code::Literal(_)) => {
-                bail!(
-                    "we found a run ({}, {}) that the original encoder missed at {}",
-                    dist,
-                    run,
-                    pos
-                )
-            }
-            None => bail!("we tried to emit a run but the stream is finished"),
+            };
+            key.push(byte);
+            buf.append(byte);
+            map.insert(key, pos);
         }
-
     }
-
-    return Ok(());
 }
 
 #[derive(Clone, Copy, Default, Eq, Hash, PartialEq)]
@@ -166,10 +223,12 @@ struct Key {
 }
 
 impl Key {
-    fn push(&mut self, val: u8) {
+    fn push(&mut self, val: u8) -> u8 {
+        let evicted = self.vals[0];
         self.vals[0] = self.vals[1];
         self.vals[1] = self.vals[2];
         self.vals[2] = val;
+        evicted
     }
 }
 
@@ -230,14 +289,32 @@ mod tests {
     use Block;
 
     #[test]
-    fn find_single_ref() {
+    fn find_single_ref_from_file() {
         match parse::parse_deflate(Cursor::new(
             &include_bytes!("../tests/data/abcdef-bcdefg.gz")[10..],
         )).next() {
             Some(Ok(Block::FixedHuffman(codes))) => single_block_encode(32, &codes).unwrap(),
             _ => unreachable!(),
         }
+    }
 
+    #[test]
+    fn find_single_lits() {
+        use Code::Literal as L;
+        use Code::Reference as R;
+        single_block_encode(32, &[
+            L(b'a'),
+            L(b'b'),
+            L(b'c'),
+            L(b'd'),
+            L(b'e'),
+            L(b'f'),
+            L(b' '),
+            R{ dist: 6, run_minus_3: 2 },
+            L(b'g'),
+            L(b'h'),
+            L(b'i'),
+        ]).unwrap()
     }
 }
 

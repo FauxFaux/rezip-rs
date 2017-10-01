@@ -58,7 +58,11 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
         #[cfg(never)]
         println!("pos: {}, map: {:?}", pos, map);
 
-        let old = match map.insert(key, pos - 2) {
+        // the map tracks pointers to the *end* of where the block is,
+        // as this removes a load of +1s and -2s from the code, not because
+        // it's essentially very clear. I think.
+
+        let old = match map.insert(key, pos) {
             Some(old) => old,
             None => {
                 // we decided to emit a literal
@@ -84,7 +88,7 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
             old
         );
 
-        let dist = pos - old - 2;
+        let dist = pos - old;
 
         if dist > (window_size as usize) {
             // TODO: off-by-one
@@ -114,11 +118,11 @@ fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
                 break;
             }
 
-            coderator.next().expect("consuming peek'd value");
+            let (pos, byte) = coderator.next().expect("consuming peek'd value");
 
             key.push(byte);
             buf.append(byte);
-            map.insert(key, pos - 3);
+            map.insert(key, pos);
 
             run += 1;
         }

@@ -20,6 +20,7 @@ pub mod gzip;
 mod huffman;
 pub mod parse;
 pub mod serialise;
+mod three;
 
 use bit::BitVec;
 

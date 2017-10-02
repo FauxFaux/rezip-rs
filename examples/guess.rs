@@ -46,7 +46,10 @@ fn print(codes: &[Code]) {
     println!("   max len: {:?}", max);
     println!("   outta bounds: {}", guess::outside_range(codes));
     if let Some(window) = max {
-        println!("   single_block: {:?}", guess::single_block_encode(window, codes));
+        println!(
+            "   single_block: {:?}",
+            guess::single_block_encode(window, codes)
+        );
     }
 
 }

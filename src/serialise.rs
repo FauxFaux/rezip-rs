@@ -89,10 +89,12 @@ where
                 Some(&Reference { dist, run_minus_3 }) => {
                     let run = u16::from(run_minus_3) + 3;
                     self.dictionary.copy(dist, run, NullWriter {}).expect(
-                        &format!("dist ({}), run (<258: {}) < 32kb ({})",
-                        dist,
-                        run,
-                        self.dictionary.capacity())
+                        &format!(
+                            "dist ({}), run (<258: {}) < 32kb ({})",
+                            dist,
+                            run,
+                            self.dictionary.capacity()
+                        ),
                     );
                     run as usize
                 }

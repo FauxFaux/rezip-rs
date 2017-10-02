@@ -113,7 +113,12 @@ pub fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
                         }
                     }
                 }
-                None => bail!("{}: we emitted a code that isn't supposed to be there", seen),
+                None => {
+                    bail!(
+                        "{}: we emitted a code that isn't supposed to be there",
+                        seen
+                    )
+                }
             }
         },
     )?;
@@ -190,8 +195,8 @@ fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
     coderator: B,
     mut emit: F,
 ) -> Result<()>
-    where
-        F: FnMut(Code) -> Result<()>,
+where
+    F: FnMut(Code) -> Result<()>,
 {
     let mut coderator = ThreePeek::new(coderator);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
@@ -209,8 +214,8 @@ fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
                 for byte in coderator {
                     emit(Code::Literal(byte))?;
                 }
-                return Ok(())
-            },
+                return Ok(());
+            }
         };
 
         buf.append(key.0);
@@ -264,9 +269,11 @@ fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
                     buf.append(key.0);
                     map.insert(key, pos);
                 }
-                None => match coderator.next() {
-                    Some(byte) => buf.append(byte),
-                    None => break,
+                None => {
+                    match coderator.next() {
+                        Some(byte) => buf.append(byte),
+                        None => break,
+                    }
                 }
             }
 
@@ -353,8 +360,23 @@ mod tests {
     #[test]
     fn range() {
         assert!(!outside_range(&[L(5)]));
-        assert!(outside_range(&[R { dist: 1, run_minus_3: 3}]));
-        assert!(!outside_range(&[L(5), R { dist: 1, run_minus_3: 3}]));
+        assert!(outside_range(
+            &[
+                R {
+                    dist: 1,
+                    run_minus_3: 3,
+                },
+            ],
+        ));
+        assert!(!outside_range(
+            &[
+                L(5),
+                R {
+                    dist: 1,
+                    run_minus_3: 3,
+                },
+            ],
+        ));
     }
 }
 

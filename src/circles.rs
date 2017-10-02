@@ -5,6 +5,7 @@ use errors::*;
 pub struct CircularBuffer {
     data: Vec<u8>,
     idx: usize,
+    valid_cap: u16,
 }
 
 impl CircularBuffer {
@@ -14,12 +15,17 @@ impl CircularBuffer {
         CircularBuffer {
             idx: 0,
             data: vec![0; usize_from(cap)],
+            valid_cap: 0,
         }
     }
 
-        pub fn append(&mut self, val: u8) {
+    pub fn append(&mut self, val: u8) {
         self.data[self.idx] = val;
         self.idx = (self.idx + 1) % self.data.len();
+
+        if (self.valid_cap as usize) < self.data.len() {
+            self.valid_cap += 1;
+        }
     }
 
     pub fn extend(&mut self, val: &[u8]) {
@@ -34,7 +40,7 @@ impl CircularBuffer {
         // TODO: optimise
 
         ensure!(
-            dist > 0 && dist as usize <= self.data.len(),
+            dist > 0 && dist <= self.valid_cap,
             "dist must fit"
         );
 
@@ -53,7 +59,7 @@ impl CircularBuffer {
     }
 
     pub fn get_at_dist(&self, dist: u16) -> u8 {
-        assert!((dist as usize) < self.data.len());
+        assert!(dist <= self.valid_cap);
         self.data[self.idx.wrapping_sub(dist as usize).wrapping_add(
             self.data.len(),
         ) % self.data.len()]

@@ -129,7 +129,7 @@ mod tests {
 
                 match block {
                     Block::FixedHuffman(codes) |
-                    Block::DynamicHuffman { codes, .. } => {},
+                    Block::DynamicHuffman { codes, .. } => {}
                     _ => {}
                 }
             }

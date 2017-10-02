@@ -94,6 +94,7 @@ impl<R: Read> BitReader<R> {
         Ok((u16::from(buf[1]) << 8) | u16::from(buf[0]))
     }
 
+    #[allow(unused)]
     pub fn into_inner(self) -> R {
         assert!(self.track.is_none());
         assert_eq!(0, self.position());

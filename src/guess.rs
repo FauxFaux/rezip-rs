@@ -51,7 +51,6 @@ pub fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
 pub fn block_encode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<()> {
     let mut expected = codes.iter();
 
-    use Code::*;
     let mut seen = 0usize;
 
     single_block_encode_helper(
@@ -401,8 +400,4 @@ mod tests {
             ],
         ));
     }
-}
-
-fn usize_from(val: u16) -> usize {
-    val as usize
 }

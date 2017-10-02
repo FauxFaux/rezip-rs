@@ -56,75 +56,11 @@ pub fn block_encode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<
 
     single_block_encode_helper(
         window_size,
-        serialise::DecompressedBytes::new(codes.iter()),
+        preroll.len(),
+        preroll.iter().map(|byte| *byte).chain(serialise::DecompressedBytes::new(codes.iter())),
         |code| {
             seen += 1;
-
-            match expected.next() {
-                Some(&Literal(expected_byte)) => {
-                    match code {
-                        Literal(byte) => {
-                            ensure!(
-                                expected_byte == byte,
-                                "{}: emitted the wrong literal, 0x{:02x} != 0x{:02x} ({:?} != {:?})",
-                                seen,
-                                expected_byte,
-                                byte,
-                                expected_byte as char,
-                                byte as char,
-                            );
-                            Ok(())
-                        }
-                        Reference { dist, run_minus_3 } => {
-                            let run = u16::from(run_minus_3) + 3;
-                            bail!(
-                                "{}: we found a run ({}, {}) that the original encoder missed",
-                                seen,
-                                dist,
-                                run
-                            )
-                        }
-                    }
-                }
-                Some(&Reference {
-                         dist: expected_dist,
-                         run_minus_3,
-                     }) => {
-                    let expected_run = u16::from(run_minus_3) + 3;
-
-                    match code {
-                        Literal(byte) => {
-                            bail!(
-                                "{}: we failed to spot the ({}, {}) backreference, wrote a 0x{:02x} literal instead",
-                                seen,
-                                expected_dist,
-                                expected_run,
-                                byte
-                            )
-                        }
-                        Reference { dist, run_minus_3 } => {
-                            let run = u16::from(run_minus_3) + 3;
-                            if expected_dist != dist || expected_run != run {
-                                bail!(
-                                    "{}: we found a different run: ({}, {}) != ({}, {})",
-                                    seen,
-                                    expected_dist,
-                                    expected_run,
-                                    dist,
-                                    run,
-                                );
-                            }
-                            Ok(())
-                        }
-                    }
-                }
-                None => {
-                    bail!(
-                        "{}: we emitted a code that isn't supposed to be there",
-                        seen
-                    )
-                }
-            }
+            validate_expectation(seen, expected.next(), &code)
         },
     )?;
 
@@ -136,6 +72,87 @@ pub fn block_encode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<
     );
 
     Ok(())
+}
+
+fn validate_expectation(seen: usize, exp: Option<&Code>, code: &Code) -> Result<()> {
+    use Code::*;
+
+    match exp {
+        Some(&Literal(expected_byte)) => validate_expected_literal(seen, expected_byte, &code),
+        Some(&Reference {
+                 dist: expected_dist,
+                 run_minus_3,
+             }) => validate_expected_range(seen, expected_dist, u16::from(run_minus_3) + 3, &code),
+        None => {
+            bail!(
+                "{}: we emitted a code that isn't supposed to be there",
+                seen
+            )
+        }
+    }
+}
+
+fn validate_expected_literal(seen: usize, expected_byte: u8, code: &Code) -> Result<()> {
+    use Code::*;
+
+    match *code {
+        Literal(byte) => {
+            ensure!(
+                expected_byte == byte,
+                "{}: wrong literal, 0x{:02x} != 0x{:02x} ({:?} != {:?})",
+                seen,
+                expected_byte,
+                byte,
+                expected_byte as char,
+                byte as char,
+            );
+            Ok(())
+        }
+        Reference { dist, run_minus_3 } => {
+            let run = u16::from(run_minus_3) + 3;
+            bail!(
+                "{}: picked reference ({}, {}) that the original encoder missed",
+                seen,
+                dist,
+                run
+            )
+        }
+    }
+}
+
+fn validate_expected_range(
+    seen: usize,
+    expected_dist: u16,
+    expected_run: u16,
+    code: &Code,
+) -> Result<()> {
+    use Code::*;
+
+    match *code {
+        Literal(byte) => {
+            bail!(
+                "{}: failed to spot ({}, {}) backreference, wrote a 0x{:02x} literal instead",
+                seen,
+                expected_dist,
+                expected_run,
+                byte
+            )
+        }
+        Reference { dist, run_minus_3 } => {
+            let run = u16::from(run_minus_3) + 3;
+            if expected_dist != dist || expected_run != run {
+                bail!(
+                    "{}: we found a different run: ({}, {}) != ({}, {})",
+                    seen,
+                    expected_dist,
+                    expected_run,
+                    dist,
+                    run,
+                );
+            }
+            Ok(())
+        }
+    }
 }
 
 /// Unlike Peekable, this is not lazy.

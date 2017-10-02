@@ -44,12 +44,17 @@ fn run() -> Result<()> {
 fn print(codes: &[Code]) {
     let max = guess::max_distance(codes);
     println!("   max len: {:?}", max);
-    println!("   outta bounds: {}", guess::outside_range(codes));
+
+    let outside_range = guess::outside_range(codes);
+    println!("   outta bounds: {}", outside_range);
+
     if let Some(window) = max {
-        println!(
-            "   single_block: {:?}",
-            guess::single_block_encode(window, codes)
-        );
+        if !outside_range {
+            println!(
+                "   single_block: {:?}",
+                guess::single_block_encode(window, codes)
+            );
+        }
     }
 
 }

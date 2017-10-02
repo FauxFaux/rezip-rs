@@ -33,6 +33,7 @@ fn single_block_mem(window_size: u16, codes: &[Code]) -> Vec<Code> {
     let mut ret = Vec::with_capacity(codes.len());
     single_block_encode_helper(
         window_size,
+        0,
         serialise::DecompressedBytes::new(codes.iter()),
         |code| {
             ret.push(code);
@@ -44,6 +45,10 @@ fn single_block_mem(window_size: u16, codes: &[Code]) -> Vec<Code> {
 }
 
 pub fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
+    block_encode(window_size, &[], codes)
+}
+
+pub fn block_encode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<()> {
     let mut expected = codes.iter();
 
     use Code::*;
@@ -192,13 +197,14 @@ where
 
 fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
     window_size: u16,
-    coderator: B,
+    preroll: usize,
+    bytes: B,
     mut emit: F,
 ) -> Result<()>
 where
     F: FnMut(Code) -> Result<()>,
 {
-    let mut coderator = ThreePeek::new(coderator);
+    let mut bytes = ThreePeek::new(bytes);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
     let mut map = HashMap::new();
 
@@ -207,11 +213,11 @@ where
     loop {
         println!(".");
 
-        let key = match coderator.next_three() {
+        let key = match bytes.next_three() {
             Some(x) => x,
             None => {
                 // drain the last few bytes as literals
-                for byte in coderator {
+                for byte in bytes {
                     emit(Code::Literal(byte))?;
                 }
                 return Ok(());
@@ -252,7 +258,7 @@ where
                 break;
             }
 
-            let byte = match coderator.peek() {
+            let byte = match bytes.peek() {
                 Some(byte) => byte,
                 None => break,
             };
@@ -264,13 +270,13 @@ where
                 break;
             }
 
-            match coderator.next_three() {
+            match bytes.next_three() {
                 Some(key) => {
                     buf.append(key.0);
                     map.insert(key, pos);
                 }
                 None => {
-                    match coderator.next() {
+                    match bytes.next() {
                         Some(byte) => buf.append(byte),
                         None => break,
                     }

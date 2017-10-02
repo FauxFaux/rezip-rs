@@ -30,11 +30,15 @@ pub fn outside_range(codes: &[Code]) -> bool {
 }
 
 fn single_block_mem(window_size: u16, codes: &[Code]) -> Vec<Code> {
+    block_mem(window_size, &[], codes)
+}
+
+fn block_mem(window_size: u16, preroll: &[u8], codes: &[Code]) -> Vec<Code> {
     let mut ret = Vec::with_capacity(codes.len());
     single_block_encode_helper(
         window_size,
-        0,
-        serialise::DecompressedBytes::new(codes.iter()),
+        preroll.len(),
+        serialise::DecompressedBytes::new(preroll, codes.iter()),
         |code| {
             ret.push(code);
             Ok(())
@@ -56,7 +60,7 @@ pub fn block_encode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<
     single_block_encode_helper(
         window_size,
         preroll.len(),
-        preroll.iter().map(|byte| *byte).chain(serialise::DecompressedBytes::new(codes.iter())),
+        serialise::DecompressedBytes::new(preroll, codes.iter()),
         |code| {
             seen += 1;
             validate_expectation(seen, expected.next(), &code)
@@ -167,6 +171,7 @@ where
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
     let mut map = HashMap::new();
 
+    let mut remaining_preroll = preroll;
     let mut pos = 0usize;
 
     loop {
@@ -184,6 +189,13 @@ where
         };
 
         buf.append(key.0);
+
+        if remaining_preroll > 0 {
+            remaining_preroll -= 1;
+            map.insert(key, pos);
+            pos += 1;
+            continue;
+        }
 
         let old = match map.insert(key, pos) {
             Some(old) => old,
@@ -305,6 +317,17 @@ mod tests {
             },
         ];
         assert_eq!(exp, single_block_mem(3, exp).as_slice());
+    }
+
+    #[test]
+    fn ref_before() {
+        let exp = &[
+            R {
+                dist: 1,
+                run_minus_3: 10,
+            },
+        ];
+        assert_eq!(exp, block_mem(3, &[0],exp).as_slice());
     }
 
     #[test]

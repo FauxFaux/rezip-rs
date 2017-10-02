@@ -62,10 +62,14 @@ impl<'a, C> DecompressedBytes<C>
 where
     C: Iterator<Item = &'a Code>,
 {
-    pub fn new(codes: C) -> Self {
+    pub fn new(preroll: &[u8], codes: C) -> Self {
+        let mut dictionary = CircularBuffer::with_capacity(32 * 1024 + 256 + 3 + 1);
+        let cap = preroll.len();
+        dictionary.extend(preroll);
+
         DecompressedBytes {
-            cap: 0,
-            dictionary: CircularBuffer::with_capacity(32 * 1024 + 256 + 3 + 1),
+            cap,
+            dictionary,
             codes,
         }
     }

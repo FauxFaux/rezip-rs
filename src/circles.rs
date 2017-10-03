@@ -23,7 +23,7 @@ impl CircularBuffer {
         }
     }
 
-    pub fn append(&mut self, val: u8) {
+    pub fn push(&mut self, val: u8) {
         self.data[self.idx] = val;
         self.idx = (self.idx + 1) % self.data.len();
 
@@ -36,7 +36,7 @@ impl CircularBuffer {
         // TODO: optimise
 
         for byte in val {
-            self.append(*byte);
+            self.push(*byte);
         }
     }
 
@@ -53,7 +53,7 @@ impl CircularBuffer {
             let b = self.data[read_from];
             read_from = (read_from + 1) % self.data.len();
             into.write_all(&[b])?;
-            self.append(b);
+            self.push(b);
         }
 
         Ok(())
@@ -123,7 +123,7 @@ mod tests {
         // with the marker at ^ (position 4)
 
         for byte in b"1234567890abcd" {
-            buf.append(*byte);
+            buf.push(*byte);
         }
 
         assert_eq!(3, buf.find_run(b"bc").unwrap());

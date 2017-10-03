@@ -189,7 +189,7 @@ where
             }
         };
 
-        buf.append(key.0);
+        buf.push(key.0);
 
         let old = map.insert(key, pos);
 
@@ -246,12 +246,12 @@ where
 
             match bytes.next_three() {
                 Some(key) => {
-                    buf.append(key.0);
+                    buf.push(key.0);
                     map.insert(key, pos);
                 }
                 None => {
                     match bytes.next() {
-                        Some(byte) => buf.append(byte),
+                        Some(byte) => buf.push(byte),
                         None => break,
                     }
                 }

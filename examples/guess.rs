@@ -60,6 +60,6 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
 
     // AWFUL
     for byte in librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter()) {
-        dictionary.append(byte);
+        dictionary.push(byte);
     }
 }

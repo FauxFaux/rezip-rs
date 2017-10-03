@@ -39,7 +39,7 @@ pub fn decompressed_codes<W: Write>(
     for code in codes {
         match *code {
             Literal(byte) => {
-                dictionary.append(byte);
+                dictionary.push(byte);
                 into.write_all(&[byte])?
             }
             Reference { dist, run_minus_3 } => {
@@ -87,7 +87,7 @@ where
 
             self.cap += match self.codes.next() {
                 Some(&Literal(byte)) => {
-                    self.dictionary.append(byte);
+                    self.dictionary.push(byte);
                     1
                 }
                 Some(&Reference { dist, run_minus_3 }) => {

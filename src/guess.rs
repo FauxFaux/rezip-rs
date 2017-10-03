@@ -20,6 +20,7 @@ pub fn max_distance(codes: &[Code]) -> Option<u16> {
 
 /// checks if any code references before the start of this block
 pub fn outside_range(codes: &[Code]) -> bool {
+    // TODO: this is totally wrong; pos != byte number
     codes.iter().enumerate().any(|(pos, code)| {
         if let Code::Reference { dist, .. } = *code {
             dist as usize > pos // off-by-one?

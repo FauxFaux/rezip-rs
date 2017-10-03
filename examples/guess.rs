@@ -11,6 +11,7 @@ use librezip::Block;
 use librezip::Code;
 
 use librezip::guess;
+use librezip::circles::CircularBuffer;
 
 quick_main!(run);
 
@@ -18,6 +19,9 @@ fn run() -> Result<()> {
     let input = env::args().nth(1).ok_or("first argument: input-path.gz")?;
     let mut reader = io::BufReader::new(fs::File::open(input)?);
     librezip::gzip::discard_header(&mut reader)?;
+
+    let mut dictionary = CircularBuffer::new();
+
     for (id, block) in librezip::parse_deflate(&mut reader).into_iter().enumerate() {
         let block = block?;
 
@@ -26,14 +30,15 @@ fn run() -> Result<()> {
         match block {
             Uncompressed(data) => {
                 println!(" - uncompressed: {} bytes", data.len());
+                dictionary.extend(&data);
             }
             FixedHuffman(codes) => {
                 println!(" - fixed huffman:");
-                print(&codes);
+                print(&mut dictionary, &codes);
             }
             DynamicHuffman { trees, codes } => {
                 println!(" - dynamic huffman: {:?}", trees);
-                print(&codes);
+                print(&mut dictionary, &codes);
             }
         }
     }
@@ -41,20 +46,20 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn print(codes: &[Code]) {
+fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
     let max = guess::max_distance(codes);
     println!("   max len: {:?}", max);
 
     let outside_range = guess::outside_range(codes);
     println!("   outta bounds: {}", outside_range);
 
-    if let Some(window) = max {
-        if !outside_range {
-            println!(
-                "   single_block: {:?}",
-                guess::single_block_encode(window, codes)
-            );
-        }
-    }
+    println!(
+        "   block_encode: {:?}",
+        guess::block_encode(max.unwrap_or(0), &dictionary.vec(), codes)
+    );
 
+    // AWFUL
+    for byte in librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter()) {
+        dictionary.append(byte);
+    }
 }

@@ -9,6 +9,10 @@ pub struct CircularBuffer {
 }
 
 impl CircularBuffer {
+    pub fn new() -> Self {
+        Self::with_capacity(32 * 1024)
+    }
+
     pub fn with_capacity(cap: u16) -> Self {
         assert!(cap > 0);
 
@@ -87,6 +91,17 @@ impl CircularBuffer {
             }
         }
         true
+    }
+
+    pub fn vec(&self) -> Vec<u8> {
+        // TODO: optimise
+
+        let mut ret = Vec::with_capacity(usize_from(self.valid_cap));
+        for pos in (1..self.valid_cap).rev() {
+            ret.push(self.get_at_dist(pos));
+        }
+
+        ret
     }
 }
 

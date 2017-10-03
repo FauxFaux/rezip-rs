@@ -11,7 +11,7 @@ extern crate sha2;
 use std::fmt;
 
 mod bit;
-mod circles;
+pub mod circles;
 mod code_tree;
 mod errors;
 pub mod filter;

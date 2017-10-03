@@ -35,7 +35,7 @@ fn single_block_mem(window_size: u16, codes: &[Code]) -> Vec<Code> {
 
 fn block_mem(window_size: u16, preroll: &[u8], codes: &[Code]) -> Vec<Code> {
     let mut ret = Vec::with_capacity(codes.len());
-    single_block_encode_helper(
+    block_encode_helper(
         window_size,
         preroll.len(),
         serialise::DecompressedBytes::new(preroll, codes.iter()),
@@ -57,7 +57,7 @@ pub fn block_encode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<
 
     let mut seen = 0usize;
 
-    single_block_encode_helper(
+    block_encode_helper(
         window_size,
         preroll.len(),
         serialise::DecompressedBytes::new(preroll, codes.iter()),
@@ -158,7 +158,7 @@ fn validate_expected_range(
     }
 }
 
-fn single_block_encode_helper<B: Iterator<Item = u8>, F>(
+fn block_encode_helper<B: Iterator<Item = u8>, F>(
     window_size: u16,
     preroll: usize,
     bytes: B,
@@ -329,7 +329,7 @@ mod tests {
                 run_minus_3: 10,
             },
         ];
-        assert_eq!(exp, block_mem(3, &[0],exp).as_slice());
+        assert_eq!(exp, block_mem(3, &[0], exp).as_slice());
     }
 
     #[test]

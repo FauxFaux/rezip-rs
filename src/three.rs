@@ -23,8 +23,8 @@ impl<I: Iterator> Iterator for ThreePeek<I> {
 }
 
 impl<I: Iterator> ThreePeek<I>
-    where
-        I::Item: Copy,
+where
+    I::Item: Copy,
 {
     pub fn new(mut inner: I) -> Self {
         let first = inner.next();

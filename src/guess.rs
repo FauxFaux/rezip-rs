@@ -115,7 +115,7 @@ fn validate_expected_literal(seen: usize, expected_byte: u8, code: &Code) -> Res
         Reference { dist, run_minus_3 } => {
             let run = u16::from(run_minus_3) + 3;
             bail!(
-                "{}: picked reference ({}, {}) that the original encoder missed",
+                "{}: picked run ({}, {}) that the original encoder missed",
                 seen,
                 dist,
                 run
@@ -146,7 +146,7 @@ fn validate_expected_range(
             let run = u16::from(run_minus_3) + 3;
             if expected_dist != dist || expected_run != run {
                 bail!(
-                    "{}: we found a different run: ({}, {}) != ({}, {})",
+                    "{}: we found a different run: them: ({}, {}) != us: ({}, {})",
                     seen,
                     expected_dist,
                     expected_run,
@@ -176,8 +176,6 @@ where
     let mut pos = 0usize;
 
     loop {
-        println!(".");
-
         let key = match bytes.next_three() {
             Some(x) => x,
             None => {
@@ -237,7 +235,7 @@ where
                 None => break,
             };
 
-            //            #[cfg(never)]
+            #[cfg(never)]
             println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
 
             if buf.get_at_dist(dist) != byte {

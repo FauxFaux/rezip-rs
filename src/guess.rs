@@ -190,21 +190,23 @@ where
 
         buf.append(key.0);
 
+        let old = map.insert(key, pos);
+
         if remaining_preroll > 0 {
             remaining_preroll -= 1;
-            map.insert(key, pos);
+
             pos += 1;
             continue;
         }
 
-        let old = match map.insert(key, pos) {
-            Some(old) => old,
-            None => {
-                emit(Code::Literal(key.0))?;
-                pos += 1;
-                continue;
-            }
-        };
+        if old.is_none() {
+            emit(Code::Literal(key.0))?;
+
+            pos += 1;
+            continue;
+        }
+
+        let old = old.unwrap();
 
         println!(
             "think we've found a run, we're at {} and the old was at {}",

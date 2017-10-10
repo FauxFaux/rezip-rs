@@ -319,6 +319,47 @@ mod tests {
     }
 
     #[test]
+    fn two_length_three_runs() {
+        let exp = &[
+            L(b'a'),
+            L(b'b'),
+            L(b'c'),
+            L(b'd'),
+            L(b'1'),
+            L(b'2'),
+            L(b'3'),
+            L(b'e'),
+            L(b'f'),
+            L(b'g'),
+            L(b'h'),
+            L(b'7'),
+            L(b'8'),
+            L(b'9'),
+            L(b'i'),
+            L(b'j'),
+            L(b'k'),
+            L(b'l'),
+            R {
+                dist: 14,
+                run_minus_3: 0,
+            },
+            L(b'm'),
+            L(b'n'),
+            L(b'o'),
+            L(b'p'),
+            R {
+                dist: 14,
+                run_minus_3: 0,
+            },
+            L(b'q'),
+            L(b'r'),
+            L(b's'),
+            L(b't'),
+        ];
+        assert_eq!(exp, single_block_mem(32, exp).as_slice());
+    }
+
+    #[test]
     fn zero_run() {
         let exp = &[
             L(b'0'),

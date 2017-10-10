@@ -361,6 +361,33 @@ mod tests {
     }
 
     #[test]
+    fn two_overlapping_runs() {
+        let exp = &[
+            L(b'a'),
+            L(b'1'),
+            L(b'2'),
+            L(b'3'),
+            L(b'b'),
+            L(b'c'),
+            L(b'd'),
+            R {
+                dist: 6,
+                run_minus_3: 0,
+            },
+            L(b'4'),
+            L(b'5'),
+            L(b'e'),
+            L(b'f'),
+            R {
+                dist: 5,
+                run_minus_3: 0,
+            },
+            L(b'g'),
+        ];
+        assert_eq!(exp, single_block_mem(32, exp).as_slice());
+    }
+
+    #[test]
     fn zero_run() {
         let exp = &[
             L(b'0'),

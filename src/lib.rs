@@ -43,8 +43,8 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
-#[derive(Debug)]
-struct WindowSettings {
+#[derive(Debug, Eq, PartialEq)]
+pub struct WindowSettings {
     window_size: u16,
 
     /// gzip (including 1.6 and probably onwards) will mis-encode

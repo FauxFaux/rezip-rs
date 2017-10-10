@@ -20,13 +20,21 @@ pub fn max_distance(codes: &[Code]) -> Option<u16> {
         .max()
 }
 
-/// checks if any code references before the start of this block
-pub fn outside_range(codes: &[Code]) -> bool {
+/// 1) checks if any code references before the start of this block
+/// 2) checks if any code references the exact start of the block
+pub fn outside_range_or_hit_zero(codes: &[Code]) -> (bool, bool) {
     let mut pos: u16 = 0;
+    let mut hit_zero = false;
+
     for code in codes {
         if let Code::Reference { dist, .. } = *code {
+
+            if dist == pos {
+                hit_zero = true;
+            }
+
             if dist > pos {
-                return true;
+                return (true, hit_zero);
             }
         }
 
@@ -34,23 +42,36 @@ pub fn outside_range(codes: &[Code]) -> bool {
         pos = pos.checked_add(code.emitted_bytes()).unwrap();
 
         if pos > 32_768 {
-            return false;
+            break;
         }
     }
 
-    return false;
+    return (false, hit_zero);
 }
 
-pub fn validate_reencode(preroll: &[u8], codes: &[Code]) -> Result<()> {
+pub fn guess_settings(mut preroll: &[u8], codes: &[Code]) -> Result<WindowSettings> {
     let window_size = max_distance(codes).unwrap();
+    let (outside, hits_first_byte) = outside_range_or_hit_zero(codes);
 
+    let config = WindowSettings {
+        window_size,
+        first_byte_bug: preroll.is_empty() && !hits_first_byte,
+    };
+
+    // optimisation
+    if !outside {
+        preroll = &[];
+    }
+
+    validate_reencode(&config, preroll, codes)?;
+
+    return Ok(config);
+}
+
+pub fn validate_reencode(config: &WindowSettings, preroll: &[u8], codes: &[Code]) -> Result<()> {
     let mut expected = codes.iter();
 
     let mut seen = 0usize;
-    let config = WindowSettings {
-        window_size,
-        first_byte_bug: false,
-    };
 
     attempt_reencoding(&config, preroll, codes, |code| {
         seen += 1;
@@ -174,9 +195,9 @@ where
 {
     let mut bytes = ThreePeek::new(bytes);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
-    let mut map = HashMap::with_capacity(config.window_size as usize);
+    let mut map: HashMap<(u8, u8, u8), usize> = HashMap::with_capacity(config.window_size as usize);
 
-    let mut pos = 0usize;
+    let mut pos: usize = 0;
 
     loop {
         //println!("top: {}: ({}) {:?}", pos, buf.vec().len(), buf.vec());
@@ -194,7 +215,12 @@ where
 
         buf.push(key.0);
 
-        let old = map.insert(key, pos);
+        let old = if 0 != pos || !config.first_byte_bug {
+            map.insert(key, pos)
+        } else {
+            None
+        };
+
         pos += 1;
 
         if pos <= preroll {
@@ -268,9 +294,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::attempt_reencoding;
+    use super::guess_settings;
     use super::max_distance;
-    use super::outside_range;
+    use super::outside_range_or_hit_zero;
     use super::Code;
+    use super::WindowSettings;
 
     use Code::Literal as L;
     use Code::Reference as R;
@@ -389,39 +417,102 @@ mod tests {
 
     #[test]
     fn range() {
-        assert!(!outside_range(&[L(5)]));
-        assert!(outside_range(
-            &[
-                R {
-                    dist: 1,
-                    run_minus_3: 3,
-                },
-            ],
-        ));
-        assert!(!outside_range(
-            &[
-                L(5),
-                R {
-                    dist: 1,
-                    run_minus_3: 3,
-                },
-            ],
-        ));
+        assert_eq!((false, false), outside_range_or_hit_zero(&[L(5)]));
+
+        assert_eq!(
+            (true, false),
+            outside_range_or_hit_zero(
+                &[
+                    R {
+                        dist: 1,
+                        run_minus_3: 3,
+                    },
+                ],
+            )
+        );
+
+        assert_eq!(
+            (false, true),
+            outside_range_or_hit_zero(
+                &[
+                    L(5),
+                    R {
+                        dist: 1,
+                        run_minus_3: 3,
+                    },
+                ],
+            )
+        );
+
+        assert_eq!(
+            (false, false),
+            outside_range_or_hit_zero(
+                &[
+                    L(5),
+                    L(5),
+                    R {
+                        dist: 1,
+                        run_minus_3: 3,
+                    },
+                ],
+            )
+        );
 
         // Not an encoding a real tool would generate
-        assert!(!outside_range(
-            &[
-                L(5),
-                R {
-                    dist: 1,
-                    run_minus_3: 20,
-                },
-                R {
-                    dist: 15,
-                    run_minus_3: 3,
-                },
-            ],
-        ));
+        assert_eq!(
+            (false, true),
+            outside_range_or_hit_zero(
+                &[
+                    L(5),
+                    R {
+                        dist: 1,
+                        run_minus_3: 20,
+                    },
+                    R {
+                        dist: 15,
+                        run_minus_3: 3,
+                    },
+                ],
+            )
+        );
+
+        assert_eq!(
+            (true, true),
+            outside_range_or_hit_zero(
+                &[
+                    L(5),
+                    R {
+                        dist: 1,
+                        run_minus_3: 4,
+                    },
+                    R {
+                        dist: 15,
+                        run_minus_3: 3,
+                    },
+                ],
+            )
+        );
+    }
+
+    #[test]
+    fn guess_first_byte_bug() {
+        assert_eq!(
+            WindowSettings {
+                window_size: 1,
+                first_byte_bug: true,
+            },
+            guess_settings(
+                &[],
+                &[
+                    L(5),
+                    L(5),
+                    R {
+                        dist: 1,
+                        run_minus_3: 5,
+                    },
+                ],
+            ).unwrap()
+        );
     }
 
     fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<Code> {

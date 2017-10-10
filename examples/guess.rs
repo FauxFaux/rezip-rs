@@ -50,13 +50,13 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
     let max = guess::max_distance(codes);
     println!("   max len: {:?}", max);
 
-    let outside_range = guess::outside_range(codes);
-    println!("   outta bounds: {}", outside_range);
+    let outside_range = guess::outside_range_or_hit_zero(codes);
+    println!("   outta bounds: {:?}", outside_range);
 
     if max.is_some() {
         println!(
             "   validate_reencode: {:?}",
-            guess::validate_reencode(&dictionary.vec(), codes)
+            guess::guess_settings(&dictionary.vec(), codes)
         );
     }
 

@@ -161,7 +161,6 @@ where
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
     let mut map = HashMap::new();
 
-    let mut remaining_preroll = preroll;
     let mut pos = 0usize;
 
     loop {
@@ -183,8 +182,7 @@ where
         let old = map.insert(key, pos);
         pos += 1;
 
-        if remaining_preroll > 0 {
-            remaining_preroll -= 1;
+        if pos <= preroll {
             continue;
         }
 

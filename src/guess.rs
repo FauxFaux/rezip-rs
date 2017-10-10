@@ -221,7 +221,6 @@ where
         let dist = pos - old - 1;
 
         if dist > (window_size as usize) {
-            // TODO: off-by-one
             continue;
         }
 
@@ -289,7 +288,7 @@ mod tests {
         match parse::parse_deflate(Cursor::new(
             &include_bytes!("../tests/data/abcdef-bcdefg.gz")[10..],
         )).next() {
-            Some(Ok(Block::FixedHuffman(codes))) => single_block_encode(32, &codes).unwrap(),
+            Some(Ok(Block::FixedHuffman(codes))) => single_block_encode(max_distance(&codes).unwrap(), &codes).unwrap(),
             _ => unreachable!(),
         }
     }
@@ -312,7 +311,7 @@ mod tests {
             L(b'h'),
             L(b'i'),
         ];
-        assert_eq!(exp, single_block_mem(32, exp).as_slice());
+        assert_eq!(exp, single_block_mem(max_distance(exp).unwrap(), exp).as_slice());
     }
 
     #[test]
@@ -353,7 +352,7 @@ mod tests {
             L(b's'),
             L(b't'),
         ];
-        assert_eq!(exp, single_block_mem(32, exp).as_slice());
+        assert_eq!(exp, single_block_mem(max_distance(exp).unwrap(), exp).as_slice());
     }
 
     #[test]
@@ -380,7 +379,7 @@ mod tests {
             },
             L(b'g'),
         ];
-        assert_eq!(exp, single_block_mem(32, exp).as_slice());
+        assert_eq!(exp, single_block_mem(max_distance(exp).unwrap(), exp).as_slice());
     }
 
     #[test]
@@ -392,7 +391,7 @@ mod tests {
                 run_minus_3: 10,
             },
         ];
-        assert_eq!(exp, single_block_mem(3, exp).as_slice());
+        assert_eq!(exp, single_block_mem(max_distance(exp).unwrap(), exp).as_slice());
     }
 
     #[test]
@@ -403,7 +402,7 @@ mod tests {
                 run_minus_3: 10,
             },
         ];
-        assert_eq!(exp, block_mem(3, &[0], exp).as_slice());
+        assert_eq!(exp, block_mem(max_distance(exp).unwrap(), &[0], exp).as_slice());
     }
 
     #[test]

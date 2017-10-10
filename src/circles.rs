@@ -97,7 +97,7 @@ impl CircularBuffer {
         // TODO: optimise
 
         let mut ret = Vec::with_capacity(usize_from(self.valid_cap));
-        for pos in (1..self.valid_cap).rev() {
+        for pos in (1..1 + self.valid_cap).rev() {
             ret.push(self.get_at_dist(pos));
         }
 

@@ -217,22 +217,20 @@ where
 
         let old = old.unwrap();
 
-        println!(
-            "think we've found a run, we're at {} and the old was at {}",
-            pos,
-            old
-        );
+        //println!("think we've found a run, we're at {} and the old was at {}", pos, old);
 
         let dist = pos - old;
 
         if dist > (window_size as usize) {
             // TODO: off-by-one
+
+            pos += 1;
             continue;
         }
 
         let dist = dist as u16;
 
-        let mut run = 1u16;
+        let mut run = 0u16;
 
         loop {
             if run >= 258 {
@@ -245,8 +243,8 @@ where
                 None => break,
             };
 
-            #[cfg(never)]
-            println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
+            //println!("inside: {}: ({}) {:?}", pos, buf.vec().len(), buf.vec());
+            //println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
 
             if buf.get_at_dist(dist) != byte {
                 break;
@@ -269,6 +267,9 @@ where
 
             run += 1;
         }
+
+        pos += 1;
+        run += 1;
 
         emit(Code::Reference {
             dist,

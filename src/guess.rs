@@ -421,8 +421,8 @@ mod tests {
             L(5),
             R {
                 dist: 1,
-                run_minus_3: ::pack_run(258)
-            }
+                run_minus_3: ::pack_run(258),
+            },
         ];
 
         assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
@@ -434,12 +434,12 @@ mod tests {
             L(5),
             R {
                 dist: 1,
-                run_minus_3: ::pack_run(258)
+                run_minus_3: ::pack_run(258),
             },
             R {
                 dist: 1,
-                run_minus_3: ::pack_run(258)
-            }
+                run_minus_3: ::pack_run(258),
+            },
         ];
 
         assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());

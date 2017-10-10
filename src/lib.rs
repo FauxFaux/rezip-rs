@@ -43,6 +43,33 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
+#[derive(Debug)]
+struct WindowSettings {
+    window_size: u16,
+
+    /// gzip (including 1.6 and probably onwards) will mis-encode
+    /// "aaaaaa" as "aa{ref one back, run=..}", as the encoder can't
+    /// be bothered to cope with pointers to the 0th character.
+    ///
+    /// Test-case:
+    ///
+    /// ```text
+    /// % yes aaaaaaaaaa | tr -d '\n' | head -c 8453631 | gzip > a.gz
+    /// % cargo run --example dump a.gz | uniq -c
+    ///     1 block 0:
+    ///     1  - dynamic huffman: BitVec: 110: 101111...
+    ///     2     - lit: 0x61: 'a'
+    /// 32765     - backref: 1 byte(s) back, 258 bytes long
+    ///     1 block 1:
+    ///     1  - fixed huffman:
+    ///     1     - backref: 1 byte(s) back, 258 bytes long
+    ///     1     - lit: 0x61: 'a'
+    /// ```
+    ///
+    /// Note the double 'a' at the start.
+    first_byte_bug: bool,
+}
+
 impl Code {
     fn emitted_bytes(&self) -> u16 {
         match *self {

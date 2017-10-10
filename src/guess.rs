@@ -7,6 +7,7 @@ use three::ThreePeek;
 use unpack_run;
 
 use Code;
+use WindowSettings;
 
 pub fn max_distance(codes: &[Code]) -> Option<u16> {
     codes
@@ -46,8 +47,12 @@ pub fn validate_reencode(preroll: &[u8], codes: &[Code]) -> Result<()> {
     let mut expected = codes.iter();
 
     let mut seen = 0usize;
+    let config = WindowSettings {
+        window_size,
+        first_byte_bug: false,
+    };
 
-    attempt_reencoding(window_size, preroll, codes, |code| {
+    attempt_reencoding(&config, preroll, codes, |code| {
         seen += 1;
         validate_expectation(seen, expected.next(), &code)
     })?;
@@ -140,26 +145,36 @@ fn validate_expected_range(
     }
 }
 
-fn attempt_reencoding<F>(window_size: u16, preroll: &[u8], codes: &[Code], emit: F) -> Result<()>
+fn attempt_reencoding<F>(
+    config: &WindowSettings,
+    preroll: &[u8],
+    codes: &[Code],
+    emit: F,
+) -> Result<()>
 where
     F: FnMut(Code) -> Result<()>,
 {
     attempt_encoding(
-        window_size,
+        config,
         preroll.len(),
         serialise::DecompressedBytes::new(preroll, codes.iter()),
         emit,
     )
 }
 
-fn attempt_encoding<B, F>(window_size: u16, preroll: usize, bytes: B, mut emit: F) -> Result<()>
+fn attempt_encoding<B, F>(
+    config: &WindowSettings,
+    preroll: usize,
+    bytes: B,
+    mut emit: F,
+) -> Result<()>
 where
     B: Iterator<Item = u8>,
     F: FnMut(Code) -> Result<()>,
 {
     let mut bytes = ThreePeek::new(bytes);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
-    let mut map = HashMap::with_capacity(window_size as usize);
+    let mut map = HashMap::with_capacity(config.window_size as usize);
 
     let mut pos = 0usize;
 
@@ -197,7 +212,7 @@ where
 
         let dist = pos - old - 1;
 
-        if dist > (window_size as usize) {
+        if dist > (config.window_size as usize) {
             continue;
         }
 
@@ -414,10 +429,16 @@ mod tests {
     }
 
     fn decode_then_reencode(preroll: &[u8], codes: &[Code]) -> Vec<Code> {
+        use WindowSettings;
+
         let window_size = max_distance(codes).unwrap();
         let mut ret = Vec::with_capacity(codes.len());
+        let config = WindowSettings {
+            window_size,
+            first_byte_bug: false,
+        };
 
-        attempt_reencoding(window_size, preroll, codes, |code| {
+        attempt_reencoding(&config, preroll, codes, |code| {
             ret.push(code);
             Ok(())
         }).expect("fails only if closure fails");

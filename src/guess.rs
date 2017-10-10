@@ -247,8 +247,8 @@ where
         let mut run = 0u16;
 
         loop {
-            if run >= 258 {
-                assert_eq!(258, run);
+            if run >= 257 {
+                assert_eq!(257, run);
                 break;
             }
 
@@ -413,6 +413,53 @@ mod tests {
             },
         ];
         assert_eq!(exp, decode_then_reencode(&[0], exp).as_slice());
+    }
+
+    #[test]
+    fn just_long_run() {
+        let exp = &[
+            L(5),
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(258)
+            }
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    #[test]
+    fn two_long_run() {
+        let exp = &[
+            L(5),
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(258)
+            },
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(258)
+            }
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+
+    #[test]
+    fn many_long_run() {
+        let enough_to_wrap_around = 10 + (32 * 1024 / 258);
+
+        let mut exp = Vec::with_capacity(enough_to_wrap_around + 1);
+        exp.push(L(5));
+        for _ in 0..enough_to_wrap_around {
+            exp.push(R {
+                dist: 1,
+                run_minus_3: ::pack_run(258)
+            });
+        }
+
+        assert_eq!(exp, decode_then_reencode_single_block(&exp));
     }
 
     #[test]

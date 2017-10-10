@@ -186,6 +186,8 @@ where
     let mut pos = 0usize;
 
     loop {
+        //println!("top: {}: ({}) {:?}", pos, buf.vec().len(), buf.vec());
+
         let key = match bytes.next_three() {
             Some(x) => x,
             None => {
@@ -200,18 +202,15 @@ where
         buf.push(key.0);
 
         let old = map.insert(key, pos);
+        pos += 1;
 
         if remaining_preroll > 0 {
             remaining_preroll -= 1;
-
-            pos += 1;
             continue;
         }
 
         if old.is_none() {
             emit(Code::Literal(key.0))?;
-
-            pos += 1;
             continue;
         }
 
@@ -219,12 +218,10 @@ where
 
         //println!("think we've found a run, we're at {} and the old was at {}", pos, old);
 
-        let dist = pos - old;
+        let dist = pos - old - 1;
 
         if dist > (window_size as usize) {
             // TODO: off-by-one
-
-            pos += 1;
             continue;
         }
 
@@ -243,7 +240,7 @@ where
                 None => break,
             };
 
-            //println!("inside: {}: ({}) {:?}", pos, buf.vec().len(), buf.vec());
+            //println!("inside: {}: ({}) {:?} {:?}", pos, buf.vec().len(), buf.vec(), map);
             //println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
 
             if buf.get_at_dist(dist) != byte {
@@ -268,7 +265,6 @@ where
             run += 1;
         }
 
-        pos += 1;
         run += 1;
 
         emit(Code::Reference {

@@ -43,6 +43,15 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
+impl Code {
+    fn emitted_bytes(&self) -> u16 {
+        match *self {
+            Code::Literal(_) => 1,
+            Code::Reference { run_minus_3, .. } => unpack_run(run_minus_3),
+        }
+    }
+}
+
 #[inline]
 pub fn unpack_run(run_minus_3: u8) -> u16 {
     u16::from(run_minus_3) + 3

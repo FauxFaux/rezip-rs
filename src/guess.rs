@@ -4,7 +4,7 @@ use circles::CircularBuffer;
 use errors::*;
 use serialise;
 use three::ThreePeek;
-use ::unpack_run;
+use unpack_run;
 
 use Code;
 
@@ -21,14 +21,23 @@ pub fn max_distance(codes: &[Code]) -> Option<u16> {
 
 /// checks if any code references before the start of this block
 pub fn outside_range(codes: &[Code]) -> bool {
-    // TODO: this is totally wrong; pos != byte number
-    codes.iter().enumerate().any(|(pos, code)| {
+    let mut pos: u16 = 0;
+    for code in codes {
         if let Code::Reference { dist, .. } = *code {
-            dist as usize > pos // off-by-one?
-        } else {
-            false
+            if dist > pos {
+                return true;
+            }
         }
-    })
+
+        // this can't overflow, as u16::MAX < 32_768 + max emitted_bytes
+        pos = pos.checked_add(code.emitted_bytes()).unwrap();
+
+        if pos > 32_768 {
+            return false;
+        }
+    }
+
+    return false;
 }
 
 fn single_block_mem(window_size: u16, codes: &[Code]) -> Vec<Code> {

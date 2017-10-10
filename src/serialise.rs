@@ -9,7 +9,7 @@ use errors::*;
 use huffman;
 use Block;
 use Code;
-use ::unpack_run;
+use unpack_run;
 
 pub fn decompressed_block<W: Write>(
     mut into: W,

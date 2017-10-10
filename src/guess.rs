@@ -448,16 +448,19 @@ mod tests {
 
     #[test]
     fn many_long_run() {
-        let enough_to_wrap_around = 10 + (32 * 1024 / 258);
+        const ENOUGH_TO_WRAP_AROUND: usize = 10 + (32 * 1024 / 258);
 
-        let mut exp = Vec::with_capacity(enough_to_wrap_around + 1);
+        let mut exp = Vec::with_capacity(ENOUGH_TO_WRAP_AROUND + 1);
+
         exp.push(L(5));
-        for _ in 0..enough_to_wrap_around {
-            exp.push(R {
+
+        exp.extend(vec![
+            R {
                 dist: 1,
-                run_minus_3: ::pack_run(258)
-            });
-        }
+                run_minus_3: ::pack_run(258),
+            };
+            ENOUGH_TO_WRAP_AROUND
+        ]);
 
         assert_eq!(exp, decode_then_reencode_single_block(&exp));
     }

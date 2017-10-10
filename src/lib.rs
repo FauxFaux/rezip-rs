@@ -30,13 +30,13 @@ pub use serialise::compressed_block;
 pub use serialise::decompressed_block;
 
 
-#[derive(PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Code {
     Literal(u8),
     Reference { dist: u16, run_minus_3: u8 },
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Block {
     Uncompressed(Vec<u8>),
     FixedHuffman(Vec<Code>),

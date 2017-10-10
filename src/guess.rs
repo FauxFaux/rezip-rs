@@ -28,7 +28,6 @@ pub fn outside_range_or_hit_zero(codes: &[Code]) -> (bool, bool) {
 
     for code in codes {
         if let Code::Reference { dist, .. } = *code {
-
             if dist == pos {
                 hit_zero = true;
             }
@@ -563,6 +562,33 @@ mod tests {
                 ],
             ).unwrap()
         );
+    }
+
+    #[test]
+    fn longer_match() {
+        // I didn't think it would, but even:
+        // echo a12341231234 | gzip --fast | cargo run --example dump /dev/stdin
+        // ..generates this.
+
+        // I was expecting it to only use the most recent hit for that hash item. Um.
+
+        let exp = &[
+            L(b'a'),
+            L(b'1'),
+            L(b'2'),
+            L(b'3'),
+            L(b'4'),
+            R {
+                dist: 4,
+                run_minus_3: ::pack_run(3),
+            },
+            R {
+                dist: 7,
+                run_minus_3: ::pack_run(4),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
     }
 
     fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<Code> {

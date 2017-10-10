@@ -43,6 +43,20 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
+#[inline]
+pub fn unpack_run(run_minus_3: u8) -> u16 {
+    u16::from(run_minus_3) + 3
+}
+
+#[inline]
+fn pack_run(run: u16) -> u8 {
+    assert!(run <= 258);
+    assert!(run >= 3);
+
+    (run - 3) as u8
+}
+
+
 impl fmt::Debug for Code {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {

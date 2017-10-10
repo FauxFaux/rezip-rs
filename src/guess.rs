@@ -4,6 +4,7 @@ use circles::CircularBuffer;
 use errors::*;
 use serialise;
 use three::ThreePeek;
+use ::unpack_run;
 
 use Code;
 
@@ -86,7 +87,7 @@ fn validate_expectation(seen: usize, exp: Option<&Code>, code: &Code) -> Result<
         Some(&Reference {
                  dist: expected_dist,
                  run_minus_3,
-             }) => validate_expected_range(seen, expected_dist, u16::from(run_minus_3) + 3, &code),
+             }) => validate_expected_range(seen, expected_dist, unpack_run(run_minus_3), &code),
         None => {
             bail!(
                 "{}: we emitted a code that isn't supposed to be there",
@@ -113,7 +114,7 @@ fn validate_expected_literal(seen: usize, expected_byte: u8, code: &Code) -> Res
             Ok(())
         }
         Reference { dist, run_minus_3 } => {
-            let run = u16::from(run_minus_3) + 3;
+            let run = unpack_run(run_minus_3);
             bail!(
                 "{}: picked run ({}, {}) that the original encoder missed",
                 seen,
@@ -143,7 +144,7 @@ fn validate_expected_range(
             )
         }
         Reference { dist, run_minus_3 } => {
-            let run = u16::from(run_minus_3) + 3;
+            let run = unpack_run(run_minus_3);
             if expected_dist != dist || expected_run != run {
                 bail!(
                     "{}: we found a different run: them: ({}, {}) != us: ({}, {})",
@@ -262,7 +263,7 @@ where
 
         emit(Code::Reference {
             dist,
-            run_minus_3: (run - 3) as u8,
+            run_minus_3: ::pack_run(run),
         })?;
     }
 }

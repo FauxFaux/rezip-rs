@@ -109,7 +109,7 @@ fn scan_huffman_data<R: Read>(
 
         ret.push(Code::Reference {
             dist,
-            run_minus_3: (run - 3) as u8,
+            run_minus_3: ::pack_run(run),
         });
     }
 

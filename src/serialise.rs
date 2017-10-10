@@ -9,6 +9,7 @@ use errors::*;
 use huffman;
 use Block;
 use Code;
+use ::unpack_run;
 
 pub fn decompressed_block<W: Write>(
     mut into: W,
@@ -43,8 +44,7 @@ pub fn decompressed_codes<W: Write>(
                 into.write_all(&[byte])?
             }
             Reference { dist, run_minus_3 } => {
-                let run = u16::from(run_minus_3) + 3;
-                dictionary.copy(dist, run, &mut into)?;
+                dictionary.copy(dist, unpack_run(run_minus_3), &mut into)?;
             }
         }
     }
@@ -91,7 +91,7 @@ where
                     1
                 }
                 Some(&Reference { dist, run_minus_3 }) => {
-                    let run = u16::from(run_minus_3) + 3;
+                    let run = unpack_run(run_minus_3);
                     self.dictionary.copy(dist, run, NullWriter {}).expect(
                         &format!(
                             "dist ({}), run (<258: {}) < 32kb ({})",
@@ -171,9 +171,7 @@ fn compressed_codes<W: Write>(
                 )?)?;
             }
             Reference { dist, run_minus_3 } => {
-                let run = u16::from(run_minus_3) + 3;
-
-                encode_run(into, &length_tree, run)?;
+                encode_run(into, &length_tree, unpack_run(run_minus_3))?;
                 encode_distance(into, distance_tree.as_ref(), dist)?;
             }
         }

@@ -9,6 +9,7 @@ use std::io;
 use librezip::Result;
 use librezip::Block;
 use librezip::Code;
+use librezip::unpack_run;
 
 fn run() -> Result<()> {
     let input = env::args().nth(1).ok_or("first argument: input-path.gz")?;
@@ -49,7 +50,7 @@ fn print(codes: &[Code]) {
                 println!(
                     "    - backref: {} byte(s) back, {} bytes long",
                     dist,
-                    u16::from(run_minus_3) + 3
+                    unpack_run(run_minus_3)
                 );
             }
         }

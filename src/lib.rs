@@ -151,6 +151,7 @@ mod tests {
                 recompressed.write_bit(last).unwrap();
                 compressed_block(&mut recompressed, &block).unwrap();
 
+                // TODO
                 match block {
                     Block::FixedHuffman(codes) |
                     Block::DynamicHuffman { codes, .. } => {}

@@ -40,30 +40,7 @@ pub fn outside_range(codes: &[Code]) -> bool {
     return false;
 }
 
-fn single_block_mem(window_size: u16, codes: &[Code]) -> Vec<Code> {
-    block_mem(window_size, &[], codes)
-}
-
-fn block_mem(window_size: u16, preroll: &[u8], codes: &[Code]) -> Vec<Code> {
-    let mut ret = Vec::with_capacity(codes.len());
-    block_encode_helper(
-        window_size,
-        preroll.len(),
-        serialise::DecompressedBytes::new(preroll, codes.iter()),
-        |code| {
-            ret.push(code);
-            Ok(())
-        },
-    ).expect("fails only if closure fails");
-
-    ret
-}
-
-pub fn single_block_encode(window_size: u16, codes: &[Code]) -> Result<()> {
-    block_encode(window_size, &[], codes)
-}
-
-pub fn block_encode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<()> {
+pub fn validate_reencode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<()> {
     let mut expected = codes.iter();
 
     let mut seen = 0usize;
@@ -275,23 +252,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::io::Cursor;
-    use parse;
-    use Block;
+    use super::block_encode_helper;
+    use super::max_distance;
+    use super::outside_range;
+    use super::Code;
+    use serialise;
 
     use Code::Literal as L;
     use Code::Reference as R;
-
-    #[test]
-    fn find_single_ref_from_file() {
-        match parse::parse_deflate(Cursor::new(
-            &include_bytes!("../tests/data/abcdef-bcdefg.gz")[10..],
-        )).next() {
-            Some(Ok(Block::FixedHuffman(codes))) => single_block_encode(max_distance(&codes).unwrap(), &codes).unwrap(),
-            _ => unreachable!(),
-        }
-    }
 
     #[test]
     fn find_single_lits() {
@@ -311,7 +279,7 @@ mod tests {
             L(b'h'),
             L(b'i'),
         ];
-        assert_eq!(exp, single_block_mem(max_distance(exp).unwrap(), exp).as_slice());
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
     }
 
     #[test]
@@ -352,7 +320,7 @@ mod tests {
             L(b's'),
             L(b't'),
         ];
-        assert_eq!(exp, single_block_mem(max_distance(exp).unwrap(), exp).as_slice());
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
     }
 
     #[test]
@@ -379,7 +347,7 @@ mod tests {
             },
             L(b'g'),
         ];
-        assert_eq!(exp, single_block_mem(max_distance(exp).unwrap(), exp).as_slice());
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
     }
 
     #[test]
@@ -391,7 +359,7 @@ mod tests {
                 run_minus_3: 10,
             },
         ];
-        assert_eq!(exp, single_block_mem(max_distance(exp).unwrap(), exp).as_slice());
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
     }
 
     #[test]
@@ -402,7 +370,7 @@ mod tests {
                 run_minus_3: 10,
             },
         ];
-        assert_eq!(exp, block_mem(max_distance(exp).unwrap(), &[0], exp).as_slice());
+        assert_eq!(exp, decode_then_reencode(&[0], exp).as_slice());
     }
 
     #[test]
@@ -440,5 +408,26 @@ mod tests {
                 },
             ],
         ));
+    }
+
+    fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<Code> {
+        decode_then_reencode(&[], codes)
+    }
+
+    fn decode_then_reencode(preroll: &[u8], codes: &[Code]) -> Vec<Code> {
+        let window_size = max_distance(codes).unwrap();
+
+        let mut ret = Vec::with_capacity(codes.len());
+        block_encode_helper(
+            window_size,
+            preroll.len(),
+            serialise::DecompressedBytes::new(preroll, codes.iter()),
+            |code| {
+                ret.push(code);
+                Ok(())
+            },
+        ).expect("fails only if closure fails");
+
+        ret
     }
 }

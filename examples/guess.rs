@@ -55,7 +55,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
 
     println!(
         "   block_encode: {:?}",
-        guess::block_encode(max.unwrap_or(0), &dictionary.vec(), codes)
+        guess::validate_reencode(max.unwrap_or(0), &dictionary.vec(), codes)
     );
 
     // AWFUL

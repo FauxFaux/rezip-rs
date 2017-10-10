@@ -53,10 +53,12 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
     let outside_range = guess::outside_range(codes);
     println!("   outta bounds: {}", outside_range);
 
-    println!(
-        "   block_encode: {:?}",
-        guess::validate_reencode(max.unwrap_or(0), &dictionary.vec(), codes)
-    );
+    if max.is_some() {
+        println!(
+            "   validate_reencode: {:?}",
+            guess::validate_reencode(&dictionary.vec(), codes)
+        );
+    }
 
     // AWFUL
     for byte in librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter()) {

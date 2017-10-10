@@ -40,27 +40,21 @@ pub fn outside_range(codes: &[Code]) -> bool {
     return false;
 }
 
-pub fn validate_reencode(window_size: u16, preroll: &[u8], codes: &[Code]) -> Result<()> {
+pub fn validate_reencode(preroll: &[u8], codes: &[Code]) -> Result<()> {
+    let window_size = max_distance(codes).unwrap();
+
     let mut expected = codes.iter();
 
     let mut seen = 0usize;
 
-    block_encode_helper(
-        window_size,
-        preroll.len(),
-        serialise::DecompressedBytes::new(preroll, codes.iter()),
-        |code| {
-            seen += 1;
-            validate_expectation(seen, expected.next(), &code)
-        },
-    )?;
+    attempt_reencoding(window_size, preroll, codes, |code| {
+        seen += 1;
+        validate_expectation(seen, expected.next(), &code)
+    })?;
 
-    ensure!(
-        seen == codes.len(),
-        "wrong number of codes were emitted, expected: {} != {}",
-        codes.len(),
-        seen
-    );
+    if expected.next().is_some() {
+        bail!("we incorrectly gave up emitting codes after {}", seen);
+    }
 
     Ok(())
 }
@@ -146,13 +140,21 @@ fn validate_expected_range(
     }
 }
 
-fn block_encode_helper<B: Iterator<Item = u8>, F>(
-    window_size: u16,
-    preroll: usize,
-    bytes: B,
-    mut emit: F,
-) -> Result<()>
+fn attempt_reencoding<F>(window_size: u16, preroll: &[u8], codes: &[Code], emit: F) -> Result<()>
 where
+    F: FnMut(Code) -> Result<()>,
+{
+    attempt_encoding(
+        window_size,
+        preroll.len(),
+        serialise::DecompressedBytes::new(preroll, codes.iter()),
+        emit,
+    )
+}
+
+fn attempt_encoding<B, F>(window_size: u16, preroll: usize, bytes: B, mut emit: F) -> Result<()>
+where
+    B: Iterator<Item = u8>,
     F: FnMut(Code) -> Result<()>,
 {
     let mut bytes = ThreePeek::new(bytes);
@@ -252,11 +254,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::block_encode_helper;
+    use super::attempt_reencoding;
     use super::max_distance;
     use super::outside_range;
     use super::Code;
-    use serialise;
 
     use Code::Literal as L;
     use Code::Reference as R;
@@ -416,17 +417,12 @@ mod tests {
 
     fn decode_then_reencode(preroll: &[u8], codes: &[Code]) -> Vec<Code> {
         let window_size = max_distance(codes).unwrap();
-
         let mut ret = Vec::with_capacity(codes.len());
-        block_encode_helper(
-            window_size,
-            preroll.len(),
-            serialise::DecompressedBytes::new(preroll, codes.iter()),
-            |code| {
-                ret.push(code);
-                Ok(())
-            },
-        ).expect("fails only if closure fails");
+
+        attempt_reencoding(window_size, preroll, codes, |code| {
+            ret.push(code);
+            Ok(())
+        }).expect("fails only if closure fails");
 
         ret
     }

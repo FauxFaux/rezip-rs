@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 use circles::CircularBuffer;
 use errors::*;
@@ -194,7 +195,7 @@ where
 {
     let mut bytes = ThreePeek::new(bytes);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
-    let mut map: HashMap<(u8, u8, u8), usize> = HashMap::with_capacity(config.window_size as usize);
+    let mut map: HashMap<(u8, u8, u8), Vec<usize>> = HashMap::with_capacity(config.window_size as usize);
 
     let mut pos: usize = 0;
 
@@ -215,7 +216,17 @@ where
         buf.push(key.0);
 
         let old = if 0 != pos || !config.first_byte_bug {
-            map.insert(key, pos)
+            match map.entry(key) {
+                Entry::Occupied(mut entry) => {
+                    entry.get_mut().retain(|old| pos - old > config.window_size as usize);
+                    entry.get_mut().push(pos);
+                    Some(entry.get().clone())
+                },
+                Entry::Vacant(entry) => {
+                    entry.insert(vec![pos]);
+                    None
+                }
+            }
         } else {
             None
         };
@@ -226,24 +237,18 @@ where
             continue;
         }
 
-        if old.is_none() {
+        if old.as_ref().map(|candidates| candidates.is_empty()).unwrap_or(true) {
             emit(Code::Literal(key.0))?;
             continue;
         }
 
-        let old = old.unwrap();
+        let mut old: Vec<usize> = old.unwrap();
+        assert!(!old.is_empty());
 
         //println!("think we've found a run, we're at {} and the old was at {}", pos, old);
 
-        let dist = pos - old - 1;
-
-        if dist > (config.window_size as usize) {
-            continue;
-        }
-
-        let dist = dist as u16;
-
         let mut run = 0u16;
+        let mut dist = 0;
 
         loop {
             if run >= 257 {
@@ -259,14 +264,16 @@ where
             //println!("inside: {}: ({}) {:?} {:?}", pos, buf.vec().len(), buf.vec(), map);
             //println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
 
-            if buf.get_at_dist(dist) != byte {
+            dist = (pos - old[0] - 1) as u16;
+            old.retain(|candidate| buf.get_at_dist((pos - candidate - 1) as u16) == byte);
+            if old.is_empty() {
                 break;
             }
 
             match bytes.next_three() {
                 Some(key) => {
                     buf.push(key.0);
-                    map.insert(key, pos);
+                    map.entry(key).or_insert_with(|| Vec::new()).push(pos);
                 }
                 None => {
                     match bytes.next() {

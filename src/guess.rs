@@ -159,7 +159,7 @@ where
 {
     let mut bytes = ThreePeek::new(bytes);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
-    let mut map = HashMap::new();
+    let mut map = HashMap::with_capacity(window_size as usize);
 
     let mut pos = 0usize;
 

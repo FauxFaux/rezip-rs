@@ -352,5 +352,20 @@ mod tests {
                 },
             ],
         ));
+
+        // Not an encoding a real tool would generate
+        assert!(!outside_range(
+            &[
+                L(5),
+                R {
+                    dist: 1,
+                    run_minus_3: 20,
+                },
+                R {
+                    dist: 15,
+                    run_minus_3: 3,
+                },
+            ],
+        ));
     }
 }

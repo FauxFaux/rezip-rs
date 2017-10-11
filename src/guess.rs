@@ -200,7 +200,8 @@ where
     let mut pos: usize = 0;
 
     loop {
-        //println!("top: {}: ({}) {:?}", pos, buf.vec().len(), buf.vec());
+        #[cfg(trace)]
+        println!("top: {}: ({}) {:?}", pos, buf.vec().len(), buf.vec());
 
         let key = match bytes.next_three() {
             Some(x) => x,
@@ -215,12 +216,14 @@ where
 
         buf.push(key.0);
 
-        let old = if 0 != pos || !config.first_byte_bug {
+        let mut old = if 0 != pos || !config.first_byte_bug {
             match map.entry(key) {
                 Entry::Occupied(mut entry) => {
-                    entry.get_mut().retain(|old| pos - old > config.window_size as usize);
-                    entry.get_mut().push(pos);
-                    Some(entry.get().clone())
+                    let current = entry.get_mut();
+                    current.retain(|old| pos - old <= config.window_size as usize);
+                    let old = current.clone();
+                    current.push(pos);
+                    Some(old)
                 },
                 Entry::Vacant(entry) => {
                     entry.insert(vec![pos]);
@@ -237,7 +240,16 @@ where
             continue;
         }
 
-        if old.as_ref().map(|candidates| candidates.is_empty()).unwrap_or(true) {
+        #[cfg(trace)]
+        {
+            println!("{}: key: {:?}", pos, key);
+            println!("{}: old: {:?}", pos, old);
+            println!("{}: map: {:?}", pos, map);
+        }
+
+        if old.as_mut().map(|candidates| {
+            candidates.is_empty()
+        }).unwrap_or(true) {
             emit(Code::Literal(key.0))?;
             continue;
         }
@@ -245,8 +257,7 @@ where
         let mut old: Vec<usize> = old.unwrap();
         assert!(!old.is_empty());
 
-        //println!("think we've found a run, we're at {} and the old was at {}", pos, old);
-
+        let run_start = pos;
         let mut run = 0u16;
         let mut dist = 0;
 
@@ -261,11 +272,14 @@ where
                 None => break,
             };
 
-            //println!("inside: {}: ({}) {:?} {:?}", pos, buf.vec().len(), buf.vec(), map);
-            //println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
+            dist = (run_start - old[0] - 1) as u16;
 
-            dist = (pos - old[0] - 1) as u16;
-            old.retain(|candidate| buf.get_at_dist((pos - candidate - 1) as u16) == byte);
+            #[cfg(trace)]
+            println!("inside: {}: ({}) {:?} {:?}", pos, buf.vec().len(), buf.vec(), map);
+            #[cfg(trace)]
+            println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
+
+            old.retain(|candidate| buf.get_at_dist((run_start - candidate - 1) as u16) == byte);
             if old.is_empty() {
                 break;
             }

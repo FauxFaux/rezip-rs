@@ -195,7 +195,8 @@ where
 {
     let mut bytes = ThreePeek::new(bytes);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
-    let mut map: HashMap<(u8, u8, u8), Vec<usize>> = HashMap::with_capacity(config.window_size as usize);
+    let mut map: HashMap<(u8, u8, u8), Vec<usize>> =
+        HashMap::with_capacity(config.window_size as usize);
 
     let mut pos: usize = 0;
 
@@ -224,7 +225,7 @@ where
                     let old = current.clone();
                     current.push(pos);
                     Some(old)
-                },
+                }
                 Entry::Vacant(entry) => {
                     entry.insert(vec![pos]);
                     None
@@ -247,9 +248,10 @@ where
             println!("{}: map: {:?}", pos, map);
         }
 
-        if old.as_mut().map(|candidates| {
-            candidates.is_empty()
-        }).unwrap_or(true) {
+        if old.as_mut()
+            .map(|candidates| candidates.is_empty())
+            .unwrap_or(true)
+        {
             emit(Code::Literal(key.0))?;
             continue;
         }
@@ -275,11 +277,19 @@ where
             dist = (run_start - old[0] - 1) as u16;
 
             #[cfg(trace)]
-            println!("inside: {}: ({}) {:?} {:?}", pos, buf.vec().len(), buf.vec(), map);
+            println!(
+                "inside: {}: ({}) {:?} {:?}",
+                pos,
+                buf.vec().len(),
+                buf.vec(),
+                map
+            );
             #[cfg(trace)]
             println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
 
-            old.retain(|candidate| buf.get_at_dist((run_start - candidate - 1) as u16) == byte);
+            old.retain(|candidate| {
+                buf.get_at_dist((run_start - candidate - 1) as u16) == byte
+            });
             if old.is_empty() {
                 break;
             }

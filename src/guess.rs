@@ -643,4 +643,26 @@ mod tests {
 
         ret
     }
+
+    #[test]
+    fn repeat_after_ref() {
+
+        let exp = &[
+            L(b'a'),
+            L(b'1'),
+            L(b'2'),
+            L(b'2'),
+            L(b'b'),
+            R {
+                dist: 4,
+                run_minus_3: ::pack_run(3),
+            },
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(3),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
 }

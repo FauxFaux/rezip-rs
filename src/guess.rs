@@ -13,6 +13,8 @@ use usize_from;
 use Code;
 use WindowSettings;
 
+type Key = (u8, u8, u8);
+
 pub fn max_distance(codes: &[Code]) -> Option<u16> {
     codes
         .iter()
@@ -198,7 +200,7 @@ where
 {
     let mut bytes = ThreePeek::new(bytes);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
-    let mut map: HashMap<(u8, u8, u8), Vec<usize>> =
+    let mut map: HashMap<Key, Vec<usize>> =
         HashMap::with_capacity(config.window_size as usize);
 
     let mut pos: usize = 0;
@@ -211,7 +213,7 @@ where
         }
 
         #[cfg(feature = "tracing")]
-        fn lit_key(key: (u8, u8, u8)) -> String {
+        fn lit_key(key: Key) -> String {
             format!("({}, {}, {})", lit(key.0), lit(key.1), lit(key.2))
         }
 
@@ -303,9 +305,9 @@ where
 }
 
 fn write_map_key(
-    key: (u8, u8, u8),
+    key: Key,
     pos: usize,
-    map: &mut HashMap<(u8, u8, u8), Vec<usize>>,
+    map: &mut HashMap<Key, Vec<usize>>,
     config: &WindowSettings,
 ) -> Option<Vec<usize>> {
     match map.entry(key) {
@@ -334,7 +336,7 @@ fn track_run<B>(
     original_start: usize,
     bytes: &mut ThreePeek<B>,
     buf: &mut CircularBuffer,
-    map: &mut HashMap<(u8, u8, u8), Vec<usize>>,
+    map: &mut HashMap<Key, Vec<usize>>,
     config: &WindowSettings,
 ) -> Result<(Vec<Prev>, u16)>
 where

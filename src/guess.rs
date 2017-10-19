@@ -239,7 +239,7 @@ where
 
         buf.push(key.0);
 
-        let mut old = if 0 != pos || !config.first_byte_bug {
+        let mut prev_poses = if 0 != pos || !config.first_byte_bug {
             match map.entry(key) {
                 Entry::Occupied(mut entry) => {
                     let current = entry.get_mut();
@@ -264,7 +264,12 @@ where
 
         #[cfg(feature = "tracing")]
         {
-            println!("{}: key: {}, old: {:?}", pos, lit_key(key), old);
+            println!(
+                "{}: key: {}, prev_poses: {:?}",
+                pos,
+                lit_key(key),
+                prev_poses
+            );
             println!(
                 "{}: map: {}",
                 pos,
@@ -274,7 +279,8 @@ where
             );
         }
 
-        if old.as_mut()
+        if prev_poses
+            .as_mut()
             .map(|candidates| candidates.is_empty())
             .unwrap_or(true)
         {
@@ -284,7 +290,7 @@ where
             continue;
         }
 
-        let (old_old, run) = track_run(old.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
+        let (old_old, run) = track_run(prev_poses.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
 
         assert_eq!(old_old[0], *old_old.iter().min().unwrap());
 
@@ -302,7 +308,7 @@ where
 }
 
 fn track_run<B>(
-    mut old: Vec<usize>,
+    mut prev_poses: Vec<usize>,
     run_start: usize,
     bytes: &mut ThreePeek<B>,
     buf: &mut CircularBuffer,
@@ -311,7 +317,7 @@ fn track_run<B>(
 where
     B: Iterator<Item = u8>,
 {
-    assert!(!old.is_empty());
+    assert!(!prev_poses.is_empty());
 
     let mut run = 0u16;
 
@@ -320,20 +326,20 @@ where
 
         if run >= 258 {
             assert_eq!(258, run);
-            return Ok((old, run));
+            return Ok((prev_poses, run));
         }
 
         let byte = match bytes.peek() {
             Some(byte) => byte,
-            None => return Ok((old, run)),
+            None => return Ok((prev_poses, run)),
         };
 
         #[cfg(feature = "tracing")]
         println!("inside: ({}) {:?} {:?}", buf.vec().len(), buf.vec(), map);
 
-        let old_old = old.clone();
+        let old_prev_poses = prev_poses.clone();
 
-        old.retain(|candidate| {
+        prev_poses.retain(|candidate| {
             let dist = (run_start - candidate) as u16;
 
             #[cfg(feature = "tracing")]
@@ -347,10 +353,10 @@ where
             buf.get_at_dist(dist) == byte
         });
 
-        if old.is_empty() {
+        if prev_poses.is_empty() {
             #[cfg(feature = "tracing")]
             println!("no matches remain");
-            return Ok((old_old, run));;
+            return Ok((old_prev_poses, run));
         }
 
         match bytes.next_three() {
@@ -366,7 +372,7 @@ where
             None => {
                 match bytes.next() {
                     Some(byte) => buf.push(byte),
-                    None => return Ok((old, run)),
+                    None => return Ok((prev_poses, run)),
                 }
             }
         }

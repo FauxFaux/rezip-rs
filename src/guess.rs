@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
+use itertools::Itertools;
+
 use circles::CircularBuffer;
 use errors::*;
 use serialise;
@@ -199,6 +201,7 @@ where
         HashMap::with_capacity(config.window_size as usize);
 
     let mut pos: usize = 0;
+    let mut old_old = None;
 
     loop {
 
@@ -262,7 +265,6 @@ where
 
         #[cfg(feature = "tracing")]
         {
-            use itertools::Itertools;
             println!("{}: key: {}, old: {:?}", pos, lit_key(key), old);
             println!(
                 "{}: map: {}",
@@ -286,9 +288,10 @@ where
 
         let run_start = pos;
         let mut run = 0u16;
-        let mut dist = 0;
 
         loop {
+            old_old = Some(old.clone());
+
             if run >= 257 {
                 assert_eq!(257, run);
                 break;
@@ -299,9 +302,7 @@ where
                 None => break,
             };
 
-            dist = (run_start - old[old.len() - 1] - 1) as u16;
-
-            #[cfg(trace)]
+            #[cfg(feature = "tracing")]
             println!(
                 "inside: {}: ({}) {:?} {:?}",
                 pos,
@@ -309,13 +310,19 @@ where
                 buf.vec(),
                 map
             );
-            #[cfg(trace)]
-            println!("{:?} != {:?}", buf.get_at_dist(dist) as char, byte as char);
 
             old.retain(|candidate| {
-                buf.get_at_dist((run_start - candidate - 1) as u16) == byte
+                let dist = (run_start - candidate - 1) as u16;
+
+                #[cfg(feature = "tracing")]
+                println!("{}: {:?} != {:?}", candidate, buf.get_at_dist(dist) as char, byte as char);
+
+                buf.get_at_dist(dist) == byte
             });
+
             if old.is_empty() {
+                #[cfg(feature = "tracing")]
+                println!("no matches remain");
                 break;
             }
 
@@ -338,6 +345,13 @@ where
         }
 
         run += 1;
+
+        let old_old = old_old.as_ref().unwrap();
+        assert_eq!(old_old[0], *old_old.iter().min().unwrap());
+
+        let candidate = old_old[old_old.len() - 1];
+
+        let dist = (run_start - candidate - 1) as u16;
 
         emit(Code::Reference {
             dist,

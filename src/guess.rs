@@ -748,19 +748,17 @@ mod tests {
         // Finally, a test for this gzip behaviour.
         // It only does this with zip levels >3, including the default.
 
-        // a11223412f41223
-        // 012345678901234
+        // a123412f41234
+        // 0123456789012
 
-        // It gets to position 10, and it's ignoring the "412" (at position 6),
-        // instead taking the longer run of "1223" at position 2.
+        // It gets to position 8, and it's ignoring the "412" (at position 6),
+        // instead taking the longer run of "1234" at position 1.
 
         // I bet it thinks it's so smart.
 
         let exp = &[
             L(b'a'),
             L(b'1'),
-            L(b'1'),
-            L(b'2'),
             L(b'2'),
             L(b'3'),
             L(b'4'),
@@ -769,7 +767,7 @@ mod tests {
             L(b'f'),
             L(b'4'),
             R {
-                dist: 9,
+                dist: 8,
                 run_minus_3: ::pack_run(4),
             },
         ];

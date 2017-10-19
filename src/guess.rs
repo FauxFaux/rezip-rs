@@ -257,9 +257,8 @@ where
             None
         };
 
-        pos += 1;
-
-        if pos <= preroll {
+        if pos < preroll {
+            pos += 1;
             continue;
         }
 
@@ -280,24 +279,26 @@ where
             .unwrap_or(true)
         {
             emit(Code::Literal(key.0))?;
+            pos += 1;
+
             continue;
         }
 
         let (old_old, run) =
-            track_run(old.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
+        track_run(old.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
 
         assert_eq!(old_old[0], *old_old.iter().min().unwrap());
 
         let candidate = old_old[old_old.len() - 1];
 
-        let dist = (pos - candidate - 1) as u16;
+        let dist = (pos - candidate) as u16;
 
         emit(Code::Reference {
             dist,
             run_minus_3: ::pack_run(run),
         })?;
 
-        pos += usize_from(run - 1);
+        pos += usize_from(run);
     }
 }
 
@@ -339,7 +340,7 @@ where
         let old_old = old.clone();
 
         old.retain(|candidate| {
-            let dist = (run_start - candidate - 1) as u16;
+            let dist = (run_start - candidate) as u16;
 
             #[cfg(feature = "tracing")]
             println!(
@@ -361,7 +362,7 @@ where
         match bytes.next_three() {
             Some(key) => {
                 buf.push(key.0);
-                map.entry(key).or_insert_with(|| Vec::new()).push(run_start + usize_from(run) - 1);
+                map.entry(key).or_insert_with(|| Vec::new()).push(run_start + usize_from(run));
             }
             None => {
                 match bytes.next() {

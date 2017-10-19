@@ -742,4 +742,38 @@ mod tests {
 
         assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
     }
+
+    #[test]
+    fn lazy_longer_ref() {
+        // Finally, a test for this gzip behaviour.
+        // It only does this with zip levels >3, including the default.
+
+        // a11223412f41223
+        // 012345678901234
+
+        // It gets to position 10, and it's ignoring the "412" (at position 6),
+        // instead taking the longer run of "1223" at position 2.
+
+        // I bet it thinks it's so smart.
+
+        let exp = &[
+            L(b'a'),
+            L(b'1'),
+            L(b'1'),
+            L(b'2'),
+            L(b'2'),
+            L(b'3'),
+            L(b'4'),
+            L(b'1'),
+            L(b'2'),
+            L(b'f'),
+            L(b'4'),
+            R {
+                dist: 9,
+                run_minus_3: ::pack_run(4),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
 }

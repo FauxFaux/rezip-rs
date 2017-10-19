@@ -299,7 +299,7 @@ where
                 None => break,
             };
 
-            dist = (run_start - old[0] - 1) as u16;
+            dist = (run_start - old[old.len() - 1] - 1) as u16;
 
             #[cfg(trace)]
             println!(
@@ -669,8 +669,27 @@ mod tests {
         ret
     }
 
+
+    #[test]
+    fn short_repeat() {
+        // a122b122222
+        // 01234567890
+
+        let exp = &[
+            L(b'a'),
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(3),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
     #[test]
     fn repeat_after_ref() {
+        // a122b122222
+        // 01234567890
 
         let exp = &[
             L(b'a'),

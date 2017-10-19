@@ -316,14 +316,16 @@ where
     let mut run = 0u16;
 
     loop {
-        if run >= 257 {
-            assert_eq!(257, run);
-            return Ok((old, run + 1));
+        run += 1;
+
+        if run >= 258 {
+            assert_eq!(258, run);
+            return Ok((old, run));
         }
 
         let byte = match bytes.peek() {
             Some(byte) => byte,
-            None => return Ok((old, run + 1)),
+            None => return Ok((old, run)),
         };
 
         #[cfg(feature = "tracing")]
@@ -353,23 +355,21 @@ where
         if old.is_empty() {
             #[cfg(feature = "tracing")]
             println!("no matches remain");
-            return Ok((old_old, run + 1));;
+            return Ok((old_old, run));;
         }
 
         match bytes.next_three() {
             Some(key) => {
                 buf.push(key.0);
-                map.entry(key).or_insert_with(|| Vec::new()).push(run_start + usize_from(run));
+                map.entry(key).or_insert_with(|| Vec::new()).push(run_start + usize_from(run) - 1);
             }
             None => {
                 match bytes.next() {
                     Some(byte) => buf.push(byte),
-                    None => return Ok((old, run + 1)),
+                    None => return Ok((old, run)),
                 }
             }
         }
-
-        run += 1;
     }
 }
 

@@ -284,8 +284,7 @@ where
             continue;
         }
 
-        let (old_old, run) =
-        track_run(old.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
+        let (old_old, run) = track_run(old.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
 
         assert_eq!(old_old[0], *old_old.iter().min().unwrap());
 
@@ -330,12 +329,7 @@ where
         };
 
         #[cfg(feature = "tracing")]
-        println!(
-            "inside: ({}) {:?} {:?}",
-            buf.vec().len(),
-            buf.vec(),
-            map
-        );
+        println!("inside: ({}) {:?} {:?}", buf.vec().len(), buf.vec(), map);
 
         let old_old = old.clone();
 
@@ -362,7 +356,12 @@ where
         match bytes.next_three() {
             Some(key) => {
                 buf.push(key.0);
-                map.entry(key).or_insert_with(|| Vec::new()).push(run_start + usize_from(run));
+                map.entry(key).or_insert_with(|| Vec::new()).push(
+                    run_start +
+                        usize_from(
+                            run,
+                        ),
+                );
             }
             None => {
                 match bytes.next() {

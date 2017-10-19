@@ -240,19 +240,7 @@ where
         buf.push(key.0);
 
         let mut prev_poses = if 0 != pos || !config.first_byte_bug {
-            match map.entry(key) {
-                Entry::Occupied(mut entry) => {
-                    let current = entry.get_mut();
-                    current.retain(|old| pos - old <= config.window_size as usize);
-                    let old = current.clone();
-                    current.push(pos);
-                    Some(old)
-                }
-                Entry::Vacant(entry) => {
-                    entry.insert(vec![pos]);
-                    None
-                }
-            }
+            write_map_key(key, pos, &mut map, &config)
         } else {
             None
         };
@@ -290,7 +278,14 @@ where
             continue;
         }
 
-        let (old_old, run) = track_run(prev_poses.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
+        let (old_old, run) = track_run(
+            prev_poses.unwrap(),
+            pos,
+            &mut bytes,
+            &mut buf,
+            &mut map,
+            config,
+        )?;
 
         let candidate = &old_old[old_old.len() - 1];
 
@@ -307,6 +302,27 @@ where
     }
 }
 
+fn write_map_key(
+    key: (u8, u8, u8),
+    pos: usize,
+    map: &mut HashMap<(u8, u8, u8), Vec<usize>>,
+    config: &WindowSettings,
+) -> Option<Vec<usize>> {
+    match map.entry(key) {
+        Entry::Occupied(mut entry) => {
+            let current = entry.get_mut();
+            current.retain(|old| pos - old <= config.window_size as usize);
+            let old = current.clone();
+            current.push(pos);
+            Some(old)
+        }
+        Entry::Vacant(entry) => {
+            entry.insert(vec![pos]);
+            None
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 struct Prev {
     data_pos: usize,
@@ -319,6 +335,7 @@ fn track_run<B>(
     bytes: &mut ThreePeek<B>,
     buf: &mut CircularBuffer,
     map: &mut HashMap<(u8, u8, u8), Vec<usize>>,
+    config: &WindowSettings,
 ) -> Result<(Vec<Prev>, u16)>
 where
     B: Iterator<Item = u8>,
@@ -380,12 +397,8 @@ where
         match bytes.next_three() {
             Some(key) => {
                 buf.push(key.0);
-                map.entry(key).or_insert_with(|| Vec::new()).push(
-                    original_start +
-                        usize_from(
-                            run,
-                        ),
-                );
+                let pos = original_start + usize_from(run);
+                write_map_key(key, pos, map, &config);
             }
             None => {
                 match bytes.next() {

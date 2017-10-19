@@ -292,7 +292,7 @@ where
 
         let (old_old, run) = track_run(prev_poses.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
 
-        assert_eq!(old_old[0], *old_old.iter().min().unwrap());
+        assert_eq!(old_old[old_old.len() - 1], *old_old.iter().max().unwrap());
 
         let candidate = old_old[old_old.len() - 1];
 

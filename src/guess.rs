@@ -201,8 +201,27 @@ where
     let mut pos: usize = 0;
 
     loop {
+
         #[cfg(feature = "tracing")]
-        println!("top: {}: ({}) {:?}", pos, buf.vec().len(), buf.vec());
+        fn lit(val: u8) -> String {
+            format!("0x{:02x} {:?}", val, val as char)
+        }
+
+        #[cfg(feature = "tracing")]
+        fn lit_key(key: (u8, u8, u8)) -> String {
+            format!("({}, {}, {})", lit(key.0), lit(key.1), lit(key.2))
+        }
+
+        #[cfg(feature = "tracing")]
+        {
+            use itertools::Itertools;
+            println!(
+                "\n{}: top: ({}) [{}]",
+                pos,
+                buf.vec().len(),
+                buf.vec().into_iter().map(|val| lit(val)).join(", ")
+            );
+        }
 
         let key = match bytes.next_three() {
             Some(x) => x,
@@ -243,9 +262,15 @@ where
 
         #[cfg(feature = "tracing")]
         {
-            println!("{}: key: {:?}", pos, key);
-            println!("{}: old: {:?}", pos, old);
-            println!("{}: map: {:?}", pos, map);
+            use itertools::Itertools;
+            println!("{}: key: {}, old: {:?}", pos, lit_key(key), old);
+            println!(
+                "{}: map: {}",
+                pos,
+                map.iter()
+                    .map(|(key, v)| format!("{} -> {:?}", lit_key(*key), v))
+                    .join(", ")
+            );
         }
 
         if old.as_mut()

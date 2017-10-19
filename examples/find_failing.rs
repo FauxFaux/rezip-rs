@@ -59,6 +59,6 @@ fn compressed_file(n: usize, mut rng: &mut rand::ThreadRng) -> Result<Vec<u8>> {
 }
 
 fn random_printable(rng: &mut rand::ThreadRng) -> u8 {
-//    rng.gen_range(32, 127)
+    //    rng.gen_range(32, 127)
     rng.gen_range(b'a', b'z')
 }

@@ -292,11 +292,11 @@ where
 
         let (old_old, run) = track_run(prev_poses.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
 
-        assert_eq!(old_old[old_old.len() - 1], *old_old.iter().max().unwrap());
+        let candidate = &old_old[old_old.len() - 1];
 
-        let candidate = old_old[old_old.len() - 1];
+        assert_eq!(pos, candidate.run_start);
 
-        let dist = (pos - candidate) as u16;
+        let dist = (pos - candidate.data_pos) as u16;
 
         emit(Code::Reference {
             dist,
@@ -307,19 +307,37 @@ where
     }
 }
 
-fn track_run<B>(
-    mut prev_poses: Vec<usize>,
+#[derive(Clone, Debug)]
+struct Prev {
+    data_pos: usize,
     run_start: usize,
+}
+
+fn track_run<B>(
+    prev_poses: Vec<usize>,
+    original_start: usize,
     bytes: &mut ThreePeek<B>,
     buf: &mut CircularBuffer,
     map: &mut HashMap<(u8, u8, u8), Vec<usize>>,
-) -> Result<(Vec<usize>, u16)>
+) -> Result<(Vec<Prev>, u16)>
 where
     B: Iterator<Item = u8>,
 {
     assert!(!prev_poses.is_empty());
 
     let mut run = 0u16;
+
+    // we're already tracking everything, how much worse could it be?
+
+    let mut prev_poses: Vec<Prev> = prev_poses
+        .into_iter()
+        .map(|data_pos| {
+            Prev {
+                data_pos,
+                run_start: original_start,
+            }
+        })
+        .collect();
 
     loop {
         run += 1;
@@ -340,7 +358,7 @@ where
         let old_prev_poses = prev_poses.clone();
 
         prev_poses.retain(|candidate| {
-            let dist = (run_start - candidate) as u16;
+            let dist = (candidate.run_start - candidate.data_pos) as u16;
 
             #[cfg(feature = "tracing")]
             println!(
@@ -363,7 +381,7 @@ where
             Some(key) => {
                 buf.push(key.0);
                 map.entry(key).or_insert_with(|| Vec::new()).push(
-                    run_start +
+                    original_start +
                         usize_from(
                             run,
                         ),

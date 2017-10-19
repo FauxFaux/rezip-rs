@@ -14,6 +14,7 @@ use Code;
 use WindowSettings;
 
 type Key = (u8, u8, u8);
+type BackMap = HashMap<Key, Vec<usize>>;
 
 pub fn max_distance(codes: &[Code]) -> Option<u16> {
     codes
@@ -200,8 +201,7 @@ where
 {
     let mut bytes = ThreePeek::new(bytes);
     let mut buf = CircularBuffer::with_capacity(32 * 1024 + 258 + 3);
-    let mut map: HashMap<Key, Vec<usize>> =
-        HashMap::with_capacity(config.window_size as usize);
+    let mut map: BackMap = HashMap::with_capacity(config.window_size as usize);
 
     let mut pos: usize = 0;
 
@@ -307,7 +307,7 @@ where
 fn write_map_key(
     key: Key,
     pos: usize,
-    map: &mut HashMap<Key, Vec<usize>>,
+    map: &mut BackMap,
     config: &WindowSettings,
 ) -> Option<Vec<usize>> {
     match map.entry(key) {
@@ -336,7 +336,7 @@ fn track_run<B>(
     original_start: usize,
     bytes: &mut ThreePeek<B>,
     buf: &mut CircularBuffer,
-    map: &mut HashMap<Key, Vec<usize>>,
+    map: &mut BackMap,
     config: &WindowSettings,
 ) -> Result<(Vec<Prev>, u16)>
 where

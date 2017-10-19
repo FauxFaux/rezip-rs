@@ -314,20 +314,18 @@ where
     assert!(!old.is_empty());
 
     let mut run = 0u16;
-    let mut old_old;
 
     loop {
         let pos = run_start + usize_from(run);
-        old_old = Some(old.clone());
 
         if run >= 257 {
             assert_eq!(257, run);
-            break;
+            return Ok((old, run + 1));
         }
 
         let byte = match bytes.peek() {
             Some(byte) => byte,
-            None => break,
+            None => return Ok((old, run + 1)),
         };
 
         #[cfg(feature = "tracing")]
@@ -338,6 +336,8 @@ where
             buf.vec(),
             map
         );
+
+        let old_old = old.clone();
 
         old.retain(|candidate| {
             let dist = (run_start - candidate - 1) as u16;
@@ -356,7 +356,7 @@ where
         if old.is_empty() {
             #[cfg(feature = "tracing")]
             println!("no matches remain");
-            break;
+            return Ok((old_old, run + 1));;
         }
 
         match bytes.next_three() {
@@ -367,17 +367,13 @@ where
             None => {
                 match bytes.next() {
                     Some(byte) => buf.push(byte),
-                    None => break,
+                    None => return Ok((old, run + 1)),
                 }
             }
         }
 
         run += 1;
     }
-
-    run += 1;
-
-    Ok((old_old.unwrap(), run))
 }
 
 #[cfg(test)]

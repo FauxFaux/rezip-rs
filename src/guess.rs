@@ -201,7 +201,7 @@ where
     let mut pos: usize = 0;
 
     loop {
-        #[cfg(trace)]
+        #[cfg(feature = "tracing")]
         println!("top: {}: ({}) {:?}", pos, buf.vec().len(), buf.vec());
 
         let key = match bytes.next_three() {
@@ -241,7 +241,7 @@ where
             continue;
         }
 
-        #[cfg(trace)]
+        #[cfg(feature = "tracing")]
         {
             println!("{}: key: {:?}", pos, key);
             println!("{}: old: {:?}", pos, old);

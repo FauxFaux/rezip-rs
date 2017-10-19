@@ -316,8 +316,6 @@ where
     let mut run = 0u16;
 
     loop {
-        let pos = run_start + usize_from(run);
-
         if run >= 257 {
             assert_eq!(257, run);
             return Ok((old, run + 1));
@@ -330,8 +328,7 @@ where
 
         #[cfg(feature = "tracing")]
         println!(
-            "inside: {}: ({}) {:?} {:?}",
-            pos,
+            "inside: ({}) {:?} {:?}",
             buf.vec().len(),
             buf.vec(),
             map
@@ -362,7 +359,7 @@ where
         match bytes.next_three() {
             Some(key) => {
                 buf.push(key.0);
-                map.entry(key).or_insert_with(|| Vec::new()).push(pos);
+                map.entry(key).or_insert_with(|| Vec::new()).push(run_start + usize_from(run));
             }
             None => {
                 match bytes.next() {

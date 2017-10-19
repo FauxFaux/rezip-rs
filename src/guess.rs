@@ -1,3 +1,4 @@
+use std::cmp;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
@@ -228,7 +229,7 @@ where
             );
         }
 
-        let key = match bytes.next_three() {
+        let key: Key = match bytes.next_three() {
             Some(x) => x,
             None => {
                 // drain the last few bytes as literals
@@ -280,7 +281,7 @@ where
             continue;
         }
 
-        let (old_old, run) = track_run(
+        let (candidates, run) = track_run(
             prev_poses.unwrap(),
             pos,
             &mut bytes,
@@ -289,7 +290,9 @@ where
             config,
         )?;
 
-        let candidate = &old_old[old_old.len() - 1];
+        println!("{}: consumed: {} {:?}", pos, run, candidates);
+
+        let candidate = best_candidate(&candidates);
 
         assert_eq!(pos, candidate.run_start);
 
@@ -302,6 +305,10 @@ where
 
         pos += usize_from(run);
     }
+}
+
+fn best_candidate(candidates: &[Prev]) -> &Prev {
+    candidates.into_iter().min().unwrap()
 }
 
 fn write_map_key(
@@ -325,10 +332,21 @@ fn write_map_key(
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq)]
 struct Prev {
     data_pos: usize,
     run_start: usize,
+}
+
+impl cmp::Ord for Prev {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        // lower run_start: longer run from where we found it -> where we are now.
+        // as: run length is current - run_start
+
+        // higher data_pos: shorter dist from where we found it -> where we are now.
+        // as: dist is current - data_pos
+        self.run_start.cmp(&other.run_start).reverse().then(self.data_pos.cmp(&other.data_pos))
+    }
 }
 
 fn track_run<B>(
@@ -381,7 +399,7 @@ where
 
             #[cfg(feature = "tracing")]
             println!(
-                "{}: {:?} != {:?}",
+                "{:?}: {:?} != {:?}",
                 candidate,
                 buf.get_at_dist(dist) as char,
                 byte as char
@@ -400,7 +418,14 @@ where
             Some(key) => {
                 buf.push(key.0);
                 let pos = original_start + usize_from(run);
-                write_map_key(key, pos, map, &config);
+                if let Some(new_prev_poses) = write_map_key(key, pos, map, &config) {
+                    prev_poses.extend(new_prev_poses.into_iter().map(|data_pos| {
+                        Prev {
+                            data_pos,
+                            run_start: original_start + usize_from(run),
+                        }
+                    }));
+                }
             }
             None => {
                 match bytes.next() {
@@ -425,7 +450,7 @@ mod tests {
     use Code::Reference as R;
 
     #[test]
-    fn find_single_lits() {
+    fn single_backref_abcdef_abcdef_ghi() {
         let exp = &[
             L(b'a'),
             L(b'b'),
@@ -753,7 +778,7 @@ mod tests {
     }
 
     #[test]
-    fn repeat_after_ref() {
+    fn repeat_after_ref_a122b_122_222() {
         // a122b122222
         // 01234567890
 

@@ -8,6 +8,7 @@ use errors::*;
 use serialise;
 use three::ThreePeek;
 use unpack_run;
+use usize_from;
 
 use Code;
 use WindowSettings;
@@ -201,7 +202,6 @@ where
         HashMap::with_capacity(config.window_size as usize);
 
     let mut pos: usize = 0;
-    let mut old_old = None;
 
     loop {
 
@@ -283,81 +283,101 @@ where
             continue;
         }
 
-        let mut old: Vec<usize> = old.unwrap();
-        assert!(!old.is_empty());
+        let (old_old, run) =
+            track_run(old.unwrap(), pos, &mut bytes, &mut buf, &mut map)?;
 
-        let run_start = pos;
-        let mut run = 0u16;
-
-        loop {
-            old_old = Some(old.clone());
-
-            if run >= 257 {
-                assert_eq!(257, run);
-                break;
-            }
-
-            let byte = match bytes.peek() {
-                Some(byte) => byte,
-                None => break,
-            };
-
-            #[cfg(feature = "tracing")]
-            println!(
-                "inside: {}: ({}) {:?} {:?}",
-                pos,
-                buf.vec().len(),
-                buf.vec(),
-                map
-            );
-
-            old.retain(|candidate| {
-                let dist = (run_start - candidate - 1) as u16;
-
-                #[cfg(feature = "tracing")]
-                println!("{}: {:?} != {:?}", candidate, buf.get_at_dist(dist) as char, byte as char);
-
-                buf.get_at_dist(dist) == byte
-            });
-
-            if old.is_empty() {
-                #[cfg(feature = "tracing")]
-                println!("no matches remain");
-                break;
-            }
-
-            match bytes.next_three() {
-                Some(key) => {
-                    buf.push(key.0);
-                    map.entry(key).or_insert_with(|| Vec::new()).push(pos);
-                }
-                None => {
-                    match bytes.next() {
-                        Some(byte) => buf.push(byte),
-                        None => break,
-                    }
-                }
-            }
-
-            pos += 1;
-
-            run += 1;
-        }
-
-        run += 1;
-
-        let old_old = old_old.as_ref().unwrap();
         assert_eq!(old_old[0], *old_old.iter().min().unwrap());
 
         let candidate = old_old[old_old.len() - 1];
 
-        let dist = (run_start - candidate - 1) as u16;
+        let dist = (pos - candidate - 1) as u16;
 
         emit(Code::Reference {
             dist,
             run_minus_3: ::pack_run(run),
         })?;
+
+        pos += usize_from(run - 1);
     }
+}
+
+fn track_run<B>(
+    mut old: Vec<usize>,
+    run_start: usize,
+    bytes: &mut ThreePeek<B>,
+    buf: &mut CircularBuffer,
+    map: &mut HashMap<(u8, u8, u8), Vec<usize>>,
+) -> Result<(Vec<usize>, u16)>
+where
+    B: Iterator<Item = u8>,
+{
+    assert!(!old.is_empty());
+
+    let mut run = 0u16;
+    let mut old_old;
+
+    loop {
+        let pos = run_start + usize_from(run);
+        old_old = Some(old.clone());
+
+        if run >= 257 {
+            assert_eq!(257, run);
+            break;
+        }
+
+        let byte = match bytes.peek() {
+            Some(byte) => byte,
+            None => break,
+        };
+
+        #[cfg(feature = "tracing")]
+        println!(
+            "inside: {}: ({}) {:?} {:?}",
+            pos,
+            buf.vec().len(),
+            buf.vec(),
+            map
+        );
+
+        old.retain(|candidate| {
+            let dist = (run_start - candidate - 1) as u16;
+
+            #[cfg(feature = "tracing")]
+            println!(
+                "{}: {:?} != {:?}",
+                candidate,
+                buf.get_at_dist(dist) as char,
+                byte as char
+            );
+
+            buf.get_at_dist(dist) == byte
+        });
+
+        if old.is_empty() {
+            #[cfg(feature = "tracing")]
+            println!("no matches remain");
+            break;
+        }
+
+        match bytes.next_three() {
+            Some(key) => {
+                buf.push(key.0);
+                map.entry(key).or_insert_with(|| Vec::new()).push(pos);
+            }
+            None => {
+                match bytes.next() {
+                    Some(byte) => buf.push(byte),
+                    None => break,
+                }
+            }
+        }
+
+        run += 1;
+    }
+
+    run += 1;
+
+    Ok((old_old.unwrap(), run))
 }
 
 #[cfg(test)]

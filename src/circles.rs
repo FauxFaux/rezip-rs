@@ -1,6 +1,7 @@
 use std::io::Write;
 
 use errors::*;
+use usize_from;
 
 pub struct CircularBuffer {
     data: Vec<u8>,
@@ -103,10 +104,6 @@ impl CircularBuffer {
 
         ret
     }
-}
-
-fn usize_from(val: u16) -> usize {
-    val as usize
 }
 
 #[cfg(test)]

@@ -104,6 +104,10 @@ impl fmt::Debug for Code {
     }
 }
 
+fn usize_from(val: u16) -> usize {
+    val as usize
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;

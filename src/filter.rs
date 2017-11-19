@@ -36,7 +36,7 @@ impl<R: Read> FilterRead<R> {
         self.inner
     }
 
-    pub fn hash(&mut self) -> Vec<u8> {
+    pub fn hash(self) -> Vec<u8> {
         self.hash.result().into_iter().collect()
     }
 }
@@ -66,7 +66,7 @@ impl<W: Write> FilterWrite<W> {
         self.inner
     }
 
-    pub fn hash(&mut self) -> Vec<u8> {
+    pub fn hash(self) -> Vec<u8> {
         self.hash.result().into_iter().collect()
     }
 }

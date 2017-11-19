@@ -4,22 +4,21 @@ name = "librezip"
 version = "0.1.0"
 
 [dependencies]
-error-chain = "0.11.0"
-itertools = "0.6.3"
-lazy_static = "0.2.8"
-sha2 = "0.6.0"
+error-chain = "0.11"
+itertools = "0.7"
+lazy_static = "0.2"
+sha2 = "0.7"
 
 [dev-dependencies]
-rand = "0.3.17"
+rand = "0.3"
 
 [dev-dependencies.flate2]
 default-features = false
 features = ["zlib"]
 version = "0.2"
+
+[features]
+tracing = []
 [profile.release]
 debug = true
 lto = true
-
-[features]
-
-tracing = []

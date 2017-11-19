@@ -46,9 +46,9 @@ impl CircularBuffer {
 
         ensure!(dist > 0 && dist <= self.valid_cap, "dist must fit");
 
-        let mut read_from = (self.idx.wrapping_sub(dist as usize).wrapping_add(
-            self.data.len(),
-        )) % self.data.len();
+        let mut read_from = (self.idx
+            .wrapping_sub(dist as usize)
+            .wrapping_add(self.data.len())) % self.data.len();
 
         for _ in 0..len {
             let b = self.data[read_from];
@@ -62,9 +62,9 @@ impl CircularBuffer {
 
     pub fn get_at_dist(&self, dist: u16) -> u8 {
         assert!(dist <= self.valid_cap);
-        self.data[self.idx.wrapping_sub(dist as usize).wrapping_add(
-            self.data.len(),
-        ) % self.data.len()]
+        self.data[self.idx
+                      .wrapping_sub(dist as usize)
+                      .wrapping_add(self.data.len()) % self.data.len()]
     }
 
     pub fn capacity(&self) -> u16 {

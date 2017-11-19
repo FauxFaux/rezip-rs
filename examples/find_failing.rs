@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate error_chain;
-extern crate rand;
 extern crate flate2;
 extern crate librezip;
+extern crate rand;
 
 use std::fs::File;
 use std::io::Cursor;

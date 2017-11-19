@@ -47,13 +47,11 @@ fn read_block<R: Read>(reader: &mut BitReader<R>) -> Result<Block> {
             reader.align()?;
             reader.read_length_prefixed().map(Block::Uncompressed)
         }
-        1 => {
-            scan_huffman_data(
-                reader,
-                &huffman::FIXED_LENGTH_TREE,
-                Some(&huffman::FIXED_DISTANCE_TREE),
-            ).map(Block::FixedHuffman)
-        }
+        1 => scan_huffman_data(
+            reader,
+            &huffman::FIXED_LENGTH_TREE,
+            Some(&huffman::FIXED_DISTANCE_TREE),
+        ).map(Block::FixedHuffman),
         2 => {
             // scope-based borrow sigh
             let ((length, distance), trees) = {
@@ -61,9 +59,8 @@ fn read_block<R: Read>(reader: &mut BitReader<R>) -> Result<Block> {
                 (huffman::read_codes(&mut tracker)?, tracker.into_data())
             };
 
-            scan_huffman_data(reader, &length, distance.as_ref()).map(
-                |codes| Block::DynamicHuffman { trees, codes },
-            )
+            scan_huffman_data(reader, &length, distance.as_ref())
+                .map(|codes| Block::DynamicHuffman { trees, codes })
         }
         3 => bail!("reserved block type"),
         _ => unreachable!(),
@@ -75,7 +72,6 @@ fn scan_huffman_data<R: Read>(
     length: &CodeTree,
     distance: Option<&CodeTree>,
 ) -> Result<Vec<Code>> {
-
     let mut ret = Vec::new();
 
     loop {

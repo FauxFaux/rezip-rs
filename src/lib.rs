@@ -184,8 +184,7 @@ mod tests {
 
                 // TODO
                 match block {
-                    Block::FixedHuffman(codes) |
-                    Block::DynamicHuffman { codes, .. } => {}
+                    Block::FixedHuffman(codes) | Block::DynamicHuffman { codes, .. } => {}
                     _ => {}
                 }
             }

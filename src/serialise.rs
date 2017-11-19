@@ -21,12 +21,12 @@ pub fn decompressed_block<W: Write>(
     match *block {
         Uncompressed(ref data) => {
             dictionary.extend(data);
-            into.write_all(data).chain_err(
-                || "storing uncompressed block",
-            )
+            into.write_all(data)
+                .chain_err(|| "storing uncompressed block")
         }
-        FixedHuffman(ref codes) |
-        DynamicHuffman { ref codes, .. } => decompressed_codes(into, dictionary, codes),
+        FixedHuffman(ref codes) | DynamicHuffman { ref codes, .. } => {
+            decompressed_codes(into, dictionary, codes)
+        }
     }
 }
 
@@ -92,14 +92,14 @@ where
                 }
                 Some(&Reference { dist, run_minus_3 }) => {
                     let run = unpack_run(run_minus_3);
-                    self.dictionary.copy(dist, run, NullWriter {}).expect(
-                        &format!(
+                    self.dictionary
+                        .copy(dist, run, NullWriter {})
+                        .expect(&format!(
                             "dist ({}), run (<258: {}) < 32kb ({})",
                             dist,
                             run,
                             self.dictionary.capacity()
-                        ),
-                    );
+                        ));
                     run as usize
                 }
                 None => return None,
@@ -110,7 +110,6 @@ where
         let pos = self.cap as u16;
         self.cap -= 1;
         Some(self.dictionary.get_at_dist(pos))
-
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -166,9 +165,9 @@ fn compressed_codes<W: Write>(
     for code in codes {
         match *code {
             Literal(byte) => {
-                into.write_vec(length_tree[byte as usize].as_ref().ok_or(
-                    "invalid literal",
-                )?)?;
+                into.write_vec(length_tree[byte as usize]
+                    .as_ref()
+                    .ok_or("invalid literal")?)?;
             }
             Reference { dist, run_minus_3 } => {
                 encode_run(into, &length_tree, unpack_run(run_minus_3))?;
@@ -209,9 +208,7 @@ fn encode_distance<W: Write>(
     if let Some((code, bits, val)) = huffman::encode_distance(dist) {
         let distance_tree = tree.as_ref().ok_or("reference but not distance tree")?;
 
-        into.write_vec(
-            distance_tree[code as usize].as_ref().unwrap(),
-        )?;
+        into.write_vec(distance_tree[code as usize].as_ref().unwrap())?;
 
         if bits > 0 {
             into.write_bits_val(bits, val)?;
@@ -252,8 +249,7 @@ mod tests {
 
         let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
         let mut raw = Cursor::new(
-            &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")
-                [37..],
+            &include_bytes!("../tests/data/libcgi-untaint-email-perl_0.03.orig.tar.gz")[37..],
         );
 
         {

@@ -20,10 +20,12 @@ type BackMap = HashMap<Key, Vec<usize>>;
 pub fn max_distance(codes: &[Code]) -> Option<u16> {
     codes
         .iter()
-        .flat_map(|code| if let Code::Reference { dist, .. } = *code {
-            Some(dist)
-        } else {
-            None
+        .flat_map(|code| {
+            if let Code::Reference { dist, .. } = *code {
+                Some(dist)
+            } else {
+                None
+            }
         })
         .max()
 }
@@ -98,15 +100,13 @@ fn validate_expectation(seen: usize, exp: Option<&Code>, code: &Code) -> Result<
     match exp {
         Some(&Literal(expected_byte)) => validate_expected_literal(seen, expected_byte, &code),
         Some(&Reference {
-                 dist: expected_dist,
-                 run_minus_3,
-             }) => validate_expected_range(seen, expected_dist, unpack_run(run_minus_3), &code),
-        None => {
-            bail!(
-                "{}: we emitted a code that isn't supposed to be there",
-                seen
-            )
-        }
+            dist: expected_dist,
+            run_minus_3,
+        }) => validate_expected_range(seen, expected_dist, unpack_run(run_minus_3), &code),
+        None => bail!(
+            "{}: we emitted a code that isn't supposed to be there",
+            seen
+        ),
     }
 }
 
@@ -147,15 +147,13 @@ fn validate_expected_range(
     use Code::*;
 
     match *code {
-        Literal(byte) => {
-            bail!(
-                "{}: failed to spot ({}, {}) backreference, wrote a 0x{:02x} literal instead",
-                seen,
-                expected_dist,
-                expected_run,
-                byte
-            )
-        }
+        Literal(byte) => bail!(
+            "{}: failed to spot ({}, {}) backreference, wrote a 0x{:02x} literal instead",
+            seen,
+            expected_dist,
+            expected_run,
+            byte
+        ),
         Reference { dist, run_minus_3 } => {
             let run = unpack_run(run_minus_3);
             if expected_dist != dist || expected_run != run {
@@ -207,7 +205,6 @@ where
     let mut pos: usize = 0;
 
     loop {
-
         #[cfg(feature = "tracing")]
         fn lit(val: u8) -> String {
             format!("0x{:02x} {:?}", val, val as char)
@@ -345,7 +342,10 @@ impl cmp::Ord for Prev {
 
         // higher data_pos: shorter dist from where we found it -> where we are now.
         // as: dist is current - data_pos
-        self.run_start.cmp(&other.run_start).reverse().then(self.data_pos.cmp(&other.data_pos))
+        self.run_start
+            .cmp(&other.run_start)
+            .reverse()
+            .then(self.data_pos.cmp(&other.data_pos))
     }
 }
 
@@ -427,12 +427,10 @@ where
                     }));
                 }
             }
-            None => {
-                match bytes.next() {
-                    Some(byte) => buf.push(byte),
-                    None => return Ok((prev_poses, run)),
-                }
-            }
+            None => match bytes.next() {
+                Some(byte) => buf.push(byte),
+                None => return Ok((prev_poses, run)),
+            },
         }
     }
 }
@@ -617,76 +615,66 @@ mod tests {
 
         assert_eq!(
             (true, false),
-            outside_range_or_hit_zero(
-                &[
-                    R {
-                        dist: 1,
-                        run_minus_3: 3,
-                    },
-                ],
-            )
+            outside_range_or_hit_zero(&[
+                R {
+                    dist: 1,
+                    run_minus_3: 3,
+                }
+            ],)
         );
 
         assert_eq!(
             (false, true),
-            outside_range_or_hit_zero(
-                &[
-                    L(5),
-                    R {
-                        dist: 1,
-                        run_minus_3: 3,
-                    },
-                ],
-            )
+            outside_range_or_hit_zero(&[
+                L(5),
+                R {
+                    dist: 1,
+                    run_minus_3: 3,
+                }
+            ],)
         );
 
         assert_eq!(
             (false, false),
-            outside_range_or_hit_zero(
-                &[
-                    L(5),
-                    L(5),
-                    R {
-                        dist: 1,
-                        run_minus_3: 3,
-                    },
-                ],
-            )
+            outside_range_or_hit_zero(&[
+                L(5),
+                L(5),
+                R {
+                    dist: 1,
+                    run_minus_3: 3,
+                }
+            ],)
         );
 
         // Not an encoding a real tool would generate
         assert_eq!(
             (false, true),
-            outside_range_or_hit_zero(
-                &[
-                    L(5),
-                    R {
-                        dist: 1,
-                        run_minus_3: 20,
-                    },
-                    R {
-                        dist: 15,
-                        run_minus_3: 3,
-                    },
-                ],
-            )
+            outside_range_or_hit_zero(&[
+                L(5),
+                R {
+                    dist: 1,
+                    run_minus_3: 20,
+                },
+                R {
+                    dist: 15,
+                    run_minus_3: 3,
+                }
+            ],)
         );
 
         assert_eq!(
             (true, true),
-            outside_range_or_hit_zero(
-                &[
-                    L(5),
-                    R {
-                        dist: 1,
-                        run_minus_3: 4,
-                    },
-                    R {
-                        dist: 15,
-                        run_minus_3: 3,
-                    },
-                ],
-            )
+            outside_range_or_hit_zero(&[
+                L(5),
+                R {
+                    dist: 1,
+                    run_minus_3: 4,
+                },
+                R {
+                    dist: 15,
+                    run_minus_3: 3,
+                }
+            ],)
         );
     }
 
@@ -705,7 +693,7 @@ mod tests {
                     R {
                         dist: 1,
                         run_minus_3: 5,
-                    },
+                    }
                 ],
             ).unwrap()
         );

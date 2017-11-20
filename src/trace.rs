@@ -13,10 +13,32 @@
 
 // Do we need to rearrange the api so we can process a sequence and its decoded bytes?
 
+// How about we output a big list of:
+// [Run where dumb algo was correct:u[16|32]] [lits:u8] [dist:u16, run:u8]?
+
+use std::collections::HashMap;
+
 use circles::CircularBuffer;
-use guess;
 use errors::*;
+use guess;
+use three::ThreePeek;
 use Code;
+
+type Key = (u8, u8, u8);
+type BackMap = HashMap<Key, Vec<usize>>;
+
+pub fn whole_map<I: Iterator<Item=u8>>(data: I) -> BackMap {
+    let mut map = BackMap::with_capacity(32 * 1024);
+    let mut it = ThreePeek::new(data);
+
+    let mut pos = 0;
+    while let Some(keys) = it.next_three() {
+        map.entry(keys).or_insert_with(|| Vec::new()).push(pos);
+        pos += 1;
+    }
+
+    map
+}
 
 trait Algo {
     fn accept(&mut self, code: &Code, dictionary: &CircularBuffer) -> Result<bool>;

@@ -1,4 +1,5 @@
 use std::io::Write;
+use u16_from;
 
 use errors::*;
 use usize_from;
@@ -69,6 +70,19 @@ impl CircularBuffer {
 
     pub fn capacity(&self) -> u16 {
         self.data.len() as u16
+    }
+
+    pub fn possible_run_length_at(&self, dist: usize, upcoming_data: &[u8]) -> u16 {
+        let cap = self.data.len();
+        // TODO: boundary disaster.
+        let max_len = upcoming_data.len().min(dist).min(258);
+        for i in 0..max_len {
+            if self.get_at_dist(u16_from(dist + i)) != upcoming_data[i] {
+                return u16_from(i - 1);
+            }
+        }
+
+        u16_from(max_len)
     }
 
     pub fn find_run(&self, run: &[u8]) -> Result<usize> {

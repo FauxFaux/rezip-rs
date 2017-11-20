@@ -20,6 +20,10 @@ impl<I: Iterator> Iterator for ThreePeek<I> {
             ),
         )
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
 }
 
 impl<I: Iterator> ThreePeek<I>

@@ -93,6 +93,12 @@ fn pack_run(run: u16) -> u8 {
     (run - 3) as u8
 }
 
+#[inline]
+fn u16_from(val: usize) -> u16 {
+    assert!(val <= (std::u16::MAX as usize));
+    val as u16
+}
+
 
 impl fmt::Debug for Code {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

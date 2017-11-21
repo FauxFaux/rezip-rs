@@ -153,6 +153,7 @@ pub fn compressed_block<W: Write>(into: &mut BitWriter<W>, block: &Block) -> Res
 pub struct Lengths {
     length: Vec<Option<u8>>,
     distance: Vec<Option<u8>>,
+    pub mean_literal_len: u8,
 }
 
 fn tree_to_lengths(tree: &CodeTree) -> Vec<Option<u8>> {
@@ -164,9 +165,13 @@ fn tree_to_lengths(tree: &CodeTree) -> Vec<Option<u8>> {
 
 impl Lengths {
     pub fn new(length_tree: &CodeTree, distance_tree: &CodeTree) -> Self {
+        let length = tree_to_lengths(length_tree);
+        let all_lengths: usize = length.iter().filter_map(|x| x.map(usize::from)).sum();
+        let populated_lengths: usize = 1 + length.iter().filter_map(|x| *x).count();
         Lengths {
-            length: tree_to_lengths(length_tree),
+            length,
             distance: tree_to_lengths(distance_tree),
+            mean_literal_len: ((all_lengths + populated_lengths) / populated_lengths) as u8,
         }
     }
 

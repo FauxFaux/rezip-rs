@@ -17,11 +17,13 @@
 // [Run where dumb algo was correct:u[16|32]] [lits:u8] [dist:u16, run:u8]?
 
 use std::collections::HashMap;
+use std::cmp;
 
 use circles::CircularBuffer;
 use errors::*;
 use guess;
 use three::ThreePeek;
+use serialise::Lengths;
 use Code;
 use u16_from;
 use pack_run;
@@ -43,7 +45,7 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-pub fn find_all_options(preroll: &[u8], data: &[u8]) -> Vec<Vec<Code>> {
+pub fn find_all_options(lengths: Lengths, preroll: &[u8], data: &[u8]) -> Vec<Vec<Code>> {
     let map = whole_map(preroll.iter().chain(data).map(|x| *x));
 
     let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
@@ -54,7 +56,7 @@ pub fn find_all_options(preroll: &[u8], data: &[u8]) -> Vec<Vec<Code>> {
     all_options(&mut dictionary, data_start, data, &map)
         .into_iter()
         .map(|mut v| {
-            v.sort_by_key(saved_bits);
+            v.sort_by(|left, right| compare(&lengths, left, right));
             v
         })
         .collect()
@@ -131,33 +133,64 @@ fn all_options(
     ret
 }
 
+fn compare(lengths: &Lengths, left: &Code, right: &Code) -> cmp::Ordering {
+    let left_len = lengths.length(left).unwrap_or(u8::max_value()) as isize;
+    let right_len = lengths.length(left).unwrap_or(u8::max_value()) as isize;
 
-fn saved_bits(code: &Code) -> u16 {
-    match *code {
-        Code::Literal(_) => {
-            // possible encoding lenghts: 1-9(?).
-            // mean: 5
-            // start length: 8
-            3
-        }
-        Code::Reference { dist, run_minus_3 } => {
-            let run = unpack_run(run_minus_3);
-            run * 5 - 5 - extra_dist_bits(dist) - extra_run_bits(run)
-        }
+    // we could do even better than this by looking at the *actual* saving vs. all literals,
+    // but it still won't be accurate as that would assume no further back-references.
+    let left_saved = saved_bits(left, lengths.mean_literal_len) as isize;
+    let right_saved = saved_bits(right, lengths.mean_literal_len) as isize;
+
+    // firstly, let's compare their savings; savings are always good
+    match (left_len - left_saved).cmp(&(right_len - right_saved)) {
+        cmp::Ordering::Equal => {}
+        other => return other,
+    }
+
+    // if both would save us the same amount, then...
+    use Code::*;
+    match *left {
+        Literal(left) => match *right {
+            Literal(right) => unreachable!(
+                "there's never two different literals that could be encoded instead of each other"
+            ),
+            Reference { .. } => {
+                // literals are worse than references
+                cmp::Ordering::Greater
+            }
+        },
+        Reference {
+            dist: left_dist,
+            run_minus_3: left_run_minus_3,
+        } => match *right {
+            Literal(_) => {
+                // literals are worse than references
+                cmp::Ordering::Less
+            }
+
+            Reference {
+                dist: right_dist,
+                run_minus_3: right_run_minus_3,
+            } => {
+                let left_run = unpack_run(left_run_minus_3);
+                let right_run = unpack_run(right_run_minus_3);
+
+                // shorter distances, then bigger runs.
+
+                // bigger runs should already have been covered by the length calc,
+                // and shorter distances are more likely to be spotted by flawed encoders?
+                left_dist.cmp(&right_dist).then(right_run.cmp(&left_run))
+            }
+        },
     }
 }
 
-fn extra_dist_bits(dist: u16) -> u16 {
-    if dist <= 4 {
-        0
-    } else {
-        dist / 2 - 1
+fn saved_bits(code: &Code, mean_literal_len: u8) -> u16 {
+    u16::from(mean_literal_len) * match *code {
+        Code::Literal(_) => 1,
+        Code::Reference { run_minus_3, .. } => unpack_run(run_minus_3),
     }
-}
-
-// (258 - 10) / 4 =
-fn extra_run_bits(run: u16) -> u16 {
-    run.saturating_sub(10) / 4
 }
 
 trait Algo {

@@ -53,17 +53,17 @@ pub fn all_options(preroll: &[u8], data: &[u8], map: &BackMap) -> Vec<Vec<Code>>
         // TODO: This shouldn't really be full of &u8s, should it?
         let key = (*key.0, *key.1, *key.2);
 
-        let data_pos = ret.len();
-        let pos = data_pos + preroll.len();
+        // it's always possible to emit the literal
+        ret.push(vec![Code::Literal(key.0)]);
 
         let candidates = match map.get(&key) {
             Some(val) => val,
-            None => {
-                ret.push(vec![Code::Literal(key.0)]);
-                continue;
-            }
+            None => continue,
         };
         assert!(!candidates.is_empty());
+
+        let data_pos = ret.len();
+        let pos = data_pos + preroll.len();
 
         let mut us = Vec::with_capacity(candidates.len());
 

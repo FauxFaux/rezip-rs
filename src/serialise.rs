@@ -10,6 +10,7 @@ use huffman;
 use Block;
 use Code;
 use unpack_run;
+use usize_from;
 
 pub fn decompressed_block<W: Write>(
     mut into: W,
@@ -145,6 +146,49 @@ pub fn compressed_block<W: Write>(into: &mut BitWriter<W>, block: &Block) -> Res
             into.write_vec(trees)?;
             let (length, distance) = huffman::read_codes(&mut trees.iter())?;
             compressed_codes(into, &length, distance.as_ref(), codes)
+        }
+    }
+}
+
+pub struct Lengths {
+    length: Vec<Option<u8>>,
+    distance: Vec<Option<u8>>,
+}
+
+fn tree_to_lengths(tree: &CodeTree) -> Vec<Option<u8>> {
+    tree.invert()
+        .into_iter()
+        .map(|opt| opt.map(|vec| vec.len() as u8))
+        .collect()
+}
+
+impl Lengths {
+    pub fn new(length_tree: &CodeTree, distance_tree: &CodeTree) -> Self {
+        Lengths {
+            length: tree_to_lengths(length_tree),
+            distance: tree_to_lengths(distance_tree),
+        }
+    }
+
+    pub fn length(&self, code: &Code) -> Option<u8> {
+        match *code {
+            Code::Literal(byte) => self.length[usize::from(byte)],
+            Code::Reference { dist, run_minus_3 } => {
+                let run = unpack_run(run_minus_3);
+                let run_symbol = huffman::encode_run_length(run);
+                let run_symbol_len = match self.length[usize_from(run_symbol)] {
+                    Some(len) => len,
+                    None => return None,
+                };
+
+                let (code, bit_count, _) = huffman::encode_distance(dist).unwrap();
+                let distance_symbol_len = match self.distance[usize::from(code)] {
+                    Some(len) => len,
+                    None => return None,
+                };
+
+                Some(run_symbol_len + distance_symbol_len)
+            }
         }
     }
 }

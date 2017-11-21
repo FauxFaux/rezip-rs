@@ -144,6 +144,10 @@ pub fn encode_run_length(length: u16) -> u16 {
     }
 }
 
+/// returns: Some(bit count, data (of which the first bit bits are valid)),
+/// or None if the length is zero
+///
+/// This does not seem like a great API.
 pub fn extra_run_length(length: u16) -> Option<(u8, u16)> {
     match length {
         3...10 => None,
@@ -184,6 +188,7 @@ pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result
     bail!("reserved symbol: {}", sym);
 }
 
+/// Returns: Some(code, bit count, bits); never None (sigh)
 pub fn encode_distance(distance: u16) -> Option<(u8, u8, u16)> {
     if distance <= 4 {
         Some((distance as u8 - 1, 0, 0))

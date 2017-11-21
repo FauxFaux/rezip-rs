@@ -92,7 +92,6 @@ fn scan_huffman_data<R: Read>(
 
         // length and distance encoding
         let run = huffman::decode_run_length(reader, sym)?;
-        ensure!(run >= 3 && run <= 258, "invalid run length");
 
         let dist_sym = match distance {
             Some(dist_code) => dist_code.decode_symbol(reader)?,

@@ -81,12 +81,15 @@ pub fn all_options(preroll: &[u8], data: &[u8], map: &BackMap) -> Vec<Vec<Code>>
                 continue;
             }
 
+            let dist = dist as u16;
+
             let run = dictionary.possible_run_length_at(dist, &data[data_pos..]);
 
             assert!(run >= 3);
 
             us.push(Code::Reference {
-                dist: u16_from(dist), run_minus_3: pack_run(run)
+                dist,
+                run_minus_3: pack_run(run),
             })
         }
 

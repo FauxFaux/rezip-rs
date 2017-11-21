@@ -42,6 +42,7 @@ impl CircularBuffer {
         }
     }
 
+    // This updates self, whereas run_from and friends do not.
     pub fn copy<W: Write>(&mut self, dist: u16, len: u16, mut into: W) -> Result<()> {
         // TODO: optimise
 
@@ -72,17 +73,8 @@ impl CircularBuffer {
         self.data.len() as u16
     }
 
-    pub fn possible_run_length_at(&self, dist: usize, upcoming_data: &[u8]) -> u16 {
-        let cap = self.data.len();
-        // TODO: boundary disaster.
-        let max_len = upcoming_data.len().min(dist).min(258);
-        for i in 0..max_len {
-            if self.get_at_dist(u16_from(dist + i)) != upcoming_data[i] {
-                return u16_from(i - 1);
-            }
-        }
-
-        u16_from(max_len)
+    pub fn possible_run_length_at(&self, dist: u16, upcoming_data: &[u8]) -> u16 {
+        u16_from(self.run_from(dist).match_length(upcoming_data))
     }
 
     pub fn find_run(&self, run: &[u8]) -> Result<usize> {
@@ -118,6 +110,46 @@ impl CircularBuffer {
 
         ret
     }
+
+    pub fn run_from(&self, dist: u16) -> Runerator {
+        assert!(dist > 0);
+        Runerator {
+            inner: self,
+            stride: dist,
+            pos: dist,
+        }
+    }
+}
+
+pub struct Runerator<'a> {
+    inner: &'a CircularBuffer,
+    stride: u16,
+    pos: u16,
+}
+
+impl<'a> Iterator for Runerator<'a> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let found = Some(self.inner.get_at_dist(self.pos));
+
+        self.pos -= 1;
+        if 0 == self.pos {
+            self.pos = self.stride;
+        }
+
+        found
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (usize::max_value(), None)
+    }
+}
+
+impl<'a> Runerator<'a> {
+    pub fn match_length(&mut self, other: &[u8]) -> usize {
+        self.take(258).zip(other).filter(|&(x, y)| x == *y).count()
+    }
 }
 
 #[cfg(test)]
@@ -133,12 +165,28 @@ mod tests {
         // represented as abcd4567890
         // with the marker at ^ (position 4)
 
-        for byte in b"1234567890abcd" {
-            buf.push(*byte);
-        }
+        buf.extend(b"1234567890abcd");
 
         assert_eq!(3, buf.find_run(b"bc").unwrap());
 
         assert_eq!(6, buf.find_run(b"90ab").unwrap());
+    }
+
+    #[test]
+    fn runerator() {
+        let mut buf = CircularBuffer::with_capacity(10);
+        buf.extend(b"1234567890abcd");
+        assert_eq!(
+            b"bcdbcd",
+            &buf.run_from(3).take(6).collect::<Vec<u8>>().as_slice()
+        );
+        assert_eq!(
+            b"ddddd",
+            &buf.run_from(1).take(5).collect::<Vec<u8>>().as_slice()
+        );
+
+        // TODO: test 258 boundary
+
+        assert_eq!(4, buf.run_from(1).match_length(b"ddddef"));
     }
 }

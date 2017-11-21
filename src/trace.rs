@@ -25,11 +25,12 @@ use three::ThreePeek;
 use Code;
 use u16_from;
 use pack_run;
+use unpack_run;
 
 type Key = (u8, u8, u8);
 type BackMap = HashMap<Key, Vec<usize>>;
 
-pub fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
+fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     let mut map = BackMap::with_capacity(32 * 1024);
     let mut it = ThreePeek::new(data);
 
@@ -42,10 +43,30 @@ pub fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-pub fn all_options(preroll: &[u8], data: &[u8], map: &BackMap) -> Vec<Vec<Code>> {
-    let mut ret = Vec::with_capacity(data.len());
+pub fn find_all_options(preroll: &[u8], data: &[u8]) -> Vec<Vec<Code>> {
+    let map = whole_map(preroll.iter().chain(data).map(|x| *x));
+
     let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
     dictionary.extend(preroll);
+
+    let data_start = preroll.len();
+
+    all_options(&mut dictionary, data_start, data, &map)
+        .into_iter()
+        .map(|mut v| {
+            v.sort_by_key(saved_bits);
+            v
+        })
+        .collect()
+}
+
+fn all_options(
+    dictionary: &mut CircularBuffer,
+    data_start: usize,
+    data: &[u8],
+    map: &BackMap,
+) -> Vec<Vec<Code>> {
+    let mut ret = Vec::with_capacity(data.len());
 
     let mut it = ThreePeek::new(data.into_iter());
 
@@ -54,18 +75,23 @@ pub fn all_options(preroll: &[u8], data: &[u8], map: &BackMap) -> Vec<Vec<Code>>
         let key = (*key.0, *key.1, *key.2);
 
         // it's always possible to emit the literal
-        ret.push(vec![Code::Literal(key.0)]);
+        let current_byte = key.0;
+        dictionary.push(current_byte);
 
         let candidates = match map.get(&key) {
             Some(val) => val,
-            None => continue,
+            None => {
+                ret.push(vec![Code::Literal(current_byte)]);
+                continue;
+            }
         };
         assert!(!candidates.is_empty());
 
         let data_pos = ret.len();
-        let pos = data_pos + preroll.len();
+        let pos = data_pos + data_start;
 
         let mut us = Vec::with_capacity(candidates.len());
+        us.push(Code::Literal(current_byte));
 
         for candidate_pos in candidates {
             let candidate_pos = *candidate_pos;
@@ -103,6 +129,35 @@ pub fn all_options(preroll: &[u8], data: &[u8], map: &BackMap) -> Vec<Vec<Code>>
 
     assert_eq!(data.len(), ret.len());
     ret
+}
+
+
+fn saved_bits(code: &Code) -> u16 {
+    match *code {
+        Code::Literal(_) => {
+            // possible encoding lenghts: 1-9(?).
+            // mean: 5
+            // start length: 8
+            3
+        }
+        Code::Reference { dist, run_minus_3 } => {
+            let run = unpack_run(run_minus_3);
+            run * 5 - 5 - extra_dist_bits(dist) - extra_run_bits(run)
+        }
+    }
+}
+
+fn extra_dist_bits(dist: u16) -> u16 {
+    if dist <= 4 {
+        0
+    } else {
+        dist / 2 - 1
+    }
+}
+
+// (258 - 10) / 4 =
+fn extra_run_bits(run: u16) -> u16 {
+    run.saturating_sub(10) / 4
 }
 
 trait Algo {

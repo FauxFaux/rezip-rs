@@ -435,7 +435,7 @@ where
     }
 }
 
-#[cfg(test)]
+#[cfg(test2)]
 mod tests {
     use super::attempt_reencoding;
     use super::guess_settings;

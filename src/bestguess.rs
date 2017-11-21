@@ -172,3 +172,296 @@ fn saved_bits(code: &Code, mean_literal_len: u8) -> u16 {
         Code::Reference { run_minus_3, .. } => unpack_run(run_minus_3),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::find_all_options;
+    use circles;
+    use huffman;
+    use serialise;
+    use Code;
+    use Code::Literal as L;
+    use Code::Reference as R;
+
+    #[test]
+    fn single_backref_abcdef_abcdef_ghi() {
+        let exp = &[
+            L(b'a'),
+            L(b'b'),
+            L(b'c'),
+            L(b'd'),
+            L(b'e'),
+            L(b'f'),
+            L(b' '),
+            R {
+                dist: 6,
+                run_minus_3: 2,
+            },
+            L(b'g'),
+            L(b'h'),
+            L(b'i'),
+        ];
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    #[test]
+    fn two_length_three_runs() {
+        let exp = &[
+            L(b'a'),
+            L(b'b'),
+            L(b'c'),
+            L(b'd'),
+            L(b'1'),
+            L(b'2'),
+            L(b'3'),
+            L(b'e'),
+            L(b'f'),
+            L(b'g'),
+            L(b'h'),
+            L(b'7'),
+            L(b'8'),
+            L(b'9'),
+            L(b'i'),
+            L(b'j'),
+            L(b'k'),
+            L(b'l'),
+            R {
+                dist: 14,
+                run_minus_3: 0,
+            },
+            L(b'm'),
+            L(b'n'),
+            L(b'o'),
+            L(b'p'),
+            R {
+                dist: 14,
+                run_minus_3: 0,
+            },
+            L(b'q'),
+            L(b'r'),
+            L(b's'),
+            L(b't'),
+        ];
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    #[test]
+    fn two_overlapping_runs() {
+        let exp = &[
+            L(b'a'),
+            L(b'1'),
+            L(b'2'),
+            L(b'3'),
+            L(b'b'),
+            L(b'c'),
+            L(b'd'),
+            R {
+                dist: 6,
+                run_minus_3: 0,
+            },
+            L(b'4'),
+            L(b'5'),
+            L(b'e'),
+            L(b'f'),
+            R {
+                dist: 5,
+                run_minus_3: 0,
+            },
+            L(b'g'),
+        ];
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    #[test]
+    fn zero_run() {
+        let exp = &[
+            L(b'0'),
+            R {
+                dist: 1,
+                run_minus_3: 10,
+            },
+        ];
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    #[test]
+    fn ref_before() {
+        let exp = &[
+            R {
+                dist: 1,
+                run_minus_3: 10,
+            },
+        ];
+        assert_eq!(exp, decode_then_reencode(&[0], exp).as_slice());
+    }
+
+    #[test]
+    fn just_long_run() {
+        let exp = &[
+            L(5),
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(258),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    #[test]
+    fn two_long_run() {
+        let exp = &[
+            L(5),
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(258),
+            },
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(258),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+
+    #[test]
+    fn many_long_run() {
+        const ENOUGH_TO_WRAP_AROUND: usize = 10 + (32 * 1024 / 258);
+
+        let mut exp = Vec::with_capacity(ENOUGH_TO_WRAP_AROUND + 1);
+
+        exp.push(L(5));
+
+        exp.extend(vec![
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(258),
+            };
+            ENOUGH_TO_WRAP_AROUND
+        ]);
+
+        assert_eq!(exp, decode_then_reencode_single_block(&exp));
+    }
+
+    #[test]
+    fn longer_match() {
+        // I didn't think it would, but even:
+        // echo a12341231234 | gzip --fast | cargo run --example dump /dev/stdin
+        // ..generates this.
+
+        // I was expecting it to only use the most recent hit for that hash item. Um.
+
+        let exp = &[
+            L(b'a'),
+            L(b'1'),
+            L(b'2'),
+            L(b'3'),
+            L(b'4'),
+            R {
+                dist: 4,
+                run_minus_3: ::pack_run(3),
+            },
+            R {
+                dist: 7,
+                run_minus_3: ::pack_run(4),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<Code> {
+        decode_then_reencode(&[], codes)
+    }
+
+    fn decode_then_reencode(preroll: &[u8], codes: &[Code]) -> Vec<Code> {
+
+//        let window_size = max_distance(codes).unwrap();
+//        let mut ret = Vec::with_capacity(codes.len());
+        let mut bytes = Vec::new();
+
+        serialise::decompressed_codes(&mut bytes, &mut circles::CircularBuffer::with_capacity(32 * 1024), codes).unwrap();
+
+        let lengths = serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
+
+        for val in find_all_options(lengths, &[], &bytes) {
+            println!("{:?}", val);
+        }
+
+        unimplemented!()
+    }
+
+    #[test]
+    fn short_repeat() {
+        // a122b122222
+        // 01234567890
+
+        let exp = &[
+            L(b'a'),
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(3),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    #[test]
+    fn repeat_after_ref_a122b_122_222() {
+        // a122b122222
+        // 01234567890
+
+        let exp = &[
+            L(b'a'),
+            L(b'1'),
+            L(b'2'),
+            L(b'2'),
+            L(b'b'),
+            R {
+                dist: 4,
+                run_minus_3: ::pack_run(3),
+            },
+            R {
+                dist: 1,
+                run_minus_3: ::pack_run(3),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+
+    #[test]
+    fn lazy_longer_ref() {
+        // Finally, a test for this gzip behaviour.
+        // It only does this with zip levels >3, including the default.
+
+        // a123412f41234
+        // 0123456789012
+
+        // It gets to position 8, and it's ignoring the "412" (at position 6),
+        // instead taking the longer run of "1234" at position 1.
+
+        // I bet it thinks it's so smart.
+
+        let exp = &[
+            L(b'a'),
+            L(b'1'),
+            L(b'2'),
+            L(b'3'),
+            L(b'4'),
+            L(b'1'),
+            L(b'2'),
+            L(b'f'),
+            L(b'4'),
+            R {
+                dist: 8,
+                run_minus_3: ::pack_run(4),
+            },
+        ];
+
+        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+    }
+}

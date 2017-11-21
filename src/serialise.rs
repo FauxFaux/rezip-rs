@@ -192,7 +192,7 @@ impl Lengths {
                     None => return None,
                 };
 
-                Some(run_symbol_len + distance_symbol_len)
+                Some(run_symbol_len + distance_symbol_len + bit_count)
             }
         }
     }

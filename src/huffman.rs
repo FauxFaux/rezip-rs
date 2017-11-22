@@ -230,3 +230,9 @@ pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u
 
     bail!("reserved distance symbol")
 }
+
+
+#[test]
+fn print_fixed_tree() {
+    println!("{:?}", *FIXED_LENGTH_TREE);
+}

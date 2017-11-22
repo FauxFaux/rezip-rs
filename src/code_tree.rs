@@ -99,9 +99,9 @@ fn fmt(into: &mut fmt::Formatter, prefix: &str, node: &Node) -> fmt::Result {
         Node::Leaf(sym) => {
             write!(into, "{} => ", prefix)?;
             match sym {
-                0...255 => write!(into, "{:?} ", sym as u8 as char),
-                256 => write!(into, "EoS "),
-                other => write!(into, "d:{} ", other - 256),
+                0...255 => write!(into, "0x{:02x} {:?}\n", sym, sym as u8 as char),
+                256 => write!(into, "EoS\n"),
+                other => write!(into, "d:{}\n", other - 256),
             }
         }
         Node::Internal(ref left, ref right) => {

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::cmp;
+use std::slice;
 
 use circles::CircularBuffer;
 use errors::*;
@@ -25,7 +26,7 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-pub fn find_all_options(lengths: Lengths, preroll: &[u8], data: &[u8]) -> Vec<Vec<Code>> {
+pub fn find_all_options<'a>(lengths: Lengths, preroll: &[u8], data: &'a [u8]) -> AllOptions<'a> {
     let map = whole_map(preroll.iter().chain(data).map(|x| *x));
 
     let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
@@ -33,44 +34,60 @@ pub fn find_all_options(lengths: Lengths, preroll: &[u8], data: &[u8]) -> Vec<Ve
 
     let data_start = preroll.len();
 
-    all_options(&mut dictionary, data_start, data, &map)
-        .into_iter()
-        .map(|mut v| {
-            v.sort_by(|left, right| compare(&lengths, left, right));
-            v
-        })
-        .collect()
+    AllOptions {
+        dictionary,
+        data_start,
+        data,
+        map,
+        it: ThreePeek::new(data.into_iter()),
+        data_pos: 0,
+        lengths,
+    }
 }
 
-fn all_options(
-    dictionary: &mut CircularBuffer,
+pub struct AllOptions<'a> {
+    dictionary: CircularBuffer,
     data_start: usize,
-    data: &[u8],
-    map: &BackMap,
-) -> Vec<Vec<Code>> {
-    let mut ret = Vec::with_capacity(data.len());
+    data: &'a [u8],
+    map: BackMap,
+    it: ThreePeek<slice::Iter<'a, u8>>,
+    data_pos: usize,
+    lengths: Lengths,
+}
 
-    let mut it = ThreePeek::new(data.into_iter());
+impl<'a> Iterator for AllOptions<'a> {
+    type Item = Vec<Code>;
 
-    while let Some(key) = it.next_three() {
-        // TODO: This shouldn't really be full of &u8s, should it?
-        let key = (*key.0, *key.1, *key.2);
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.it.next_three() {
+            Some(key) => {
+                // TODO: This shouldn't really be full of &u8s, should it?
+                let key = (*key.0, *key.1, *key.2);
 
+                Some(self.stateful_options(key))
+            },
+            None => self.it.next().map(|byte| vec![Code::Literal(*byte)])
+        }
+    }
+}
+
+impl<'a> AllOptions<'a> {
+    fn stateful_options(&mut self, key: Key) -> Vec<Code> {
         // it's always possible to emit the literal
         let current_byte = key.0;
 
-        let candidates = match map.get(&key) {
+        let candidates = match self.map.get(&key) {
             Some(val) => val,
             None => {
-                dictionary.push(current_byte);
-                ret.push(vec![Code::Literal(current_byte)]);
-                continue;
+                self.dictionary.push(current_byte);
+                self.data_pos += 1;
+                return vec![Code::Literal(current_byte)];
             }
         };
         assert!(!candidates.is_empty());
 
-        let data_pos = ret.len();
-        let pos = data_pos + data_start;
+        let data_pos = self.data_pos;
+        let pos = data_pos + self.data_start;
 
         let mut us = Vec::with_capacity(candidates.len());
         us.push(Code::Literal(current_byte));
@@ -91,8 +108,8 @@ fn all_options(
 
             let dist = dist as u16;
 
-            let upcoming_data = &data[data_pos..];
-            let run = dictionary.possible_run_length_at(dist, upcoming_data);
+            let upcoming_data = &self.data[data_pos..];
+            let run = self.dictionary.possible_run_length_at(dist, upcoming_data);
 
             assert!(
                 run >= 3,
@@ -108,18 +125,13 @@ fn all_options(
             })
         }
 
+        self.dictionary.push(current_byte);
+        self.data_pos += 1;
+
+        us.sort_by(|left, right| compare(&self.lengths, left, right));
         us.shrink_to_fit();
-
-        dictionary.push(current_byte);
-        ret.push(us);
+        us
     }
-
-    for remaining_byte in it {
-        ret.push(vec![Code::Literal(*remaining_byte)]);
-    }
-
-    assert_eq!(data.len(), ret.len());
-    ret
 }
 
 fn compare(lengths: &Lengths, left: &Code, right: &Code) -> cmp::Ordering {

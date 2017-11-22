@@ -90,44 +90,45 @@ impl<'a> AllOptions<'a> {
         let data_pos = self.data_pos;
         let pos = data_pos + self.data_start;
 
-        let mut us = Vec::with_capacity(candidates.len());
+        let mut us = candidates
+            .into_iter()
+            .filter_map(|candidate_pos| {
+                // TODO: ge or gt?
+                if *candidate_pos >= pos {
+                    return None;
+                }
+
+                let dist = pos - *candidate_pos;
+
+                if dist > 32 * 1024 {
+                    return None;
+                }
+
+                Some(dist as u16)
+            })
+            .map(|dist| {
+                let upcoming_data = &self.data[data_pos..];
+                let run = self.dictionary.possible_run_length_at(dist, upcoming_data);
+
+                assert!(
+                    run >= 3,
+                    "only matched {} bytes like {:?} at -{}",
+                    run,
+                    upcoming_data,
+                    dist
+                );
+
+                Code::Reference {
+                    dist,
+                    run_minus_3: pack_run(run),
+                }
+            })
+            .collect::<Vec<Code>>();
+
         us.push(Code::Literal(current_byte));
 
-        for candidate_pos in candidates {
-            let candidate_pos = *candidate_pos;
-
-            // TODO: ge or gt?
-            if candidate_pos >= pos {
-                continue;
-            }
-
-            let dist = pos - candidate_pos;
-
-            if dist > 32 * 1024 {
-                continue;
-            }
-
-            let dist = dist as u16;
-
-            let upcoming_data = &self.data[data_pos..];
-            let run = self.dictionary.possible_run_length_at(dist, upcoming_data);
-
-            assert!(
-                run >= 3,
-                "only matched {} bytes like {:?} at -{}",
-                run,
-                upcoming_data,
-                dist
-            );
-
-            us.push(Code::Reference {
-                dist,
-                run_minus_3: pack_run(run),
-            })
-        }
-
         us.sort_by(|left, right| compare(&self.lengths, left, right));
-        us.shrink_to_fit();
+
         us
     }
 }

@@ -68,14 +68,14 @@ impl<'a> Iterator for AllOptions<'a> {
                 self.dictionary.push(key.0);
                 self.data_pos += 1;
                 ret
-            },
-            None => self.it.next().map(|byte| vec![Code::Literal(*byte)])
+            }
+            None => self.it.next().map(|byte| vec![Code::Literal(*byte)]),
         }
     }
 }
 
 impl<'a> AllOptions<'a> {
-    fn stateful_options(&mut self, key: Key) -> Vec<Code> {
+    fn stateful_options(&self, key: Key) -> Vec<Code> {
         // it's always possible to emit the literal
         let current_byte = key.0;
 

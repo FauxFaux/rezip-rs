@@ -42,7 +42,7 @@ impl CircularBuffer {
         }
     }
 
-    pub fn extendi<'a, I: Iterator<Item=&'a u8>>(&mut self, val: I) {
+    pub fn extendi<'a, I: Iterator<Item = &'a u8>>(&mut self, val: I) {
         // TODO: optimise
 
         for byte in val {
@@ -80,10 +80,17 @@ impl CircularBuffer {
             dist > 0,
             "distances are one-indexed; the most recent inserted value is 1"
         );
+        assert!(self.valid_cap as usize <= self.data.len());
         assert!(dist <= self.valid_cap);
-        self.data[self.idx
-                      .wrapping_sub(dist as usize)
-                      .wrapping_add(self.data.len()) % self.data.len()]
+
+        let target = self.idx as isize - (dist as isize);
+        let idx = if target >= 0 {
+            target
+        } else {
+            target + self.data.len() as isize
+        } as usize;
+
+        self.data[idx]
     }
 
     pub fn capacity(&self) -> u16 {

@@ -81,9 +81,9 @@ fn key(from: &[u8]) -> Key {
 }
 
 impl<'a> AllOptions<'a> {
-
     pub fn advance(&mut self, n: usize) {
-        self.dictionary.extend(&self.data[self.data_pos..self.data_pos + n]);
+        self.dictionary
+            .extend(&self.data[self.data_pos..self.data_pos + n]);
         self.data_pos += n;
     }
 
@@ -349,7 +349,7 @@ mod tests {
     }
 
 
-    // TODO: #[test]
+    #[test]
     fn many_long_run() {
         const ENOUGH_TO_WRAP_AROUND: usize = 10 + (32 * 1024 / 258);
 
@@ -428,11 +428,7 @@ mod tests {
         while let Some(vec) = it.next() {
             let orig = cit.next().expect("desync");
             #[cfg(feature = "tracing")]
-            println!(
-                "trying to guess {:?}, we have {:?}",
-                orig,
-                vec
-            );
+            println!("trying to guess {:?}, we have {:?}", orig, vec);
             let chosen = vec.iter().position(|x| x == orig).expect("it must be here");
             we_chose.push(chosen);
             it.advance(usize_from(orig.emitted_bytes() - 1));

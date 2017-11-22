@@ -98,7 +98,17 @@ impl CircularBuffer {
     }
 
     pub fn possible_run_length_at(&self, dist: u16, upcoming_data: &[u8]) -> u16 {
-        u16_from(self.run_from(dist).match_length(upcoming_data))
+        let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
+        //  pos: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+        // dist: 7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1
+        for (pos, byte) in upcoming_data.into_iter().enumerate() {
+            let pos = pos as u16;
+            if *byte != self.get_at_dist(dist - (pos % dist)) {
+                return pos;
+            }
+        }
+
+        return upcoming_data.len() as u16;
     }
 
     pub fn find_run(&self, run: &[u8]) -> Result<usize> {

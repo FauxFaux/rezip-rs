@@ -63,6 +63,7 @@ impl CircularBuffer {
     }
 
     pub fn get_at_dist(&self, dist: u16) -> u8 {
+        assert!(dist > 0, "distances are one-indexed; the most recent inserted value is 1");
         assert!(dist <= self.valid_cap);
         self.data[self.idx
                       .wrapping_sub(dist as usize)
@@ -157,6 +158,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn dist() {
+        let mut buf = CircularBuffer::with_capacity(10);
+        buf.extend(b"abcdef");
+        assert_eq!(b'f', buf.get_at_dist(1));
+        assert_eq!(b'a', buf.get_at_dist(6));
+
+        buf.extend(b"qrstuv");
+        assert_eq!(b'v', buf.get_at_dist(1));
+        assert_eq!(b'q', buf.get_at_dist(6));
+        assert_eq!(b'f', buf.get_at_dist(7));
+
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_dist() {
+        let mut buf = CircularBuffer::with_capacity(10);
+        buf.extend(b"abcdef");
+        buf.get_at_dist(7);
+    }
+
+    #[test]
     fn run_across_end() {
         let mut buf = CircularBuffer::with_capacity(10);
 
@@ -188,5 +211,15 @@ mod tests {
         // TODO: test 258 boundary
 
         assert_eq!(4, buf.run_from(1).match_length(b"ddddef"));
+    }
+
+    #[test]
+    fn run_length_at() {
+        let mut buf = CircularBuffer::with_capacity(100);
+        buf.extend(b"abcdef b");
+        //   distances: "87654321"
+        assert_eq!(b'b', buf.get_at_dist(7));
+        assert_eq!(b"bcdef ", buf.run_from(7).take(6).collect::<Vec<u8>>().as_slice());
+        assert_eq!(5, buf.possible_run_length_at(7, b"bcdef"));
     }
 }

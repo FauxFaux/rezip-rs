@@ -410,18 +410,17 @@ mod tests {
             serialise::decompressed_codes(&mut bytes, &mut prebuf, codes).unwrap();
         }
 
+        #[cfg(never)]
         println!(
             "bytes: {:?}, str: {:?}",
             bytes,
             String::from_utf8_lossy(&bytes)
         );
 
-
         let lengths =
             serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
 
         let mut it = find_all_options(lengths, preroll, &bytes)
-            .into_iter()
             .enumerate();
 
         let mut cit = codes.iter();
@@ -430,6 +429,7 @@ mod tests {
 
         while let Some((pos, vec)) = it.next() {
             let orig = cit.next().expect("desync");
+            #[cfg(tracing)]
             println!(
                 "byte {}: trying to guess {:?}, we have {:?}",
                 pos,

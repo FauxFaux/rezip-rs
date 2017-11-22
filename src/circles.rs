@@ -46,7 +46,12 @@ impl CircularBuffer {
     pub fn copy<W: Write>(&mut self, dist: u16, len: u16, mut into: W) -> Result<()> {
         // TODO: optimise
 
-        ensure!(dist > 0 && dist <= self.valid_cap, "dist must fit: {} / {}", dist, self.valid_cap);
+        ensure!(
+            dist > 0 && dist <= self.valid_cap,
+            "dist must fit: {} / {}",
+            dist,
+            self.valid_cap
+        );
 
         let mut read_from = (self.idx
             .wrapping_sub(dist as usize)
@@ -63,7 +68,10 @@ impl CircularBuffer {
     }
 
     pub fn get_at_dist(&self, dist: u16) -> u8 {
-        assert!(dist > 0, "distances are one-indexed; the most recent inserted value is 1");
+        assert!(
+            dist > 0,
+            "distances are one-indexed; the most recent inserted value is 1"
+        );
         assert!(dist <= self.valid_cap);
         self.data[self.idx
                       .wrapping_sub(dist as usize)
@@ -149,7 +157,10 @@ impl<'a> Iterator for Runerator<'a> {
 
 impl<'a> Runerator<'a> {
     pub fn match_length(&mut self, other: &[u8]) -> usize {
-        self.take(258).zip(other).filter(|&(x, y)| x == *y).count()
+        self.take(258)
+            .zip(other)
+            .take_while(|&(x, y)| x == *y)
+            .count()
     }
 }
 
@@ -168,7 +179,6 @@ mod tests {
         assert_eq!(b'v', buf.get_at_dist(1));
         assert_eq!(b'q', buf.get_at_dist(6));
         assert_eq!(b'f', buf.get_at_dist(7));
-
     }
 
     #[test]
@@ -219,7 +229,22 @@ mod tests {
         buf.extend(b"abcdef b");
         //   distances: "87654321"
         assert_eq!(b'b', buf.get_at_dist(7));
-        assert_eq!(b"bcdef ", buf.run_from(7).take(6).collect::<Vec<u8>>().as_slice());
+        assert_eq!(
+            b"bcdef ",
+            buf.run_from(7).take(6).collect::<Vec<u8>>().as_slice()
+        );
         assert_eq!(5, buf.possible_run_length_at(7, b"bcdef"));
+    }
+
+    #[test]
+    fn run_length_at_2() {
+        let mut buf = CircularBuffer::with_capacity(100);
+        buf.extend(b"a122b");
+        assert_eq!(b'1', buf.get_at_dist(4));
+        assert_eq!(
+            b"122b122b",
+            buf.run_from(4).take(8).collect::<Vec<u8>>().as_slice()
+        );
+        assert_eq!(3, buf.possible_run_length_at(4, b"122222"));
     }
 }

@@ -94,7 +94,13 @@ fn all_options(
             let upcoming_data = &data[data_pos..];
             let run = dictionary.possible_run_length_at(dist, upcoming_data);
 
-            assert!(run >= 3, "only matched {} bytes like {:?} at -{}", run, upcoming_data, dist);
+            assert!(
+                run >= 3,
+                "only matched {} bytes like {:?} at -{}",
+                run,
+                upcoming_data,
+                dist
+            );
 
             us.push(Code::Reference {
                 dist,
@@ -391,25 +397,40 @@ mod tests {
     }
 
     fn decode_then_reencode(preroll: &[u8], codes: &[Code]) -> Vec<Code> {
-
-//        let window_size = max_distance(codes).unwrap();
-//        let mut ret = Vec::with_capacity(codes.len());
+        //        let window_size = max_distance(codes).unwrap();
+        //        let mut ret = Vec::with_capacity(codes.len());
         let mut bytes = Vec::new();
 
-        serialise::decompressed_codes(&mut bytes, &mut circles::CircularBuffer::with_capacity(32 * 1024), codes).unwrap();
+        serialise::decompressed_codes(
+            &mut bytes,
+            &mut circles::CircularBuffer::with_capacity(32 * 1024),
+            codes,
+        ).unwrap();
 
-        println!("bytes: {:?}, str: {:?}", bytes, String::from_utf8_lossy(&bytes));
+        println!(
+            "bytes: {:?}, str: {:?}",
+            bytes,
+            String::from_utf8_lossy(&bytes)
+        );
 
 
-        let lengths = serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
+        let lengths =
+            serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
 
-        let mut it = find_all_options(lengths, &[], &bytes).into_iter().enumerate();
+        let mut it = find_all_options(lengths, &[], &bytes)
+            .into_iter()
+            .enumerate();
 
         let mut cit = codes.iter();
 
         while let Some((pos, vec)) = it.next() {
             let orig = cit.next().expect("desync");
-            println!("byte {}: trying to guess {:?}, we have {:?}", pos, orig, vec);
+            println!(
+                "byte {}: trying to guess {:?}, we have {:?}",
+                pos,
+                orig,
+                vec
+            );
             let chosen = vec.iter().position(|x| x == orig).expect("it must be here");
             assert_eq!(0, chosen, "we would have picked a different value");
             it.advance(usize_from(orig.emitted_bytes() - 1));

@@ -221,7 +221,8 @@ mod tests {
             L(b'h'),
             L(b'i'),
         ];
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+
+        assert_unity(exp);
     }
 
     #[test]
@@ -262,7 +263,8 @@ mod tests {
             L(b's'),
             L(b't'),
         ];
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+
+        assert_unity(exp);
     }
 
     #[test]
@@ -289,7 +291,8 @@ mod tests {
             },
             L(b'g'),
         ];
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+
+        assert_unity(exp);
     }
 
     #[test]
@@ -301,7 +304,7 @@ mod tests {
                 run_minus_3: 10,
             },
         ];
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+        assert_unity(exp);
     }
 
     #[test]
@@ -312,7 +315,10 @@ mod tests {
                 run_minus_3: 10,
             },
         ];
-        assert_eq!(exp, decode_then_reencode(&[0], exp).as_slice());
+        assert_eq!(
+            exp.iter().map(|_| 0usize).collect::<Vec<usize>>(),
+            decode_then_reencode(&[0], exp)
+        );
     }
 
     #[test]
@@ -325,7 +331,7 @@ mod tests {
             },
         ];
 
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+        assert_unity(exp);
     }
 
     #[test]
@@ -342,7 +348,7 @@ mod tests {
             },
         ];
 
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+        assert_unity(exp);
     }
 
 
@@ -362,7 +368,7 @@ mod tests {
             ENOUGH_TO_WRAP_AROUND
         ]);
 
-        assert_eq!(exp, decode_then_reencode_single_block(&exp));
+        assert_unity(&exp);
     }
 
     #[test]
@@ -389,23 +395,22 @@ mod tests {
             },
         ];
 
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+        assert_unity(exp);
     }
 
-    fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<Code> {
+    fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<usize> {
         decode_then_reencode(&[], codes)
     }
 
-    fn decode_then_reencode(preroll: &[u8], codes: &[Code]) -> Vec<Code> {
+    fn decode_then_reencode(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
         //        let window_size = max_distance(codes).unwrap();
         //        let mut ret = Vec::with_capacity(codes.len());
         let mut bytes = Vec::new();
-
-        serialise::decompressed_codes(
-            &mut bytes,
-            &mut circles::CircularBuffer::with_capacity(32 * 1024),
-            codes,
-        ).unwrap();
+        {
+            let mut prebuf = circles::CircularBuffer::with_capacity(32 * 1024);
+            prebuf.extend(preroll);
+            serialise::decompressed_codes(&mut bytes, &mut prebuf, codes).unwrap();
+        }
 
         println!(
             "bytes: {:?}, str: {:?}",
@@ -417,11 +422,13 @@ mod tests {
         let lengths =
             serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
 
-        let mut it = find_all_options(lengths, &[], &bytes)
+        let mut it = find_all_options(lengths, preroll, &bytes)
             .into_iter()
             .enumerate();
 
         let mut cit = codes.iter();
+
+        let mut we_chose = Vec::with_capacity(codes.len());
 
         while let Some((pos, vec)) = it.next() {
             let orig = cit.next().expect("desync");
@@ -432,13 +439,13 @@ mod tests {
                 vec
             );
             let chosen = vec.iter().position(|x| x == orig).expect("it must be here");
-            assert_eq!(0, chosen, "we would have picked a different value");
+            we_chose.push(chosen);
             it.advance(usize_from(orig.emitted_bytes() - 1));
         }
 
         assert_eq!(None, cit.next());
 
-        codes.to_vec()
+        we_chose
     }
 
     #[test]
@@ -454,7 +461,7 @@ mod tests {
             },
         ];
 
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+        assert_unity(exp);
     }
 
     #[test]
@@ -478,7 +485,7 @@ mod tests {
             },
         ];
 
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+        assert_unity(exp);
     }
 
     #[test]
@@ -510,6 +517,16 @@ mod tests {
             },
         ];
 
-        assert_eq!(exp, decode_then_reencode_single_block(exp).as_slice());
+        assert_eq!(
+            &[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+            decode_then_reencode_single_block(exp).as_slice()
+        );
+    }
+
+    fn assert_unity(exp: &[Code]) {
+        assert_eq!(
+            exp.iter().map(|x| 0).collect::<Vec<usize>>(),
+            decode_then_reencode_single_block(exp)
+        );
     }
 }

@@ -100,7 +100,7 @@ impl CircularBuffer {
 
     pub fn possible_run_length_at(&self, dist: u16, upcoming_data: &[u8]) -> u16 {
         let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
-        for pos in 0..dist.min(upcoming_data.len() as u16) {
+        for pos in 3..dist.min(upcoming_data.len() as u16) {
             if upcoming_data[pos as usize] != self.get_at_dist(dist - pos) {
                 return pos;
             }

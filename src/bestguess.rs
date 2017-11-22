@@ -75,6 +75,7 @@ impl<'a> Iterator for AllOptions<'a> {
 }
 
 impl<'a> AllOptions<'a> {
+
     pub fn advance(&mut self, n: usize) {
         self.data_pos += n;
         for _ in 0..n {
@@ -83,10 +84,7 @@ impl<'a> AllOptions<'a> {
     }
 
     fn stateful_options(&self, key: Key) -> Vec<Code> {
-        // it's always possible to emit the literal
         let current_byte = key.0;
-
-        let pos = self.data_pos + self.data_start;
 
         let mut us = match self.map.get(&key) {
             Some(val) => val,
@@ -95,6 +93,8 @@ impl<'a> AllOptions<'a> {
             }
         }.into_iter()
             .filter_map(|candidate_pos| {
+                let pos = self.data_pos + self.data_start;
+
                 // TODO: ge or gt?
                 if *candidate_pos >= pos {
                     return None;
@@ -119,6 +119,7 @@ impl<'a> AllOptions<'a> {
             })
             .collect::<Vec<Code>>();
 
+        // plus, it's always possible to emit the literal
         us.push(Code::Literal(current_byte));
 
         us.sort_by(|left, right| compare(&self.lengths, left, right));

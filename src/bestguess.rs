@@ -39,7 +39,6 @@ pub fn find_all_options<'a>(lengths: Lengths, preroll: &[u8], data: &'a [u8]) ->
         data_start,
         data,
         map,
-        it: ThreePeek::new(data.into_iter()),
         data_pos: 0,
         lengths,
     }
@@ -50,7 +49,6 @@ pub struct AllOptions<'a> {
     data_start: usize,
     data: &'a [u8],
     map: BackMap,
-    it: ThreePeek<slice::Iter<'a, u8>>,
     data_pos: usize,
     lengths: Lengths,
 }
@@ -59,28 +57,34 @@ impl<'a> Iterator for AllOptions<'a> {
     type Item = Vec<Code>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.it.next_three() {
-            Some(key) => {
-                // TODO: This shouldn't really be full of &u8s, should it?
-                let key = (*key.0, *key.1, *key.2);
-
-                let ret = Some(self.stateful_options(key));
-                self.dictionary.push(key.0);
-                self.data_pos += 1;
-                ret
-            }
-            None => self.it.next().map(|byte| vec![Code::Literal(*byte)]),
+        if self.data_pos >= self.data.len() {
+            return None;
         }
+
+        if self.data_pos + 3 > self.data.len() {
+            let item = self.data[self.data_pos];
+            self.data_pos += 1;
+            return Some(vec![Code::Literal(item)]);
+        }
+
+        let key = key(&self.data[self.data_pos..]);
+
+        let ret = Some(self.stateful_options((key)));
+        self.dictionary.push(key.0);
+        self.data_pos += 1;
+        ret
     }
+}
+
+fn key(from: &[u8]) -> Key {
+    (from[0], from[1], from[2])
 }
 
 impl<'a> AllOptions<'a> {
 
     pub fn advance(&mut self, n: usize) {
+        self.dictionary.extend(&self.data[self.data_pos..self.data_pos + n]);
         self.data_pos += n;
-        for _ in 0..n {
-            self.dictionary.push(*self.it.next().unwrap());
-        }
     }
 
     fn stateful_options(&self, key: Key) -> Vec<Code> {

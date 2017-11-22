@@ -79,19 +79,15 @@ impl<'a> AllOptions<'a> {
         // it's always possible to emit the literal
         let current_byte = key.0;
 
-        let candidates = match self.map.get(&key) {
+        let data_pos = self.data_pos;
+        let pos = data_pos + self.data_start;
+
+        let mut us = match self.map.get(&key) {
             Some(val) => val,
             None => {
                 return vec![Code::Literal(current_byte)];
             }
-        };
-        assert!(!candidates.is_empty());
-
-        let data_pos = self.data_pos;
-        let pos = data_pos + self.data_start;
-
-        let mut us = candidates
-            .into_iter()
+        }.into_iter()
             .filter_map(|candidate_pos| {
                 // TODO: ge or gt?
                 if *candidate_pos >= pos {
@@ -107,20 +103,12 @@ impl<'a> AllOptions<'a> {
                 Some(dist as u16)
             })
             .map(|dist| {
-                let upcoming_data = &self.data[data_pos..];
-                let run = self.dictionary.possible_run_length_at(dist, upcoming_data);
-
-                assert!(
-                    run >= 3,
-                    "only matched {} bytes like {:?} at -{}",
-                    run,
-                    upcoming_data,
-                    dist
-                );
-
                 Code::Reference {
                     dist,
-                    run_minus_3: pack_run(run),
+                    run_minus_3: pack_run(
+                        self.dictionary
+                            .possible_run_length_at(dist, &self.data[data_pos..]),
+                    ),
                 }
             })
             .collect::<Vec<Code>>();

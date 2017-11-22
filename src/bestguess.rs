@@ -64,7 +64,10 @@ impl<'a> Iterator for AllOptions<'a> {
                 // TODO: This shouldn't really be full of &u8s, should it?
                 let key = (*key.0, *key.1, *key.2);
 
-                Some(self.stateful_options(key))
+                let ret = Some(self.stateful_options(key));
+                self.dictionary.push(key.0);
+                self.data_pos += 1;
+                ret
             },
             None => self.it.next().map(|byte| vec![Code::Literal(*byte)])
         }
@@ -79,8 +82,6 @@ impl<'a> AllOptions<'a> {
         let candidates = match self.map.get(&key) {
             Some(val) => val,
             None => {
-                self.dictionary.push(current_byte);
-                self.data_pos += 1;
                 return vec![Code::Literal(current_byte)];
             }
         };
@@ -124,9 +125,6 @@ impl<'a> AllOptions<'a> {
                 run_minus_3: pack_run(run),
             })
         }
-
-        self.dictionary.push(current_byte);
-        self.data_pos += 1;
 
         us.sort_by(|left, right| compare(&self.lengths, left, right));
         us.shrink_to_fit();

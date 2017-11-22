@@ -79,8 +79,7 @@ impl<'a> AllOptions<'a> {
         // it's always possible to emit the literal
         let current_byte = key.0;
 
-        let data_pos = self.data_pos;
-        let pos = data_pos + self.data_start;
+        let pos = self.data_pos + self.data_start;
 
         let mut us = match self.map.get(&key) {
             Some(val) => val,
@@ -107,7 +106,7 @@ impl<'a> AllOptions<'a> {
                     dist,
                     run_minus_3: pack_run(
                         self.dictionary
-                            .possible_run_length_at(dist, &self.data[data_pos..]),
+                            .possible_run_length_at(dist, &self.data[self.data_pos..]),
                     ),
                 }
             })

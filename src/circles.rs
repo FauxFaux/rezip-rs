@@ -75,13 +75,14 @@ impl CircularBuffer {
         Ok(())
     }
 
+    #[inline]
     pub fn get_at_dist(&self, dist: u16) -> u8 {
-        assert!(
+        debug_assert!(
             dist > 0,
             "distances are one-indexed; the most recent inserted value is 1"
         );
-        assert!(self.valid_cap as usize <= self.data.len());
-        assert!(dist <= self.valid_cap);
+        debug_assert!(self.valid_cap as usize <= self.data.len());
+        debug_assert!(dist <= self.valid_cap);
 
         let target = self.idx as isize - (dist as isize);
         let idx = if target >= 0 {
@@ -99,11 +100,14 @@ impl CircularBuffer {
 
     pub fn possible_run_length_at(&self, dist: u16, upcoming_data: &[u8]) -> u16 {
         let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
-        //  pos: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-        // dist: 7, 6, 5, 4, 3, 2, 1, 7, 6, 5, 4, 3, 2, 1
-        for (pos, byte) in upcoming_data.into_iter().enumerate() {
-            let pos = pos as u16;
-            if *byte != self.get_at_dist(dist - (pos % dist)) {
+        for pos in 0..dist.min(upcoming_data.len() as u16) {
+            if upcoming_data[pos as usize] != self.get_at_dist(dist - pos) {
+                return pos;
+            }
+        }
+
+        for pos in dist..(upcoming_data.len() as u16) {
+            if upcoming_data[(pos % dist) as usize] != upcoming_data[pos as usize] {
                 return pos;
             }
         }

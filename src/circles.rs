@@ -42,6 +42,14 @@ impl CircularBuffer {
         }
     }
 
+    pub fn extendi<'a, I: Iterator<Item=&'a u8>>(&mut self, val: I) {
+        // TODO: optimise
+
+        for byte in val {
+            self.push(*byte);
+        }
+    }
+
     // This updates self, whereas run_from and friends do not.
     pub fn copy<W: Write>(&mut self, dist: u16, len: u16, mut into: W) -> Result<()> {
         // TODO: optimise

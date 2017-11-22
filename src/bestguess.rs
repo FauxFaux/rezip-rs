@@ -75,6 +75,13 @@ impl<'a> Iterator for AllOptions<'a> {
 }
 
 impl<'a> AllOptions<'a> {
+    pub fn advance(&mut self, n: usize) {
+        self.data_pos += n;
+        for _ in 0..n {
+            self.dictionary.push(*self.it.next().unwrap());
+        }
+    }
+
     fn stateful_options(&self, key: Key) -> Vec<Code> {
         // it's always possible to emit the literal
         let current_byte = key.0;
@@ -177,22 +184,9 @@ fn saved_bits(code: &Code, mean_literal_len: u8) -> u16 {
     u16::from(mean_literal_len) * code.emitted_bytes()
 }
 
-trait IteratorZoomer {
-    fn advance(&mut self, n: usize);
-}
-
-impl<I: Iterator> IteratorZoomer for I {
-    fn advance(&mut self, n: usize) {
-        for _ in 0..n {
-            self.next();
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::find_all_options;
-    use super::IteratorZoomer;
     use circles;
     use huffman;
     use serialise;
@@ -420,19 +414,17 @@ mod tests {
         let lengths =
             serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
 
-        let mut it = find_all_options(lengths, preroll, &bytes)
-            .enumerate();
+        let mut it = find_all_options(lengths, preroll, &bytes);
 
         let mut cit = codes.iter();
 
         let mut we_chose = Vec::with_capacity(codes.len());
 
-        while let Some((pos, vec)) = it.next() {
+        while let Some(vec) = it.next() {
             let orig = cit.next().expect("desync");
-            #[cfg(tracing)]
+            #[cfg(feature = "tracing")]
             println!(
-                "byte {}: trying to guess {:?}, we have {:?}",
-                pos,
+                "trying to guess {:?}, we have {:?}",
                 orig,
                 vec
             );

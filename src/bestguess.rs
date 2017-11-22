@@ -170,18 +170,29 @@ fn compare(lengths: &Lengths, left: &Code, right: &Code) -> cmp::Ordering {
 }
 
 fn saved_bits(code: &Code, mean_literal_len: u8) -> u16 {
-    u16::from(mean_literal_len) * match *code {
-        Code::Literal(_) => 1,
-        Code::Reference { run_minus_3, .. } => unpack_run(run_minus_3),
+    u16::from(mean_literal_len) * code.emitted_bytes()
+}
+
+trait IteratorZoomer {
+    fn advance(&mut self, n: usize);
+}
+
+impl<I: Iterator> IteratorZoomer for I {
+    fn advance(&mut self, n: usize) {
+        for _ in 0..n {
+            self.next();
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::find_all_options;
+    use super::IteratorZoomer;
     use circles;
     use huffman;
     use serialise;
+    use usize_from;
     use Code;
     use Code::Literal as L;
     use Code::Reference as R;
@@ -387,13 +398,26 @@ mod tests {
 
         serialise::decompressed_codes(&mut bytes, &mut circles::CircularBuffer::with_capacity(32 * 1024), codes).unwrap();
 
+        println!("bytes: {:?}, str: {:?}", bytes, String::from_utf8_lossy(&bytes));
+
+
         let lengths = serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
 
-        for val in find_all_options(lengths, &[], &bytes) {
-            println!("{:?}", val);
+        let mut it = find_all_options(lengths, &[], &bytes).into_iter().enumerate();
+
+        let mut cit = codes.iter();
+
+        while let Some((pos, vec)) = it.next() {
+            let orig = cit.next().expect("desync");
+            println!("byte {}: trying to guess {:?}, we have {:?}", pos, orig, vec);
+            let chosen = vec.iter().position(|x| x == orig).expect("it must be here");
+            assert_eq!(0, chosen, "we would have picked a different value");
+            it.advance(usize_from(orig.emitted_bytes() - 1));
         }
 
-        unimplemented!()
+        assert_eq!(None, cit.next());
+
+        codes.to_vec()
     }
 
     #[test]

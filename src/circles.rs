@@ -46,7 +46,7 @@ impl CircularBuffer {
     pub fn copy<W: Write>(&mut self, dist: u16, len: u16, mut into: W) -> Result<()> {
         // TODO: optimise
 
-        ensure!(dist > 0 && dist <= self.valid_cap, "dist must fit");
+        ensure!(dist > 0 && dist <= self.valid_cap, "dist must fit: {} / {}", dist, self.valid_cap);
 
         let mut read_from = (self.idx
             .wrapping_sub(dist as usize)

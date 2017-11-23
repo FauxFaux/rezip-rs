@@ -25,8 +25,8 @@ fn run() -> Result<()> {
         };
 
         let codes = match block {
-            librezip::Block::FixedHuffman(codes) |
-            librezip::Block::DynamicHuffman { codes, .. } => codes,
+            librezip::Block::FixedHuffman(codes)
+            | librezip::Block::DynamicHuffman { codes, .. } => codes,
             _ => continue,
         };
 

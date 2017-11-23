@@ -87,18 +87,59 @@ impl<'a> AllOptions<'a> {
         self.data_pos += n;
     }
 
+    fn pos(&self) -> usize {
+        self.data_pos + self.data_start
+    }
+
+    fn all_candidates(&self, key: &Key) -> Option<&Vec<usize>> {
+        self.map.get(key)
+    }
+
+    fn reference_from_dist(&self, dist: u16) -> Code {
+        Code::Reference {
+            dist,
+            run_minus_3: pack_run(
+                self.dictionary
+                    .possible_run_length_at(dist, &self.data[self.data_pos..]),
+            ),
+        }
+    }
+
     fn stateful_options(&self, key: Key) -> Vec<Code> {
         let current_byte = key.0;
 
-        let mut us = match self.map.get(&key) {
+        let candidates = match self.all_candidates(&key) {
             Some(val) => val,
             None => {
                 return vec![Code::Literal(current_byte)];
             }
-        }.into_iter()
-            .filter_map(|candidate_pos| {
-                let pos = self.data_pos + self.data_start;
+        };
 
+        let pos = self.pos();
+
+        if false {
+            // TODO: off-by-one, especially in err
+            let end = match candidates.binary_search(&pos) {
+                Ok(val) => val,
+                Err(val) => val,
+            };
+
+            if end == pos {
+                // check for 258 run of data[pos] == data[pos..]
+                // and early return?
+            }
+
+            // TODO: maybe easier to search backwards?
+            let earliest_possible_start = pos.checked_sub(32 * 1024).unwrap_or(0);
+            let start = match candidates[..end].binary_search(&earliest_possible_start) {
+                Ok(val) => val,
+                Err(val) => val,
+            };
+        }
+
+        let mut us = candidates
+            .into_iter()
+            .filter_map(|candidate_pos| {
                 // TODO: ge or gt?
                 if *candidate_pos >= pos {
                     return None;
@@ -112,15 +153,7 @@ impl<'a> AllOptions<'a> {
 
                 Some(dist as u16)
             })
-            .map(|dist| {
-                Code::Reference {
-                    dist,
-                    run_minus_3: pack_run(
-                        self.dictionary
-                            .possible_run_length_at(dist, &self.data[self.data_pos..]),
-                    ),
-                }
-            })
+            .map(|dist| self.reference_from_dist(dist))
             .collect::<Vec<Code>>();
 
         // plus, it's always possible to emit the literal
@@ -131,6 +164,8 @@ impl<'a> AllOptions<'a> {
         us
     }
 }
+
+fn possible_dists() {}
 
 fn compare(lengths: &Lengths, left: &Code, right: &Code) -> cmp::Ordering {
     let left_len = lengths.length(left).unwrap_or(u8::max_value()) as isize;

@@ -135,7 +135,7 @@ fn find_reference_score<I: Iterator<Item = u16>>(
         us.push((dist, run));
     }
 
-    us.sort();
+    us.sort_by(|&(ld, lr), &(rd, rr)| rr.cmp(&lr).then(ld.cmp(&rd)));
 
     us.into_iter()
         .position(|(dist, run)| actual_run == run && actual_dist == dist)

@@ -10,9 +10,6 @@ use std::collections::HashMap;
 
 use circles::CircularBuffer;
 use three::ThreePeek;
-use serialise::Lengths;
-use Code;
-use pack_run;
 
 type Key = (u8, u8, u8);
 type BackMap = HashMap<Key, Vec<usize>>;
@@ -96,20 +93,13 @@ impl<'a> AllOptions<'a> {
             .unwrap_or(&[])
     }
 
-    fn reference_from_dist(&self, dist: u16) -> Code {
-        Code::Reference {
-            dist,
-            run_minus_3: pack_run(self.possible_run_length_at(dist)),
-        }
-    }
-
     pub fn possible_run_length_at(&self, dist: u16) -> u16 {
         self.dictionary
             .possible_run_length_at(dist, &self.data[self.data_pos..])
     }
 }
 
-fn find_reference_score<I: Iterator<Item = u16>>(
+pub fn find_reference_score<I: Iterator<Item = u16>>(
     actual_dist: u16,
     actual_run: u16,
     options: &AllOptions,
@@ -165,7 +155,6 @@ mod tests {
     use super::find_all_options;
     use super::find_reference_score;
     use circles;
-    use huffman;
     use serialise;
     use usize_from;
     use u16_from;

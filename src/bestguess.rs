@@ -232,18 +232,24 @@ pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Cod
     hints
         .into_iter()
         .map(|hint| {
-            let orig = match options.all_candidates().map(|candidates| candidates) {
+            let orig = match options.all_candidates() {
                 // TODO: match candidates.next()?
                 Some(mut candidates) => {
-                    let candidates = sorted_candidates(candidates);
-                    if candidates.is_empty() {
-                        options.current_literal()
-                    } else {
-                        match *hint {
-                            0 => candidates.get(0).expect("invalid input 1").into(),
-                            1 => options.current_literal(),
-                            other => candidates.get(other - 1).expect("invalid input 2").into(),
+                    let mut candidates = candidates.peekable();
+                    match candidates.peek() {
+                        Some(&(dist, run_minus_3)) if 1 == dist && 255 == run_minus_3 => {
+                            (&(dist, run_minus_3)).into()
                         }
+                        Some(_) => {
+                            let candidates = sorted_candidates(candidates);
+
+                            match *hint {
+                                0 => candidates.get(0).expect("invalid input 1").into(),
+                                1 => options.current_literal(),
+                                other => candidates.get(other - 1).expect("invalid input 2").into(),
+                            }
+                        }
+                        None => options.current_literal(),
                     }
                 }
                 None => options.current_literal(),

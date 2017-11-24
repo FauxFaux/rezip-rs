@@ -11,9 +11,6 @@ use std::iter;
 
 use itertools::Itertools;
 
-use circles::CircularBuffer;
-use serialise;
-
 use pack_run;
 use u16_from;
 use usize_from;
@@ -203,22 +200,8 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> usize
     }
 }
 
-pub fn reduce_entropy(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
-    let mut bytes = Vec::with_capacity(codes.len());
-    {
-        let mut prebuf = CircularBuffer::with_capacity(32 * 1024);
-        prebuf.extend(preroll);
-        serialise::decompressed_codes(&mut bytes, &mut prebuf, codes).unwrap();
-    }
-
-    #[cfg(never)]
-    println!(
-        "bytes: {:?}, str: {:?}",
-        bytes,
-        String::from_utf8_lossy(&bytes)
-    );
-
-    let mut options = find_all_options(preroll, &bytes);
+pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<usize> {
+    let mut options = find_all_options(preroll, data);
 
     codes
         .into_iter()
@@ -238,6 +221,8 @@ pub fn reduce_entropy(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::reduce_entropy;
+    use circles::CircularBuffer;
+    use serialise;
     use Code;
     use Code::Literal as L;
     use Code::Reference as R;
@@ -356,7 +341,7 @@ mod tests {
         ];
         assert_eq!(
             exp.iter().map(|_| 0usize).collect::<Vec<usize>>(),
-            reduce_entropy(&[0], exp)
+            decode_maybe(&[0], exp)
         );
     }
 
@@ -438,7 +423,25 @@ mod tests {
     }
 
     fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<usize> {
-        reduce_entropy(&[], codes)
+        decode_maybe(&[], codes)
+    }
+
+    fn decode_maybe(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
+        let mut data = Vec::with_capacity(codes.len());
+        {
+            let mut prebuf = CircularBuffer::with_capacity(32 * 1024);
+            prebuf.extend(preroll);
+            serialise::decompressed_codes(&mut data, &mut prebuf, codes).unwrap();
+        }
+
+        #[cfg(never)]
+        println!(
+            "data: {:?}, str: {:?}",
+            data,
+            String::from_utf8_lossy(&data)
+        );
+
+        reduce_entropy(preroll, &data, codes)
     }
 
     #[test]

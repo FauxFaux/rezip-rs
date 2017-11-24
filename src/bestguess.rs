@@ -137,9 +137,16 @@ fn find_reference_score<I: Iterator<Item = u16>>(
 
     us.sort_by(|&(ld, lr), &(rd, rr)| rr.cmp(&lr).then(ld.cmp(&rd)));
 
-    us.into_iter()
+    match us.into_iter()
         .position(|(dist, run)| actual_run == run && actual_dist == dist)
-        .expect("it must be there?")
+        .expect("it must be there?") {
+        0 => 0,
+        other => {
+            // we guessed incorrectly, so we let the literal have the next position,
+            // and everything shifts up
+            1 + other
+        },
+    }
 }
 
 fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {

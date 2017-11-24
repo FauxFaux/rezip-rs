@@ -214,6 +214,7 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[cfg(debug_assertions)]
     fn test_invalid_dist() {
         let mut buf = CircularBuffer::with_capacity(10);
         buf.extend(b"abcdef");

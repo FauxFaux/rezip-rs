@@ -43,27 +43,6 @@ pub fn outside_range_or_hit_zero(codes: &[Code]) -> (bool, bool) {
     return (false, hit_zero);
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq)]
-struct Prev {
-    data_pos: usize,
-    run_start: usize,
-}
-
-impl cmp::Ord for Prev {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        // lower run_start: longer run from where we found it -> where we are now.
-        // as: run length is current - run_start
-
-        // higher data_pos: shorter dist from where we found it -> where we are now.
-        // as: dist is current - data_pos
-        self.run_start
-            .cmp(&other.run_start)
-            .reverse()
-            .then(self.data_pos.cmp(&other.data_pos))
-    }
-}
-
-
 #[cfg(test)]
 mod tests {
     use super::max_distance;

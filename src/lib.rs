@@ -36,6 +36,12 @@ pub enum Code {
     Reference { dist: u16, run_minus_3: u8 },
 }
 
+impl<'a> From<&'a (u16, u8)> for Code {
+    fn from(&(dist, run_minus_3): &'a (u16, u8)) -> Self {
+        Code::Reference { dist, run_minus_3 }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Block {
     Uncompressed(Vec<u8>),

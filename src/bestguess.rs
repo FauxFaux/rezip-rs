@@ -103,6 +103,10 @@ impl<'p, 'd> AllOptions<'p, 'd> {
         ))
     }
 
+    pub fn current_literal(&self) -> Code {
+        Code::Literal(self.data[self.data_pos])
+    }
+
     fn get_at_dist(&self, dist: u16) -> u8 {
         debug_assert!(dist > 0);
         let pos = self.data_pos;
@@ -135,6 +139,14 @@ impl<'p, 'd> AllOptions<'p, 'd> {
     }
 }
 
+fn sorted_candidates<I: Iterator<Item = Ref>>(candidates: I) -> Vec<Ref> {
+    let mut us: Vec<Ref> = candidates.collect();
+
+    us.sort_by(|&(ld, lr), &(rd, rr)| rr.cmp(&lr).then(ld.cmp(&rd)));
+
+    us
+}
+
 fn find_reference_score<I: Iterator<Item = Ref>>(
     actual_dist: u16,
     actual_run_minus_3: u8,
@@ -144,12 +156,7 @@ fn find_reference_score<I: Iterator<Item = Ref>>(
         return 0;
     }
 
-    let mut us: Vec<Ref> = candidates.collect();
-    // TODO: if run == 258 ..?
-
-    us.sort_by(|&(ld, lr), &(rd, rr)| rr.cmp(&lr).then(ld.cmp(&rd)));
-
-    match us.into_iter()
+    match sorted_candidates(candidates).into_iter()
         .position(|(dist, run_minus_3)| {
             actual_run_minus_3 == run_minus_3 && actual_dist == dist
         })
@@ -218,9 +225,43 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<usize>
         .collect()
 }
 
+pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Code> {
+    let mut options = find_all_options(preroll, data);
+
+    hints
+        .into_iter()
+        .map(|hint| {
+            let orig = match options
+                .all_candidates()
+                .map(|candidates| candidates)
+            {
+                // TODO: match candidates.next()?
+                Some(mut candidates) => {
+                    let candidates = sorted_candidates(candidates);
+                    if candidates.is_empty() {
+                        options.current_literal()
+                    } else {
+                        match *hint {
+                            0 => candidates.get(0).expect("invalid input 1").into(),
+                            1 => options.current_literal(),
+                            other => candidates.get(other - 1).expect("invalid input 2").into(),
+                        }
+                    }
+                },
+                None => options.current_literal(),
+            };
+
+            options.advance(usize_from(orig.emitted_bytes()));
+
+            orig
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::reduce_entropy;
+    use super::increase_entropy;
     use circles::CircularBuffer;
     use serialise;
     use Code;
@@ -441,7 +482,9 @@ mod tests {
             String::from_utf8_lossy(&data)
         );
 
-        reduce_entropy(preroll, &data, codes)
+        let reduced = reduce_entropy(preroll, &data, codes);
+        assert_eq!(codes, increase_entropy(preroll, &data, &reduced).as_slice());
+        reduced
     }
 
     #[test]

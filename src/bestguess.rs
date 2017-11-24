@@ -7,6 +7,8 @@
 
 
 use std::collections::HashMap;
+use std::iter;
+
 use itertools::Itertools;
 
 use circles::CircularBuffer;
@@ -72,7 +74,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
     }
 
     // None if we are out of possible keys, or Some(possibly empty list)
-    pub fn all_candidates(&self) -> Option<&[usize]> {
+    pub fn all_candidates<'a>(&'a self) -> Option<Box<Iterator<Item = Ref> + 'a>> {
         let key = match self.key() {
             Some(key) => key,
             None => return None,
@@ -84,17 +86,24 @@ impl<'p, 'd> AllOptions<'p, 'd> {
         // we can only find ourselves, which is invalid, and not handled by (inclusive) range code
         // Maybe I should fix the inclusive range code? Or pretend this is an optimisation.
         if 0 == pos {
-            return Some(&[]);
+            return Some(Box::new(iter::empty()));
         }
 
-        Some(
+        Some(Box::new(
             self.map
                 .get(&key)
                 .map(|v| {
                     sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
                 })
-                .unwrap_or(&[]),
-        )
+                .unwrap_or(&[])
+                .into_iter()
+                .rev()
+                .map(move |off| {
+                    let dist = u16_from(pos - off);
+                    let run = self.possible_run_length_at(dist);
+                    (dist, run)
+                }),
+        ))
     }
 
     fn get_at_dist(&self, dist: u16) -> u8 {
@@ -214,16 +223,7 @@ pub fn reduce_entropy(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
         .map(|orig| {
             let reduced = options
                 .all_candidates()
-                .map(|candidates| {
-                    reduce_code(
-                        orig,
-                        candidates.into_iter().rev().map(|off| {
-                            let dist = u16_from(options.pos() - off);
-                            let run = options.possible_run_length_at(dist);
-                            (dist, run)
-                        }),
-                    )
-                })
+                .map(|candidates| reduce_code(orig, candidates))
                 .unwrap_or(0);
 
             options.advance(usize_from(orig.emitted_bytes()));

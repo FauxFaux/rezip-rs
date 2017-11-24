@@ -1,6 +1,13 @@
+/// Right, time to try the trace-like algorithm again.
+/// Ranking?
+///  1. The longest, closest run, if there is one.
+///  2. A literal
+///  3. The next closest run of the same length.
+///  4. The next slightly shorter run that's closest.
+
+
 use std::collections::HashMap;
 use std::cmp;
-use std::slice;
 
 use circles::CircularBuffer;
 use errors::*;
@@ -53,30 +60,7 @@ pub struct AllOptions<'a> {
     lengths: Lengths,
 }
 
-impl<'a> Iterator for AllOptions<'a> {
-    type Item = Vec<Code>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.data_pos >= self.data.len() {
-            return None;
-        }
-
-        if self.data_pos + 3 > self.data.len() {
-            let item = self.data[self.data_pos];
-            self.data_pos += 1;
-            return Some(vec![Code::Literal(item)]);
-        }
-
-        let key = key(&self.data[self.data_pos..]);
-
-        let ret = Some(self.stateful_options((key)));
-        self.dictionary.push(key.0);
-        self.data_pos += 1;
-        ret
-    }
-}
-
-fn key(from: &[u8]) -> Key {
+fn key_from_bytes(from: &[u8]) -> Key {
     (from[0], from[1], from[2])
 }
 
@@ -87,150 +71,87 @@ impl<'a> AllOptions<'a> {
         self.data_pos += n;
     }
 
+    pub fn key(&self) -> Key {
+        key_from_bytes(&self.data[self.data_pos..])
+    }
+
     fn pos(&self) -> usize {
         self.data_pos + self.data_start
     }
 
-    fn all_candidates(&self, key: &Key) -> Option<&Vec<usize>> {
-        self.map.get(key)
+    pub fn all_candidates(&self, key: &Key) -> &[usize] {
+        self.map
+            .get(key)
+            .map(|v| {
+                sub_range_inclusive(self.pos().saturating_sub(32 * 1024), self.pos(), v)
+            })
+            .unwrap_or(&[])
     }
 
     fn reference_from_dist(&self, dist: u16) -> Code {
         Code::Reference {
             dist,
-            run_minus_3: pack_run(
-                self.dictionary
-                    .possible_run_length_at(dist, &self.data[self.data_pos..]),
-            ),
+            run_minus_3: pack_run(self.possible_run_length_at(dist)),
         }
     }
 
-    fn stateful_options(&self, key: Key) -> Vec<Code> {
-        let current_byte = key.0;
-
-        let candidates = match self.all_candidates(&key) {
-            Some(val) => val,
-            None => {
-                return vec![Code::Literal(current_byte)];
-            }
-        };
-
-        let pos = self.pos();
-
-        if false {
-            // TODO: off-by-one, especially in err
-            let end = match candidates.binary_search(&pos) {
-                Ok(val) => val,
-                Err(val) => val,
-            };
-
-            if end == pos {
-                // check for 258 run of data[pos] == data[pos..]
-                // and early return?
-            }
-
-            // TODO: maybe easier to search backwards?
-            let earliest_possible_start = pos.checked_sub(32 * 1024).unwrap_or(0);
-            let start = match candidates[..end].binary_search(&earliest_possible_start) {
-                Ok(val) => val,
-                Err(val) => val,
-            };
-        }
-
-        let mut us = candidates
-            .into_iter()
-            .filter_map(|candidate_pos| {
-                // TODO: ge or gt?
-                if *candidate_pos >= pos {
-                    return None;
-                }
-
-                let dist = pos - *candidate_pos;
-
-                if dist > 32 * 1024 {
-                    return None;
-                }
-
-                Some(dist as u16)
-            })
-            .map(|dist| self.reference_from_dist(dist))
-            .collect::<Vec<Code>>();
-
-        // plus, it's always possible to emit the literal
-        us.push(Code::Literal(current_byte));
-
-        us.sort_by(|left, right| compare(&self.lengths, left, right));
-
-        us
+    pub fn possible_run_length_at(&self, dist: u16) -> u16 {
+        self.dictionary
+            .possible_run_length_at(dist, &self.data[self.data_pos..])
     }
 }
 
-fn possible_dists() {}
-
-fn compare(lengths: &Lengths, left: &Code, right: &Code) -> cmp::Ordering {
-    let left_len = lengths.length(left).unwrap_or(u8::max_value()) as isize;
-    let right_len = lengths.length(left).unwrap_or(u8::max_value()) as isize;
-
-    // we could do even better than this by looking at the *actual* saving vs. all literals,
-    // but it still won't be accurate as that would assume no further back-references.
-    let left_saved = saved_bits(left, lengths.mean_literal_len) as isize;
-    let right_saved = saved_bits(right, lengths.mean_literal_len) as isize;
-
-    // firstly, let's compare their savings; savings are always good
-    match (left_len - left_saved).cmp(&(right_len - right_saved)) {
-        cmp::Ordering::Equal => {}
-        other => return other,
+fn find_reference_score<I: Iterator<Item = u16>>(
+    actual_dist: u16,
+    actual_run: u16,
+    options: &AllOptions,
+    candidates: I,
+) -> usize {
+    if 258 == actual_run && 1 == actual_dist {
+        return 0;
     }
 
-    // if both would save us the same amount, then...
-    use Code::*;
-    match *left {
-        Literal(_) => match *right {
-            Literal(_) => unreachable!(
-                "there's never two different literals that could be encoded instead of each other"
-            ),
-            Reference { .. } => {
-                // literals are worse than references
-                cmp::Ordering::Greater
-            }
-        },
-        Reference {
-            dist: left_dist,
-            run_minus_3: left_run_minus_3,
-        } => match *right {
-            Literal(_) => {
-                // literals are worse than references
-                cmp::Ordering::Less
-            }
+    let mut us = Vec::with_capacity(candidates.size_hint().0);
 
-            Reference {
-                dist: right_dist,
-                run_minus_3: right_run_minus_3,
-            } => {
-                let left_run = unpack_run(left_run_minus_3);
-                let right_run = unpack_run(right_run_minus_3);
-
-                // shorter distances, then bigger runs.
-
-                // bigger runs should already have been covered by the length calc,
-                // and shorter distances are more likely to be spotted by flawed encoders?
-                left_dist.cmp(&right_dist).then(right_run.cmp(&left_run))
-            }
-        },
+    for dist in candidates {
+        let run = options.possible_run_length_at(dist);
+        // TODO: if run == 258 ..?
+        us.push((dist, run));
     }
+
+    us.sort();
+
+    us.into_iter()
+        .position(|(dist, run)| actual_run == run && actual_dist == dist)
+        .expect("it must be there?")
 }
 
-fn saved_bits(code: &Code, mean_literal_len: u8) -> u16 {
-    u16::from(mean_literal_len) * code.emitted_bytes()
+fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
+    let end_idx = match range.binary_search(&end) {
+        Ok(e) => e + 1,
+        Err(e) => e,
+    };
+
+    let range = &range[..end_idx];
+
+    let start_idx = match range.binary_search(&start) {
+        Ok(e) => e,
+        Err(e) => e,
+    };
+
+    &range[start_idx..]
 }
 
 #[cfg(test)]
 mod tests {
     use super::find_all_options;
+    use super::find_reference_score;
     use circles;
     use huffman;
     use serialise;
     use usize_from;
+    use u16_from;
+    use unpack_run;
     use Code;
     use Code::Literal as L;
     use Code::Reference as R;
@@ -451,25 +372,45 @@ mod tests {
             String::from_utf8_lossy(&bytes)
         );
 
+        let mut we_chose = Vec::with_capacity(codes.len());
+
         let lengths =
             serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
 
         let mut it = find_all_options(lengths, preroll, &bytes);
 
-        let mut cit = codes.iter();
+        for orig in codes {
+            let key = it.key();
 
-        let mut we_chose = Vec::with_capacity(codes.len());
+            we_chose.push(match *orig {
+                Code::Literal(_) => {
+                    if it.all_candidates(&key).is_empty() {
+                        //There are no runs, so a literal is the only, obvious choice
+                        0
+                    } else {
+                        // There's a run available, and we've decided not to pick it; unusual
+                        1
+                    }
+                }
 
-        while let Some(vec) = it.next() {
-            let orig = cit.next().expect("desync");
-            #[cfg(feature = "tracing")]
-            println!("trying to guess {:?}, we have {:?}", orig, vec);
-            let chosen = vec.iter().position(|x| x == orig).expect("it must be here");
-            we_chose.push(chosen);
+                Code::Reference {
+                    dist: actual_dist,
+                    run_minus_3: actual_run_minus_3,
+                } => {
+                    let candidates = it.all_candidates(&key);
+                    let actual_run = unpack_run(actual_run_minus_3);
+                    let pos = it.pos();
+                    find_reference_score(
+                        actual_dist,
+                        actual_run,
+                        &it,
+                        candidates.into_iter().rev().map(|off| u16_from(off - pos)),
+                    )
+                }
+            });
+
             it.advance(usize_from(orig.emitted_bytes() - 1));
         }
-
-        assert_eq!(None, cit.next());
 
         we_chose
     }
@@ -554,5 +495,21 @@ mod tests {
             exp.iter().map(|x| 0).collect::<Vec<usize>>(),
             decode_then_reencode_single_block(exp)
         );
+    }
+
+    #[test]
+    fn sub_range() {
+        use super::sub_range_inclusive as s;
+        assert_eq!(&[5, 6], s(5, 6, &[4, 5, 6, 7]));
+        assert_eq!(&[5, 6], s(5, 6, &[5, 6, 7]));
+        assert_eq!(&[5, 6], s(5, 6, &[4, 5, 6]));
+
+        assert_eq!(&[5, 6], s(4, 7, &[2, 3, 5, 6, 8, 9]));
+        assert_eq!(&[5, 6], s(4, 7, &[5, 6, 8, 9]));
+        assert_eq!(&[5, 6], s(4, 7, &[2, 3, 5, 6]));
+
+        assert_eq!(&[0usize; 0], s(7, 8, &[4, 5, 6]));
+        assert_eq!(&[0usize; 0], s(7, 8, &[9, 10]));
+        assert_eq!(&[0usize; 0], s(7, 8, &[]));
     }
 }

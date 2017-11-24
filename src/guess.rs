@@ -58,42 +58,6 @@ pub fn outside_range_or_hit_zero(codes: &[Code]) -> (bool, bool) {
     return (false, hit_zero);
 }
 
-pub fn guess_settings(mut preroll: &[u8], codes: &[Code]) -> Result<WindowSettings> {
-    let window_size = max_distance(codes).unwrap();
-    let (outside, hits_first_byte) = outside_range_or_hit_zero(codes);
-
-    let config = WindowSettings {
-        window_size,
-        first_byte_bug: preroll.is_empty() && !hits_first_byte,
-    };
-
-    // optimisation
-    if !outside {
-        preroll = &[];
-    }
-
-    validate_reencode(&config, preroll, codes)?;
-
-    return Ok(config);
-}
-
-pub fn validate_reencode(config: &WindowSettings, preroll: &[u8], codes: &[Code]) -> Result<()> {
-    let mut expected = codes.iter();
-
-    let mut seen = 0usize;
-
-    attempt_reencoding(&config, preroll, codes, |code| {
-        seen += 1;
-        validate_expectation(seen, expected.next(), &code)
-    })?;
-
-    if expected.next().is_some() {
-        bail!("we incorrectly gave up emitting codes after {}", seen);
-    }
-
-    Ok(())
-}
-
 fn validate_expectation(seen: usize, exp: Option<&Code>, code: &Code) -> Result<()> {
     use Code::*;
 

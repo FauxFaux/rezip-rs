@@ -16,7 +16,7 @@ quick_main!(run);
 
 fn run() -> Result<()> {
     let mut rng = rand::thread_rng();
-    let mut n = 25;
+    let n = 25;
     loop {
         let output = compressed_file(n, &mut rng)?;
         let block = match librezip::parse_deflate(Cursor::new(&output)).next() {
@@ -35,15 +35,15 @@ fn run() -> Result<()> {
             continue;
         }
 
-        let result = librezip::guess::guess_settings(&[], &codes);
-        if result.is_err() {
+        let result = librezip::bestguess::find_all_options(&[], unimplemented!("codes -> bytes"));
+        if unimplemented!("result") {
             if let Ok(mut f) = File::create(format!("brokey-{}.deflate", n)) {
                 f.write_all(&output)?;
             } else {
                 println!("beaten");
                 n -= 1;
             }
-            println!("found a failure at n={}: {:?}", n, result);
+            println!("found a failure at n={}: {:?}", n, unimplemented!("result"));
             n -= 1;
         }
     }

@@ -7,15 +7,12 @@
 
 
 use std::collections::HashMap;
-use std::cmp;
 
 use circles::CircularBuffer;
-use errors::*;
 use three::ThreePeek;
 use serialise::Lengths;
 use Code;
 use pack_run;
-use unpack_run;
 
 type Key = (u8, u8, u8);
 type BackMap = HashMap<Key, Vec<usize>>;
@@ -33,7 +30,7 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-pub fn find_all_options<'a>(lengths: Lengths, preroll: &[u8], data: &'a [u8]) -> AllOptions<'a> {
+pub fn find_all_options<'a>(preroll: &[u8], data: &'a [u8]) -> AllOptions<'a> {
     let map = whole_map(preroll.iter().chain(data).map(|x| *x));
 
     let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
@@ -47,7 +44,6 @@ pub fn find_all_options<'a>(lengths: Lengths, preroll: &[u8], data: &'a [u8]) ->
         data,
         map,
         data_pos: 0,
-        lengths,
     }
 }
 
@@ -57,7 +53,6 @@ pub struct AllOptions<'a> {
     data: &'a [u8],
     map: BackMap,
     data_pos: usize,
-    lengths: Lengths,
 }
 
 fn key_from_bytes(from: &[u8]) -> Key {
@@ -397,10 +392,7 @@ mod tests {
 
         let mut we_chose = Vec::with_capacity(codes.len());
 
-        let lengths =
-            serialise::Lengths::new(&huffman::FIXED_LENGTH_TREE, &huffman::FIXED_DISTANCE_TREE);
-
-        let mut it = find_all_options(lengths, preroll, &bytes);
+        let mut it = find_all_options(preroll, &bytes);
 
         for orig in codes {
             let key = match it.key() {

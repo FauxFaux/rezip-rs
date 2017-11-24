@@ -1,5 +1,4 @@
 use std::io::Write;
-use u16_from;
 
 use errors::*;
 use usize_from;

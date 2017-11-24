@@ -56,7 +56,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
     if max.is_some() {
         println!(
             "   validate_reencode: {:?}",
-            guess::guess_settings(&dictionary.vec(), codes)
+            unimplemented!("&dictionary.vec(), codes")
         );
     }
 

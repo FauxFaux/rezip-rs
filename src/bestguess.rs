@@ -15,7 +15,6 @@ use circles::CircularBuffer;
 use serialise;
 
 use pack_run;
-use unpack_run;
 use u16_from;
 use usize_from;
 use Code;
@@ -35,7 +34,7 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-pub fn find_all_options<'p, 'd>(preroll: &'p [u8], data: &'d [u8]) -> AllOptions<'p, 'd> {
+fn find_all_options<'p, 'd>(preroll: &'p [u8], data: &'d [u8]) -> AllOptions<'p, 'd> {
     let map = whole_map(preroll.iter().chain(data).map(|x| *x));
 
     AllOptions {
@@ -46,7 +45,7 @@ pub fn find_all_options<'p, 'd>(preroll: &'p [u8], data: &'d [u8]) -> AllOptions
     }
 }
 
-pub struct AllOptions<'p, 'd> {
+struct AllOptions<'p, 'd> {
     preroll: &'p [u8],
     data: &'d [u8],
     map: BackMap,
@@ -139,7 +138,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
     }
 }
 
-pub fn find_reference_score<I: Iterator<Item = Ref>>(
+fn find_reference_score<I: Iterator<Item = Ref>>(
     actual_dist: u16,
     actual_run_minus_3: u8,
     candidates: I,

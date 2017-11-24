@@ -30,27 +30,20 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-pub fn find_all_options<'a>(preroll: &[u8], data: &'a [u8]) -> AllOptions<'a> {
+pub fn find_all_options<'p, 'd>(preroll: &'p [u8], data: &'d [u8]) -> AllOptions<'p, 'd> {
     let map = whole_map(preroll.iter().chain(data).map(|x| *x));
 
-    let mut dictionary = CircularBuffer::with_capacity(32 * 1024);
-    dictionary.extend(preroll);
-
-    let data_start = preroll.len();
-
     AllOptions {
-        dictionary,
-        data_start,
+        preroll,
         data,
         map,
         data_pos: 0,
     }
 }
 
-pub struct AllOptions<'a> {
-    dictionary: CircularBuffer,
-    data_start: usize,
-    data: &'a [u8],
+pub struct AllOptions<'p, 'd> {
+    preroll: &'p [u8],
+    data: &'d [u8],
     map: BackMap,
     data_pos: usize,
 }
@@ -59,10 +52,8 @@ fn key_from_bytes(from: &[u8]) -> Key {
     (from[0], from[1], from[2])
 }
 
-impl<'a> AllOptions<'a> {
+impl<'p, 'd> AllOptions<'p, 'd> {
     pub fn advance(&mut self, n: usize) {
-        self.dictionary
-            .extend(&self.data[self.data_pos..self.data_pos + n]);
         self.data_pos += n;
     }
 
@@ -75,7 +66,7 @@ impl<'a> AllOptions<'a> {
     }
 
     fn pos(&self) -> usize {
-        self.data_pos + self.data_start
+        self.data_pos + self.preroll.len()
     }
 
     // None if we are out of possible keys, or Some(possibly empty list)
@@ -104,9 +95,35 @@ impl<'a> AllOptions<'a> {
         )
     }
 
+    fn get_at_dist(&self, dist: u16) -> u8 {
+        debug_assert!(dist > 0);
+        let pos = self.pos();
+        let dist = usize_from(dist);
+
+        if dist <= pos {
+            self.data[pos - dist]
+        } else {
+            self.preroll[self.preroll.len() - (dist - pos)]
+        }
+    }
+
     pub fn possible_run_length_at(&self, dist: u16) -> u16 {
-        self.dictionary
-            .possible_run_length_at(dist, &self.data[self.data_pos..])
+        let upcoming_data = &self.data[self.data_pos..];
+        let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
+
+        for cur in 3..dist.min(upcoming_data.len() as u16) {
+            if upcoming_data[cur as usize] != self.get_at_dist(dist - cur) {
+                return cur;
+            }
+        }
+
+        for cur in dist..(upcoming_data.len() as u16) {
+            if upcoming_data[(cur % dist) as usize] != upcoming_data[cur as usize] {
+                return cur;
+            }
+        }
+
+        upcoming_data.len() as u16
     }
 }
 
@@ -127,6 +144,7 @@ pub fn find_reference_score<I: Iterator<Item = u16>>(
 
     for dist in candidates {
         let run = options.possible_run_length_at(dist);
+        println!("({}, {})", dist, run);
         // TODO: if run == 258 ..?
         us.push((dist, run));
     }
@@ -135,7 +153,7 @@ pub fn find_reference_score<I: Iterator<Item = u16>>(
 
     match us.into_iter()
         .position(|(dist, run)| actual_run == run && actual_dist == dist)
-        .expect("it must be there?")
+        .expect(&format!("it must be there? {:?}", (actual_dist, actual_run)))
     {
         0 => 0,
         other => {
@@ -337,7 +355,7 @@ mod tests {
         let exp = &[
             R {
                 dist: 1,
-                run_minus_3: 10,
+                run_minus_3: ::pack_run(13),
             },
         ];
         assert_eq!(

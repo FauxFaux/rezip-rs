@@ -14,14 +14,15 @@ use itertools::Itertools;
 use circles::CircularBuffer;
 use serialise;
 
+use pack_run;
 use unpack_run;
 use u16_from;
 use usize_from;
 use Code;
 
 type Key = (u8, u8, u8);
-// len, run
-type Ref = (u16, u16);
+// len, run_minus_3
+type Ref = (u16, u8);
 type BackMap = HashMap<Key, Vec<usize>>;
 
 fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
@@ -100,7 +101,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
                 .rev()
                 .map(move |off| {
                     let dist = u16_from(pos - off);
-                    let run = self.possible_run_length_at(dist);
+                    let run = pack_run(self.possible_run_length_at(dist));
                     (dist, run)
                 }),
         ))
@@ -140,10 +141,10 @@ impl<'p, 'd> AllOptions<'p, 'd> {
 
 pub fn find_reference_score<I: Iterator<Item = Ref>>(
     actual_dist: u16,
-    actual_run: u16,
+    actual_run_minus_3: u8,
     candidates: I,
 ) -> usize {
-    if 258 == actual_run && 1 == actual_dist {
+    if 255 == actual_run_minus_3 && 1 == actual_dist {
         return 0;
     }
 
@@ -153,10 +154,12 @@ pub fn find_reference_score<I: Iterator<Item = Ref>>(
     us.sort_by(|&(ld, lr), &(rd, rr)| rr.cmp(&lr).then(ld.cmp(&rd)));
 
     match us.into_iter()
-        .position(|(dist, run)| actual_run == run && actual_dist == dist)
+        .position(|(dist, run_minus_3)| {
+            actual_run_minus_3 == run_minus_3 && actual_dist == dist
+        })
         .expect(&format!(
             "it must be there? {:?}",
-            (actual_dist, actual_run)
+            (actual_dist, actual_run_minus_3)
         )) {
         0 => 0,
         other => {
@@ -196,7 +199,7 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> usize
         }
 
         Code::Reference { dist, run_minus_3 } => {
-            find_reference_score(dist, unpack_run(run_minus_3), candidates)
+            find_reference_score(dist, run_minus_3, candidates)
         }
     }
 }

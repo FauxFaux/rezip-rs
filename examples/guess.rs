@@ -10,7 +10,7 @@ use librezip::Result;
 use librezip::Block;
 use librezip::Code;
 
-use librezip::guess;
+use librezip::infer;
 use librezip::circles::CircularBuffer;
 
 quick_main!(run);
@@ -47,10 +47,10 @@ fn run() -> Result<()> {
 }
 
 fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
-    let max = guess::max_distance(codes);
+    let max = infer::max_distance(codes);
     println!("   max len: {:?}", max);
 
-    let outside_range = guess::outside_range_or_hit_zero(codes);
+    let outside_range = infer::outside_range_or_hit_zero(codes);
     println!("   outta bounds: {:?}", outside_range);
 
     if max.is_some() {

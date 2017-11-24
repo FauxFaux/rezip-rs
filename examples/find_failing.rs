@@ -30,7 +30,7 @@ fn run() -> Result<()> {
             _ => continue,
         };
 
-        if librezip::guess::max_distance(&codes).is_none() {
+        if librezip::infer::max_distance(&codes).is_none() {
             // pure literals
             continue;
         }

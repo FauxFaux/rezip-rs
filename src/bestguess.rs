@@ -97,7 +97,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
 
     fn get_at_dist(&self, dist: u16) -> u8 {
         debug_assert!(dist > 0);
-        let pos = self.pos();
+        let pos = self.data_pos;
         let dist = usize_from(dist);
 
         if dist <= pos {

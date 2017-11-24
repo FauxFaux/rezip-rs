@@ -226,6 +226,25 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<usize>
         .collect()
 }
 
+fn increase_code<I: Iterator<Item = Ref>>(candidates: I, hint: usize) -> Option<Code> {
+    let mut candidates = candidates.peekable();
+    Some(match candidates.peek() {
+        Some(&(dist, run_minus_3)) if 1 == dist && 255 == run_minus_3 => {
+            (&(dist, run_minus_3)).into()
+        }
+        Some(_) => {
+            let candidates = sorted_candidates(candidates);
+
+            match hint {
+                0 => candidates.get(0).expect("invalid input 1").into(),
+                1 => return None,
+                other => candidates.get(other - 1).expect("invalid input 2").into(),
+            }
+        }
+        None => return None,
+    })
+}
+
 pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Code> {
     let mut options = find_all_options(preroll, data);
 
@@ -233,24 +252,8 @@ pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Cod
         .into_iter()
         .map(|hint| {
             let orig = match options.all_candidates() {
-                // TODO: match candidates.next()?
                 Some(mut candidates) => {
-                    let mut candidates = candidates.peekable();
-                    match candidates.peek() {
-                        Some(&(dist, run_minus_3)) if 1 == dist && 255 == run_minus_3 => {
-                            (&(dist, run_minus_3)).into()
-                        }
-                        Some(_) => {
-                            let candidates = sorted_candidates(candidates);
-
-                            match *hint {
-                                0 => candidates.get(0).expect("invalid input 1").into(),
-                                1 => options.current_literal(),
-                                other => candidates.get(other - 1).expect("invalid input 2").into(),
-                            }
-                        }
-                        None => options.current_literal(),
-                    }
+                    increase_code(candidates, *hint).unwrap_or_else(|| options.current_literal())
                 }
                 None => options.current_literal(),
             };

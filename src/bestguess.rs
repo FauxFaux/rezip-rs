@@ -18,6 +18,8 @@ use usize_from;
 use Code;
 
 type Key = (u8, u8, u8);
+// len, run
+type Ref = (u16, u16);
 type BackMap = HashMap<Key, Vec<usize>>;
 
 fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
@@ -107,7 +109,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
         }
     }
 
-    pub fn possible_run_length_at(&self, dist: u16) -> u16 {
+    fn possible_run_length_at(&self, dist: u16) -> u16 {
         let upcoming_data = &self.data[self.data_pos..];
         let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
 
@@ -127,34 +129,26 @@ impl<'p, 'd> AllOptions<'p, 'd> {
     }
 }
 
-pub fn find_reference_score<I: Iterator<Item = u16>>(
+pub fn find_reference_score<I: Iterator<Item = Ref>>(
     actual_dist: u16,
     actual_run: u16,
-    options: &AllOptions,
     candidates: I,
 ) -> usize {
     if 258 == actual_run && 1 == actual_dist {
         return 0;
     }
 
-    let mut us = Vec::with_capacity(candidates.size_hint().0);
-
-    // let candidates: Vec<u16> = candidates.collect();
-    // println!("{:?}", candidates);
-
-    for dist in candidates {
-        let run = options.possible_run_length_at(dist);
-        println!("({}, {})", dist, run);
-        // TODO: if run == 258 ..?
-        us.push((dist, run));
-    }
+    let mut us: Vec<Ref> = candidates.collect();
+    // TODO: if run == 258 ..?
 
     us.sort_by(|&(ld, lr), &(rd, rr)| rr.cmp(&lr).then(ld.cmp(&rd)));
 
     match us.into_iter()
         .position(|(dist, run)| actual_run == run && actual_dist == dist)
-        .expect(&format!("it must be there? {:?}", (actual_dist, actual_run)))
-    {
+        .expect(&format!(
+            "it must be there? {:?}",
+            (actual_dist, actual_run)
+        )) {
         0 => 0,
         other => {
             // we guessed incorrectly, so we let the literal have the next position,
@@ -180,10 +174,10 @@ fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
     &range[start_idx..]
 }
 
-fn reduce_code(orig: &Code, options: &AllOptions, candidates: &[usize]) -> usize {
+fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> usize {
     match *orig {
         Code::Literal(_) => {
-            if candidates.is_empty() {
+            if candidates.next().is_none() {
                 //There are no runs, so a literal is the only, obvious choice
                 0
             } else {
@@ -192,17 +186,8 @@ fn reduce_code(orig: &Code, options: &AllOptions, candidates: &[usize]) -> usize
             }
         }
 
-        Code::Reference {
-            dist: actual_dist,
-            run_minus_3: actual_run_minus_3,
-        } => {
-            let pos = options.pos();
-            find_reference_score(
-                actual_dist,
-                unpack_run(actual_run_minus_3),
-                &options,
-                candidates.into_iter().rev().map(|off| u16_from(pos - off)),
-            )
+        Code::Reference { dist, run_minus_3 } => {
+            find_reference_score(dist, unpack_run(run_minus_3), candidates)
         }
     }
 }
@@ -229,7 +214,16 @@ pub fn reduce_entropy(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
         .map(|orig| {
             let reduced = options
                 .all_candidates()
-                .map(|candidates| reduce_code(orig, &options, candidates))
+                .map(|candidates| {
+                    reduce_code(
+                        orig,
+                        candidates.into_iter().rev().map(|off| {
+                            let dist = u16_from(options.pos() - off);
+                            let run = options.possible_run_length_at(dist);
+                            (dist, run)
+                        }),
+                    )
+                })
                 .unwrap_or(0);
 
             options.advance(usize_from(orig.emitted_bytes()));

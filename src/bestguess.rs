@@ -71,8 +71,12 @@ impl<'a> AllOptions<'a> {
         self.data_pos += n;
     }
 
-    pub fn key(&self) -> Key {
-        key_from_bytes(&self.data[self.data_pos..])
+    pub fn key(&self) -> Option<Key> {
+        if self.data_pos + 2 < self.data.len() {
+            Some(key_from_bytes(&self.data[self.data_pos..]))
+        } else {
+            None
+        }
     }
 
     fn pos(&self) -> usize {
@@ -80,10 +84,19 @@ impl<'a> AllOptions<'a> {
     }
 
     pub fn all_candidates(&self, key: &Key) -> &[usize] {
+        // TODO: off-by-ones?
+        let pos = self.pos();
+
+        // we can only find ourselves, which is invalid, and not handled by (inclusive) range code
+        // Maybe I should fix the inclusive range code? Or pretend this is an optimisation.
+        if 0 == pos {
+            return &[];
+        }
+
         self.map
             .get(key)
             .map(|v| {
-                sub_range_inclusive(self.pos().saturating_sub(32 * 1024), self.pos(), v)
+                sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
             })
             .unwrap_or(&[])
     }
@@ -112,6 +125,9 @@ fn find_reference_score<I: Iterator<Item = u16>>(
     }
 
     let mut us = Vec::with_capacity(candidates.size_hint().0);
+
+    // let candidates: Vec<u16> = candidates.collect();
+    // println!("{:?}", candidates);
 
     for dist in candidates {
         let run = options.possible_run_length_at(dist);
@@ -157,7 +173,7 @@ mod tests {
     use Code::Reference as R;
 
     #[test]
-    fn single_backref_abcdef_bcdefghi() {
+    fn re_1_single_backref_abcdef_bcdefghi() {
         let exp = &[
             L(b'a'),
             L(b'b'),
@@ -179,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn two_length_three_runs() {
+    fn re_2_two_length_three_runs() {
         let exp = &[
             L(b'a'),
             L(b'b'),
@@ -221,7 +237,7 @@ mod tests {
     }
 
     #[test]
-    fn two_overlapping_runs() {
+    fn re_3_two_overlapping_runs() {
         let exp = &[
             L(b'a'),
             L(b'1'),
@@ -249,7 +265,7 @@ mod tests {
     }
 
     #[test]
-    fn zero_run() {
+    fn re_4_zero_run() {
         let exp = &[
             L(b'0'),
             R {
@@ -261,7 +277,7 @@ mod tests {
     }
 
     #[test]
-    fn ref_before() {
+    fn re_5_ref_before() {
         let exp = &[
             R {
                 dist: 1,
@@ -275,7 +291,7 @@ mod tests {
     }
 
     #[test]
-    fn just_long_run() {
+    fn re_6_just_long_run() {
         let exp = &[
             L(5),
             R {
@@ -288,7 +304,7 @@ mod tests {
     }
 
     #[test]
-    fn two_long_run() {
+    fn re_7_two_long_run() {
         let exp = &[
             L(5),
             R {
@@ -306,7 +322,7 @@ mod tests {
 
 
     #[test]
-    fn many_long_run() {
+    fn re_8_many_long_run() {
         const ENOUGH_TO_WRAP_AROUND: usize = 10 + (32 * 1024 / 258);
 
         let mut exp = Vec::with_capacity(ENOUGH_TO_WRAP_AROUND + 1);
@@ -325,7 +341,7 @@ mod tests {
     }
 
     #[test]
-    fn longer_match() {
+    fn re_9_longer_match() {
         // I didn't think it would, but even:
         // echo a12341231234 | gzip --fast | cargo run --example dump /dev/stdin
         // ..generates this.
@@ -380,7 +396,15 @@ mod tests {
         let mut it = find_all_options(lengths, preroll, &bytes);
 
         for orig in codes {
-            let key = it.key();
+            let key = match it.key() {
+                Some(key) => key,
+                None => {
+                    we_chose.push(0);
+                    continue;
+                }
+            };
+
+
 
             we_chose.push(match *orig {
                 Code::Literal(_) => {
@@ -404,12 +428,12 @@ mod tests {
                         actual_dist,
                         actual_run,
                         &it,
-                        candidates.into_iter().rev().map(|off| u16_from(off - pos)),
+                        candidates.into_iter().rev().map(|off| u16_from(pos - off)),
                     )
                 }
             });
 
-            it.advance(usize_from(orig.emitted_bytes() - 1));
+            it.advance(usize_from(orig.emitted_bytes()));
         }
 
         we_chose
@@ -432,7 +456,7 @@ mod tests {
     }
 
     #[test]
-    fn repeat_after_ref_a122b_122_222() {
+    fn re_10_repeat_after_ref_a122b_122_222() {
         // a122b122222
         // 01234567890
 

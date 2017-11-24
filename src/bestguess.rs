@@ -69,7 +69,7 @@ impl<'a> AllOptions<'a> {
         self.data_pos += n;
     }
 
-    pub fn key(&self) -> Option<Key> {
+    fn key(&self) -> Option<Key> {
         if self.data_pos + 2 < self.data.len() {
             Some(key_from_bytes(&self.data[self.data_pos..]))
         } else {
@@ -81,22 +81,30 @@ impl<'a> AllOptions<'a> {
         self.data_pos + self.data_start
     }
 
-    pub fn all_candidates(&self, key: &Key) -> &[usize] {
+    // None if we are out of possible keys, or Some(possibly empty list)
+    pub fn all_candidates(&self) -> Option<&[usize]> {
+        let key = match self.key() {
+            Some(key) => key,
+            None => return None,
+        };
+
         // TODO: off-by-ones?
         let pos = self.pos();
 
         // we can only find ourselves, which is invalid, and not handled by (inclusive) range code
         // Maybe I should fix the inclusive range code? Or pretend this is an optimisation.
         if 0 == pos {
-            return &[];
+            return Some(&[]);
         }
 
-        self.map
-            .get(key)
-            .map(|v| {
-                sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
-            })
-            .unwrap_or(&[])
+        Some(
+            self.map
+                .get(&key)
+                .map(|v| {
+                    sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
+                })
+                .unwrap_or(&[]),
+        )
     }
 
     pub fn possible_run_length_at(&self, dist: u16) -> u16 {
@@ -157,8 +165,35 @@ fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
     &range[start_idx..]
 }
 
+fn reduce_code(orig: &Code, options: &AllOptions, candidates: &[usize]) -> usize {
+    match *orig {
+        Code::Literal(_) => {
+            if candidates.is_empty() {
+                //There are no runs, so a literal is the only, obvious choice
+                0
+            } else {
+                // There's a run available, and we've decided not to pick it; unusual
+                1
+            }
+        }
+
+        Code::Reference {
+            dist: actual_dist,
+            run_minus_3: actual_run_minus_3,
+        } => {
+            let pos = options.pos();
+            find_reference_score(
+                actual_dist,
+                unpack_run(actual_run_minus_3),
+                &options,
+                candidates.into_iter().rev().map(|off| u16_from(pos - off)),
+            )
+        }
+    }
+}
+
 pub fn reduce_entropy(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
-    let mut bytes = Vec::with_capacity(preroll.len() + codes.len());
+    let mut bytes = Vec::with_capacity(codes.len());
     {
         let mut prebuf = CircularBuffer::with_capacity(32 * 1024);
         prebuf.extend(preroll);
@@ -172,52 +207,21 @@ pub fn reduce_entropy(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
         String::from_utf8_lossy(&bytes)
     );
 
-    let mut we_chose = Vec::with_capacity(codes.len());
+    let mut options = find_all_options(preroll, &bytes);
 
-    let mut it = find_all_options(preroll, &bytes);
+    codes
+        .into_iter()
+        .map(|orig| {
+            let reduced = options
+                .all_candidates()
+                .map(|candidates| reduce_code(orig, &options, candidates))
+                .unwrap_or(0);
 
-    for orig in codes {
-        let key = match it.key() {
-            Some(key) => key,
-            None => {
-                we_chose.push(0);
-                continue;
-            }
-        };
+            options.advance(usize_from(orig.emitted_bytes()));
 
-        we_chose.push(match *orig {
-            Code::Literal(_) => {
-                if it.all_candidates(&key).is_empty() {
-                    //There are no runs, so a literal is the only, obvious choice
-                    0
-                } else {
-                    // There's a run available, and we've decided not to pick it; unusual
-                    1
-                }
-            }
-
-            Code::Reference {
-                dist: actual_dist,
-                run_minus_3: actual_run_minus_3,
-            } => {
-                let candidates = it.all_candidates(&key);
-                let actual_run = unpack_run(actual_run_minus_3);
-                let pos = it.pos();
-                find_reference_score(
-                    actual_dist,
-                    actual_run,
-                    &it,
-                    candidates.into_iter().rev().map(|off| u16_from(pos - off)),
-                )
-            }
-        });
-
-        it.advance(usize_from(orig.emitted_bytes()));
-    }
-
-    assert_eq!(codes.len(), we_chose.len());
-
-    we_chose
+            reduced
+        })
+        .collect()
 }
 
 #[cfg(test)]

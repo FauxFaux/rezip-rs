@@ -1,6 +1,8 @@
 use std::cmp;
 
+use errors::*;
 use Code;
+use WindowSettings;
 
 pub fn max_distance(codes: &[Code]) -> Option<u16> {
     codes
@@ -43,14 +45,34 @@ pub fn outside_range_or_hit_zero(codes: &[Code]) -> (bool, bool) {
     return (false, hit_zero);
 }
 
+pub fn guess_settings(mut preroll: &[u8], codes: &[Code]) -> Result<WindowSettings> {
+    let window_size = max_distance(codes).unwrap();
+    let (outside, hits_first_byte) = outside_range_or_hit_zero(codes);
+
+    let config = WindowSettings {
+        window_size,
+        first_byte_bug: preroll.is_empty() && !hits_first_byte,
+    };
+
+    // optimisation
+    if !outside {
+        preroll = &[];
+    }
+
+    return Ok(config);
+}
+
 #[cfg(test)]
 mod tests {
     use super::max_distance;
     use super::outside_range_or_hit_zero;
-    use super::Code;
+    use super::guess_settings;
+
+    use WindowSettings;
 
     use Code::Literal as L;
     use Code::Reference as R;
+
 
     #[test]
     fn range() {
@@ -118,6 +140,26 @@ mod tests {
                     run_minus_3: 3,
                 }
             ],)
+        );
+    }
+    #[test]
+    fn guess_first_byte_bug() {
+        assert_eq!(
+            WindowSettings {
+                window_size: 1,
+                first_byte_bug: true,
+            },
+            guess_settings(
+                &[],
+                &[
+                    L(5),
+                    L(5),
+                    R {
+                        dist: 1,
+                        run_minus_3: 5,
+                    }
+                ],
+            ).unwrap()
         );
     }
 }

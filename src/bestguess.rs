@@ -124,13 +124,14 @@ pub fn find_reference_score<I: Iterator<Item = u16>>(
 
     match us.into_iter()
         .position(|(dist, run)| actual_run == run && actual_dist == dist)
-        .expect("it must be there?") {
+        .expect("it must be there?")
+    {
         0 => 0,
         other => {
             // we guessed incorrectly, so we let the literal have the next position,
             // and everything shifts up
             1 + other
-        },
+        }
     }
 }
 

@@ -1,6 +1,3 @@
-use std::cmp;
-
-use errors::*;
 use Code;
 use WindowSettings;
 
@@ -45,21 +42,14 @@ pub fn outside_range_or_hit_zero(codes: &[Code]) -> (bool, bool) {
     return (false, hit_zero);
 }
 
-pub fn guess_settings(mut preroll: &[u8], codes: &[Code]) -> Result<WindowSettings> {
+pub fn guess_settings(preroll: &[u8], codes: &[Code]) -> WindowSettings {
     let window_size = max_distance(codes).unwrap();
-    let (outside, hits_first_byte) = outside_range_or_hit_zero(codes);
+    let (_, hits_first_byte) = outside_range_or_hit_zero(codes);
 
-    let config = WindowSettings {
+    WindowSettings {
         window_size,
         first_byte_bug: preroll.is_empty() && !hits_first_byte,
-    };
-
-    // optimisation
-    if !outside {
-        preroll = &[];
     }
-
-    return Ok(config);
 }
 
 #[cfg(test)]
@@ -159,7 +149,7 @@ mod tests {
                         run_minus_3: 5,
                     }
                 ],
-            ).unwrap()
+            )
         );
     }
 }

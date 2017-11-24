@@ -9,7 +9,13 @@
 use std::collections::HashMap;
 
 use circles::CircularBuffer;
+use serialise;
 use three::ThreePeek;
+
+use unpack_run;
+use u16_from;
+use usize_from;
+use Code;
 
 type Key = (u8, u8, u8);
 type BackMap = HashMap<Key, Vec<usize>>;
@@ -151,10 +157,74 @@ fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
     &range[start_idx..]
 }
 
+pub fn reduce_entropy(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
+    let mut bytes = Vec::with_capacity(preroll.len() + codes.len());
+    {
+        let mut prebuf = CircularBuffer::with_capacity(32 * 1024);
+        prebuf.extend(preroll);
+        serialise::decompressed_codes(&mut bytes, &mut prebuf, codes).unwrap();
+    }
+
+    #[cfg(never)]
+    println!(
+        "bytes: {:?}, str: {:?}",
+        bytes,
+        String::from_utf8_lossy(&bytes)
+    );
+
+    let mut we_chose = Vec::with_capacity(codes.len());
+
+    let mut it = find_all_options(preroll, &bytes);
+
+    for orig in codes {
+        let key = match it.key() {
+            Some(key) => key,
+            None => {
+                we_chose.push(0);
+                continue;
+            }
+        };
+
+        we_chose.push(match *orig {
+            Code::Literal(_) => {
+                if it.all_candidates(&key).is_empty() {
+                    //There are no runs, so a literal is the only, obvious choice
+                    0
+                } else {
+                    // There's a run available, and we've decided not to pick it; unusual
+                    1
+                }
+            }
+
+            Code::Reference {
+                dist: actual_dist,
+                run_minus_3: actual_run_minus_3,
+            } => {
+                let candidates = it.all_candidates(&key);
+                let actual_run = unpack_run(actual_run_minus_3);
+                let pos = it.pos();
+                find_reference_score(
+                    actual_dist,
+                    actual_run,
+                    &it,
+                    candidates.into_iter().rev().map(|off| u16_from(pos - off)),
+                )
+            }
+        });
+
+        it.advance(usize_from(orig.emitted_bytes()));
+    }
+
+    assert_eq!(codes.len(), we_chose.len());
+
+    we_chose
+}
+
 #[cfg(test)]
 mod tests {
     use super::find_all_options;
     use super::find_reference_score;
+    use super::reduce_entropy;
     use circles;
     use serialise;
     use usize_from;
@@ -278,7 +348,7 @@ mod tests {
         ];
         assert_eq!(
             exp.iter().map(|_| 0usize).collect::<Vec<usize>>(),
-            decode_then_reencode(&[0], exp)
+            reduce_entropy(&[0], exp)
         );
     }
 
@@ -360,72 +430,7 @@ mod tests {
     }
 
     fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<usize> {
-        decode_then_reencode(&[], codes)
-    }
-
-    fn decode_then_reencode(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
-        //        let window_size = max_distance(codes).unwrap();
-        //        let mut ret = Vec::with_capacity(codes.len());
-        let mut bytes = Vec::new();
-        {
-            let mut prebuf = circles::CircularBuffer::with_capacity(32 * 1024);
-            prebuf.extend(preroll);
-            serialise::decompressed_codes(&mut bytes, &mut prebuf, codes).unwrap();
-        }
-
-        #[cfg(never)]
-        println!(
-            "bytes: {:?}, str: {:?}",
-            bytes,
-            String::from_utf8_lossy(&bytes)
-        );
-
-        let mut we_chose = Vec::with_capacity(codes.len());
-
-        let mut it = find_all_options(preroll, &bytes);
-
-        for orig in codes {
-            let key = match it.key() {
-                Some(key) => key,
-                None => {
-                    we_chose.push(0);
-                    continue;
-                }
-            };
-
-
-
-            we_chose.push(match *orig {
-                Code::Literal(_) => {
-                    if it.all_candidates(&key).is_empty() {
-                        //There are no runs, so a literal is the only, obvious choice
-                        0
-                    } else {
-                        // There's a run available, and we've decided not to pick it; unusual
-                        1
-                    }
-                }
-
-                Code::Reference {
-                    dist: actual_dist,
-                    run_minus_3: actual_run_minus_3,
-                } => {
-                    let candidates = it.all_candidates(&key);
-                    let actual_run = unpack_run(actual_run_minus_3);
-                    let pos = it.pos();
-                    find_reference_score(
-                        actual_dist,
-                        actual_run,
-                        &it,
-                        candidates.into_iter().rev().map(|off| u16_from(pos - off)),
-                    )
-                }
-            });
-
-            it.advance(usize_from(orig.emitted_bytes()));
-        }
-
-        we_chose
+        reduce_entropy(&[], codes)
     }
 
     #[test]

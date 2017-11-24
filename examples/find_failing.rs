@@ -36,7 +36,7 @@ fn run() -> Result<()> {
         }
 
         let result = librezip::infer::guess_settings(&[], &codes);
-        if result.is_err() {
+        if unimplemented!() {
             if let Ok(mut f) = File::create(format!("brokey-{}.deflate", n)) {
                 f.write_all(&output)?;
             } else {

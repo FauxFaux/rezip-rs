@@ -3,7 +3,7 @@ use std::io::Read;
 use errors::*;
 
 pub fn discard_header<R: Read>(mut from: R) -> Result<Vec<u8>> {
-    let mut whole_thing = vec![];
+    let mut whole_thing = Vec::new();
 
     let mut header = [0u8; 10];
     from.read_exact(&mut header)?;

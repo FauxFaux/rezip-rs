@@ -226,14 +226,7 @@ pub fn reduce_entropy(preroll: &[u8], codes: &[Code]) -> Vec<usize> {
 
 #[cfg(test)]
 mod tests {
-    use super::find_all_options;
-    use super::find_reference_score;
     use super::reduce_entropy;
-    use circles;
-    use serialise;
-    use usize_from;
-    use u16_from;
-    use unpack_run;
     use Code;
     use Code::Literal as L;
     use Code::Reference as R;

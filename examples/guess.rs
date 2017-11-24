@@ -53,15 +53,18 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
     let outside_range = infer::outside_range_or_hit_zero(codes);
     println!("   outta bounds: {:?}", outside_range);
 
+
+    let decompressed: Vec<u8> =
+        librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter()).collect();
+
     if max.is_some() {
-        println!(
-            "   validate_reencode: {:?}",
-            unimplemented!("&dictionary.vec(), codes")
-        );
+        println!("   validate_reencode:");
+
+        for reduced in librezip::bestguess::reduce_entropy(&dictionary.vec(), &decompressed, codes)
+        {
+            println!("{}", reduced);
+        }
     }
 
-    // AWFUL
-    for byte in librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter()) {
-        dictionary.push(byte);
-    }
+    dictionary.extend(&decompressed);
 }

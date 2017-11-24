@@ -166,8 +166,8 @@ mod tests {
         let mut raw = Cursor::new(orig);
         let header = gzip::discard_header(&mut raw).unwrap();
 
-        let mut decompressed = Cursor::new(vec![]);
-        let mut recompressed = Cursor::new(vec![]);
+        let mut decompressed = Vec::new();
+        let mut recompressed = Cursor::new(Vec::new());
         recompressed.write_all(&header).unwrap();
         let mut recompressed = BitWriter::new(recompressed);
 
@@ -197,14 +197,11 @@ mod tests {
             recompressed.align().unwrap();
         }
 
-        let mut tail = vec![];
-        raw.read_to_end(&mut tail).unwrap();
+        let mut recompressed = recompressed.into_inner().into_inner();
+        raw.read_to_end(&mut recompressed).unwrap();
 
-        let mut recompressed = recompressed.into_inner();
-        recompressed.write_all(&tail).unwrap();
+        assert_eq!(raw.into_inner().to_vec(), recompressed);
 
-        assert_eq!(raw.into_inner().to_vec(), recompressed.into_inner());
-
-        assert_eq!(expected_len, decompressed.into_inner().len());
+        assert_eq!(expected_len, decompressed.len());
     }
 }

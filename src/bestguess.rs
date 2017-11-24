@@ -156,7 +156,8 @@ fn find_reference_score<I: Iterator<Item = Ref>>(
         return 0;
     }
 
-    match sorted_candidates(candidates).into_iter()
+    match sorted_candidates(candidates)
+        .into_iter()
         .position(|(dist, run_minus_3)| {
             actual_run_minus_3 == run_minus_3 && actual_dist == dist
         })
@@ -231,10 +232,7 @@ pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Cod
     hints
         .into_iter()
         .map(|hint| {
-            let orig = match options
-                .all_candidates()
-                .map(|candidates| candidates)
-            {
+            let orig = match options.all_candidates().map(|candidates| candidates) {
                 // TODO: match candidates.next()?
                 Some(mut candidates) => {
                     let candidates = sorted_candidates(candidates);
@@ -247,7 +245,7 @@ pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Cod
                             other => candidates.get(other - 1).expect("invalid input 2").into(),
                         }
                     }
-                },
+                }
                 None => options.current_literal(),
             };
 

@@ -116,29 +116,6 @@ impl CircularBuffer {
         return upcoming_data.len() as u16;
     }
 
-    pub fn find_run(&self, run: &[u8]) -> Result<usize> {
-        let cap = self.data.len();
-        ensure!(run.len() < cap, "can't have a run that long");
-
-        for dist in (run.len() - 1)..cap {
-            let start = self.idx.wrapping_sub(dist).wrapping_add(cap) % cap;
-            if self.run_at(start, run) {
-                return Ok(dist);
-            }
-        }
-        unimplemented!()
-    }
-
-    fn run_at(&self, start: usize, run: &[u8]) -> bool {
-        for i in 0..run.len() {
-            let j = start.wrapping_add(i) % self.data.len();
-            if self.data[j] != run[i] {
-                return false;
-            }
-        }
-        true
-    }
-
     pub fn vec(&self) -> Vec<u8> {
         // TODO: optimise
 
@@ -148,49 +125,6 @@ impl CircularBuffer {
         }
 
         ret
-    }
-
-    pub fn run_from(&self, dist: u16) -> Runerator {
-        assert!(dist > 0);
-        Runerator {
-            inner: self,
-            stride: dist,
-            pos: dist,
-        }
-    }
-}
-
-pub struct Runerator<'a> {
-    inner: &'a CircularBuffer,
-    stride: u16,
-    pos: u16,
-}
-
-impl<'a> Iterator for Runerator<'a> {
-    type Item = u8;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let found = Some(self.inner.get_at_dist(self.pos));
-
-        self.pos -= 1;
-        if 0 == self.pos {
-            self.pos = self.stride;
-        }
-
-        found
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (usize::max_value(), None)
-    }
-}
-
-impl<'a> Runerator<'a> {
-    pub fn match_length(&mut self, other: &[u8]) -> usize {
-        self.take(258)
-            .zip(other)
-            .take_while(|&(x, y)| x == *y)
-            .count()
     }
 }
 
@@ -221,49 +155,11 @@ mod tests {
     }
 
     #[test]
-    fn run_across_end() {
-        let mut buf = CircularBuffer::with_capacity(10);
-
-        // 1234 will be dropped,
-        // so buf logically contains 4567890abcd,
-        // represented as abcd4567890
-        // with the marker at ^ (position 4)
-
-        buf.extend(b"1234567890abcd");
-
-        assert_eq!(3, buf.find_run(b"bc").unwrap());
-
-        assert_eq!(6, buf.find_run(b"90ab").unwrap());
-    }
-
-    #[test]
-    fn runerator() {
-        let mut buf = CircularBuffer::with_capacity(10);
-        buf.extend(b"1234567890abcd");
-        assert_eq!(
-            b"bcdbcd",
-            &buf.run_from(3).take(6).collect::<Vec<u8>>().as_slice()
-        );
-        assert_eq!(
-            b"ddddd",
-            &buf.run_from(1).take(5).collect::<Vec<u8>>().as_slice()
-        );
-
-        // TODO: test 258 boundary
-
-        assert_eq!(4, buf.run_from(1).match_length(b"ddddef"));
-    }
-
-    #[test]
     fn run_length_at() {
         let mut buf = CircularBuffer::with_capacity(100);
         buf.extend(b"abcdef b");
         //   distances: "87654321"
         assert_eq!(b'b', buf.get_at_dist(7));
-        assert_eq!(
-            b"bcdef ",
-            buf.run_from(7).take(6).collect::<Vec<u8>>().as_slice()
-        );
         assert_eq!(5, buf.possible_run_length_at(7, b"bcdef"));
     }
 
@@ -272,10 +168,6 @@ mod tests {
         let mut buf = CircularBuffer::with_capacity(100);
         buf.extend(b"a122b");
         assert_eq!(b'1', buf.get_at_dist(4));
-        assert_eq!(
-            b"122b122b",
-            buf.run_from(4).take(8).collect::<Vec<u8>>().as_slice()
-        );
         assert_eq!(3, buf.possible_run_length_at(4, b"122222"));
     }
 }

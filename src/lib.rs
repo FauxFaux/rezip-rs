@@ -21,7 +21,6 @@ mod huffman;
 pub mod infer;
 pub mod parse;
 pub mod serialise;
-mod three;
 
 use bit::BitVec;
 

@@ -7,10 +7,10 @@
 
 
 use std::collections::HashMap;
+use itertools::Itertools;
 
 use circles::CircularBuffer;
 use serialise;
-use three::ThreePeek;
 
 use unpack_run;
 use u16_from;
@@ -22,12 +22,9 @@ type BackMap = HashMap<Key, Vec<usize>>;
 
 fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     let mut map = BackMap::with_capacity(32 * 1024);
-    let mut it = ThreePeek::new(data);
 
-    let mut pos = 0;
-    while let Some(keys) = it.next_three() {
+    for (pos, keys) in data.tuple_windows::<Key>().enumerate() {
         map.entry(keys).or_insert_with(|| Vec::new()).push(pos);
-        pos += 1;
     }
 
     map

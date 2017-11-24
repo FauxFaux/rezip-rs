@@ -70,6 +70,10 @@ impl<'p, 'd> AllOptions<'p, 'd> {
         self.data_pos + self.preroll.len()
     }
 
+    pub fn can_advance(&self) -> bool {
+        self.data_pos < self.data.len()
+    }
+
     // None if we are out of possible keys, or Some(possibly empty list)
     pub fn all_candidates<'a>(&'a self) -> Option<Box<Iterator<Item = Ref> + 'a>> {
         let key = match self.key() {
@@ -213,11 +217,10 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<usize>
 
     codes
         .into_iter()
-        .map(|orig| {
+        .flat_map(|orig| {
             let reduced = options
                 .all_candidates()
-                .map(|candidates| reduce_code(orig, candidates))
-                .unwrap_or(0);
+                .map(|candidates| reduce_code(orig, candidates));
 
             options.advance(usize_from(orig.emitted_bytes()));
 
@@ -247,22 +250,25 @@ fn increase_code<I: Iterator<Item = Ref>>(candidates: I, hint: usize) -> Option<
 
 pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Code> {
     let mut options = find_all_options(preroll, data);
+    let mut hints = hints.into_iter();
 
-    hints
-        .into_iter()
-        .map(|hint| {
-            let orig = match options.all_candidates() {
-                Some(mut candidates) => {
-                    increase_code(candidates, *hint).unwrap_or_else(|| options.current_literal())
-                }
-                None => options.current_literal(),
-            };
+    let mut ret = Vec::with_capacity(data.len());
 
-            options.advance(usize_from(orig.emitted_bytes()));
+    loop {
+        let orig = match options.all_candidates() {
+            Some(candidates) => increase_code(candidates, *hints.next().unwrap()).unwrap_or_else(|| options.current_literal()),
+            None => break,
+        };
+        ret.push(orig);
+        options.advance(usize_from(orig.emitted_bytes()));
+    }
 
-            orig
-        })
-        .collect()
+    while options.can_advance() {
+        ret.push(options.current_literal());
+        options.advance(1);
+    }
+
+    ret
 }
 
 #[cfg(test)]

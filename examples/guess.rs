@@ -50,9 +50,9 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
     let max = infer::max_distance(codes);
     println!("   max len: {:?}", max);
 
-    let outside_range = infer::outside_range_or_hit_zero(codes);
-    println!("   outta bounds: {:?}", outside_range);
-
+    let (outside_range, hit_zero) = infer::outside_range_or_hit_zero(codes);
+    println!("   outta bounds: {}", outside_range);
+    println!("       hit zero: {}", hit_zero);
 
     let decompressed: Vec<u8> =
         librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter()).collect();

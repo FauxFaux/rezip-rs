@@ -194,20 +194,20 @@ fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
     &range[start_idx..]
 }
 
-fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> usize {
+fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Option<usize> {
     match *orig {
         Code::Literal(_) => {
             if candidates.next().is_none() {
                 //There are no runs, so a literal is the only, obvious choice
-                0
+                None
             } else {
                 // There's a run available, and we've decided not to pick it; unusual
-                1
+                Some(1)
             }
         }
 
         Code::Reference { dist, run_minus_3 } => {
-            find_reference_score(dist, run_minus_3, candidates)
+            Some(find_reference_score(dist, run_minus_3, candidates))
         }
     }
 }
@@ -220,7 +220,7 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<usize>
         .flat_map(|orig| {
             let reduced = options
                 .all_candidates()
-                .map(|candidates| reduce_code(orig, candidates));
+                .and_then(|candidates| reduce_code(orig, candidates));
 
             options.advance(usize_from(orig.emitted_bytes()));
 
@@ -229,7 +229,10 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<usize>
         .collect()
 }
 
-fn increase_code<I: Iterator<Item = Ref>>(candidates: I, hint: usize) -> Option<Code> {
+fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
+    candidates: I,
+    mut hint: J,
+) -> Option<Code> {
     let mut candidates = candidates.peekable();
     Some(match candidates.peek() {
         Some(&(dist, run_minus_3)) if 1 == dist && 255 == run_minus_3 => {
@@ -238,7 +241,9 @@ fn increase_code<I: Iterator<Item = Ref>>(candidates: I, hint: usize) -> Option<
         Some(_) => {
             let candidates = sorted_candidates(candidates);
 
-            match hint {
+            match hint.next()
+                .expect("there were some candidates, so we should have some hints left")
+            {
                 0 => candidates.get(0).expect("invalid input 1").into(),
                 1 => return None,
                 other => candidates.get(other - 1).expect("invalid input 2").into(),
@@ -250,13 +255,15 @@ fn increase_code<I: Iterator<Item = Ref>>(candidates: I, hint: usize) -> Option<
 
 pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Code> {
     let mut options = find_all_options(preroll, data);
-    let mut hints = hints.into_iter();
+    let mut hints = hints.into_iter().map(|x| *x);
 
     let mut ret = Vec::with_capacity(data.len());
 
     loop {
         let orig = match options.all_candidates() {
-            Some(candidates) => increase_code(candidates, *hints.next().unwrap()).unwrap_or_else(|| options.current_literal()),
+            Some(candidates) => {
+                increase_code(candidates, &mut hints).unwrap_or_else(|| options.current_literal())
+            }
             None => break,
         };
         ret.push(orig);
@@ -300,7 +307,7 @@ mod tests {
             L(b'i'),
         ];
 
-        assert_unity(exp);
+        assert_eq!(vec![0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
@@ -342,7 +349,7 @@ mod tests {
             L(b't'),
         ];
 
-        assert_unity(exp);
+        assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
@@ -370,7 +377,7 @@ mod tests {
             L(b'g'),
         ];
 
-        assert_unity(exp);
+        assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
@@ -382,7 +389,7 @@ mod tests {
                 run_minus_3: 10,
             },
         ];
-        assert_unity(exp);
+        assert_eq!(vec![0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
@@ -409,7 +416,7 @@ mod tests {
             },
         ];
 
-        assert_unity(exp);
+        assert_eq!(vec![0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
@@ -426,7 +433,7 @@ mod tests {
             },
         ];
 
-        assert_unity(exp);
+        assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
     }
 
 
@@ -446,7 +453,7 @@ mod tests {
             ENOUGH_TO_WRAP_AROUND
         ]);
 
-        assert_unity(&exp);
+        assert_eq!(vec![0; 137], decode_then_reencode_single_block(&exp));
     }
 
     #[test]
@@ -473,7 +480,7 @@ mod tests {
             },
         ];
 
-        assert_unity(exp);
+        assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
     }
 
     fn decode_then_reencode_single_block(codes: &[Code]) -> Vec<usize> {
@@ -513,7 +520,7 @@ mod tests {
             },
         ];
 
-        assert_unity(exp);
+        assert_eq!(vec![0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
@@ -537,7 +544,7 @@ mod tests {
             },
         ];
 
-        assert_unity(exp);
+        assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
@@ -570,15 +577,8 @@ mod tests {
         ];
 
         assert_eq!(
-            &[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+            &[1, 0],
             decode_then_reencode_single_block(exp).as_slice()
-        );
-    }
-
-    fn assert_unity(exp: &[Code]) {
-        assert_eq!(
-            exp.iter().map(|x| 0).collect::<Vec<usize>>(),
-            decode_then_reencode_single_block(exp)
         );
     }
 

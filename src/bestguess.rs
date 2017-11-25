@@ -11,6 +11,8 @@ use std::iter;
 
 use itertools::Itertools;
 
+use errors::*;
+
 use pack_run;
 use u16_from;
 use usize_from;
@@ -155,27 +157,30 @@ fn find_reference_score<I: Iterator<Item = Ref>>(
     actual_dist: u16,
     actual_run_minus_3: u8,
     candidates: I,
-) -> usize {
+) -> Result<usize> {
     if 255 == actual_run_minus_3 && 1 == actual_dist {
-        return 0;
+        return Ok(0);
     }
 
-    match sorted_candidates(candidates)
-        .into_iter()
-        .position(|(dist, run_minus_3)| {
+    let cand = sorted_candidates(candidates);
+
+    Ok(match cand
+        .iter()
+        .position(|&(dist, run_minus_3)| {
             actual_run_minus_3 == run_minus_3 && actual_dist == dist
         })
-        .expect(&format!(
-            "it must be there? {:?}",
-            (actual_dist, actual_run_minus_3)
-        )) {
+        .ok_or_else(|| format!(
+            "it must be there? {:?} {:?}",
+            (actual_dist, actual_run_minus_3),
+            cand
+        ))? {
         0 => 0,
         other => {
             // we guessed incorrectly, so we let the literal have the next position,
             // and everything shifts up
             1 + other
         }
-    }
+    })
 }
 
 fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
@@ -194,8 +199,8 @@ fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
     &range[start_idx..]
 }
 
-fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Option<usize> {
-    match *orig {
+fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Result<Option<usize>> {
+    Ok(match *orig {
         Code::Literal(_) => {
             if candidates.next().is_none() {
                 //There are no runs, so a literal is the only, obvious choice
@@ -207,20 +212,24 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Optio
         }
 
         Code::Reference { dist, run_minus_3 } => {
-            Some(find_reference_score(dist, run_minus_3, candidates))
+            Some(find_reference_score(dist, run_minus_3, candidates)?)
         }
-    }
+    })
 }
 
-pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<usize> {
+pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Result<Vec<usize>> {
     let mut options = find_all_options(preroll, data);
 
     codes
         .into_iter()
         .flat_map(|orig| {
-            let reduced = options
+            let reduced: Option<Result<usize>> = options
                 .all_candidates()
-                .and_then(|candidates| reduce_code(orig, candidates));
+                // TODO: Comically gross error handling
+                .and_then(|candidates| match reduce_code(orig, candidates) {
+                    Ok(o) => o.map(|x| Ok(x)),
+                    Err(e) => Some(Err(e))
+                });
 
             options.advance(usize_from(orig.emitted_bytes()));
 
@@ -433,10 +442,7 @@ mod tests {
                 run_minus_3: ::pack_run(3),
             },
         ];
-        assert_eq!(
-            &[0],
-            decode_maybe(&[b's', b't', b'u'], exp).as_slice()
-        );
+        assert_eq!(&[0], decode_maybe(&[b's', b't', b'u'], exp).as_slice());
     }
 
     #[test]
@@ -535,7 +541,7 @@ mod tests {
             String::from_utf8_lossy(&data)
         );
 
-        let reduced = reduce_entropy(preroll, &data, codes);
+        let reduced = reduce_entropy(preroll, &data, codes).unwrap();
         assert_eq!(codes, increase_entropy(preroll, &data, &reduced).as_slice());
         reduced
     }
@@ -609,10 +615,7 @@ mod tests {
             },
         ];
 
-        assert_eq!(
-            &[1, 0],
-            decode_then_reencode_single_block(exp).as_slice()
-        );
+        assert_eq!(&[1, 0], decode_then_reencode_single_block(exp).as_slice());
     }
 
     #[test]

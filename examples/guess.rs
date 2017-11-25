@@ -34,11 +34,11 @@ fn run() -> Result<()> {
             }
             FixedHuffman(codes) => {
                 println!(" - fixed huffman:");
-                print(&mut dictionary, &codes);
+                print(&mut dictionary, &codes)?;
             }
             DynamicHuffman { trees, codes } => {
                 println!(" - dynamic huffman: {:?}", trees);
-                print(&mut dictionary, &codes);
+                print(&mut dictionary, &codes)?;
             }
         }
 
@@ -61,7 +61,7 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
+fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     let max = infer::max_distance(codes);
     println!("   max len: {:?}", max);
 
@@ -75,11 +75,13 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) {
     if max.is_some() {
         println!("   validate_reencode:");
 
-        for reduced in librezip::bestguess::reduce_entropy(&dictionary.vec(), &decompressed, codes)
+        for reduced in librezip::bestguess::reduce_entropy(&dictionary.vec(), &decompressed, codes)?
         {
             println!("{}", reduced);
         }
     }
 
     dictionary.extend(&decompressed);
+
+    Ok(())
 }

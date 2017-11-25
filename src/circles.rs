@@ -97,6 +97,10 @@ impl CircularBuffer {
         self.data.len() as u16
     }
 
+    pub fn len(&self) -> u16 {
+        self.valid_cap
+    }
+
     pub fn possible_run_length_at(&self, dist: u16, upcoming_data: &[u8]) -> u16 {
         assert!(dist > 0, "dist must be positive");
 

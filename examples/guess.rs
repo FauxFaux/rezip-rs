@@ -41,6 +41,21 @@ fn run() -> Result<()> {
                 print(&mut dictionary, &codes);
             }
         }
+
+        let dict = dictionary.vec();
+        let observe = 20;
+        if dict.len() > observe * 2 {
+            let start = &dict[..observe];
+            let end = &dict[dict.len() - observe..];
+            println!(
+                " - dict (after): {} bytes: {:?}...{:?} ({:?}...{:?})",
+                dict.len(),
+                start,
+                end,
+                String::from_utf8_lossy(start),
+                String::from_utf8_lossy(end)
+            );
+        }
     }
 
     Ok(())

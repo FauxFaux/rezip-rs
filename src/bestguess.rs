@@ -407,6 +407,24 @@ mod tests {
     }
 
     #[test]
+    fn re_11_ref_long_before() {
+        let exp = &[
+            L(b'a'),
+            L(b'b'),
+            L(b'c'),
+            L(b'd'),
+            R {
+                dist: 7,
+                run_minus_3: ::pack_run(13),
+            },
+        ];
+        assert_eq!(
+            &[0],
+            decode_maybe(&[b'q', b'r', b's', b't', b'u'], exp).as_slice()
+        );
+    }
+
+    #[test]
     fn re_6_just_long_run() {
         let exp = &[
             L(5),

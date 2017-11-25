@@ -425,6 +425,21 @@ mod tests {
     }
 
     #[test]
+    fn re_12_ref_over_edge() {
+        let exp = &[
+            L(b'd'),
+            R {
+                dist: 2,
+                run_minus_3: ::pack_run(3),
+            },
+        ];
+        assert_eq!(
+            &[0],
+            decode_maybe(&[b's', b't', b'u'], exp).as_slice()
+        );
+    }
+
+    #[test]
     fn re_6_just_long_run() {
         let exp = &[
             L(5),

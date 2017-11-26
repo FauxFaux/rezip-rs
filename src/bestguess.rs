@@ -60,7 +60,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
         self.data_pos += n;
     }
 
-    fn key(&self) -> Option<Key> {
+    pub fn key(&self) -> Option<Key> {
         if self.data_pos + 2 < self.data.len() {
             Some(key_from_bytes(&self.data[self.data_pos..]))
         } else {
@@ -212,7 +212,8 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Resul
         }
 
         Code::Reference { dist, run_minus_3 } => {
-            Some(find_reference_score(dist, run_minus_3, candidates)?)
+            Some(find_reference_score(dist, run_minus_3, candidates)
+                .chain_err(|| format!("looking for {:?}", orig))?)
         }
     })
 }
@@ -226,7 +227,7 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Result<Vec
             let reduced: Option<Result<usize>> = options
                 .all_candidates()
                 // TODO: Comically gross error handling
-                .and_then(|candidates| match reduce_code(orig, candidates) {
+                .and_then(|candidates| match reduce_code(orig, candidates).chain_err(|| format!("looking for {:?}", options.key())) {
                     Ok(o) => o.map(|x| Ok(x)),
                     Err(e) => Some(Err(e))
                 });

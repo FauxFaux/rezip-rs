@@ -6,6 +6,7 @@ extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate result;
 extern crate sha2;
 
 use std::fmt;

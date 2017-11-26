@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::iter;
 
 use itertools::Itertools;
+use result::ResultOptionExt;
 
 use errors::*;
 
@@ -164,16 +165,17 @@ fn find_reference_score<I: Iterator<Item = Ref>>(
 
     let cand = sorted_candidates(candidates);
 
-    Ok(match cand
-        .iter()
+    Ok(match cand.iter()
         .position(|&(dist, run_minus_3)| {
             actual_run_minus_3 == run_minus_3 && actual_dist == dist
         })
-        .ok_or_else(|| format!(
-            "it must be there? {:?} {:?}",
-            (actual_dist, actual_run_minus_3),
-            cand
-        ))? {
+        .ok_or_else(|| {
+            format!(
+                "it must be there? {:?} {:?}",
+                (actual_dist, actual_run_minus_3),
+                cand
+            )
+        })? {
         0 => 0,
         other => {
             // we guessed incorrectly, so we let the literal have the next position,
@@ -224,13 +226,11 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Result<Vec
     codes
         .into_iter()
         .flat_map(|orig| {
-            let reduced: Option<Result<usize>> = options
-                .all_candidates()
-                // TODO: Comically gross error handling
-                .and_then(|candidates| match reduce_code(orig, candidates).chain_err(|| format!("looking for {:?}", options.key())) {
-                    Ok(o) => o.map(|x| Ok(x)),
-                    Err(e) => Some(Err(e))
-                });
+            let reduced: Option<Result<usize>> = options.all_candidates().and_then(|candidates| {
+                reduce_code(orig, candidates)
+                    .chain_err(|| format!("looking for {:?}", options.key()))
+                    .invert()
+            });
 
             options.advance(usize_from(orig.emitted_bytes()));
 

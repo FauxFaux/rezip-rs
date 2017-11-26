@@ -634,4 +634,36 @@ mod tests {
         assert_eq!(&[0usize; 0], s(7, 8, &[9, 10]));
         assert_eq!(&[0usize; 0], s(7, 8, &[]));
     }
+
+    #[test]
+    fn long_prelude() {
+        let exp = &[
+            L(b'b'),
+            R {
+                dist: 3,
+                run_minus_3: ::pack_run(3),
+            },
+        ];
+
+        let pre = concat(&[b'|'; 32768 + 1], b"ponies");
+
+        #[cfg(never)]
+        println!(
+            "{}",
+            String::from_utf8_lossy(
+                serialise::DecompressedBytes::new(&pre, exp.iter())
+                    .collect::<Vec<u8>>()
+                    .as_slice()
+            )
+        );
+
+        assert_eq!(&[0], decode_maybe(&pre, exp).as_slice());
+    }
+
+    fn concat(x: &[u8], y: &[u8]) -> Box<[u8]> {
+        let mut v = Vec::with_capacity(x.len() + y.len());
+        v.extend(x);
+        v.extend(y);
+        v.into_boxed_slice()
+    }
 }

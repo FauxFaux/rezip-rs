@@ -47,27 +47,20 @@ fn sorted_candidates<I: Iterator<Item = Ref>>(candidates: I) -> Vec<Ref> {
     us
 }
 
-fn find_reference_score<I: Iterator<Item = Ref>>(
-    actual: Ref,
-    candidates: I,
-) -> Result<usize> {
+fn find_reference_score<I: Iterator<Item = Ref>>(actual: Ref, candidates: I) -> Result<usize> {
     if 258 == actual.run() && 1 == actual.dist {
         return Ok(0);
     }
 
     let cand = sorted_candidates(candidates);
 
-    Ok(match cand.iter()
-        .position(|&r| {
-            actual == r
-        })
-        .ok_or_else(|| {
-            format!(
-                "it must be there? {:?} {:?}",
-                (actual.dist, actual.run()),
-                cand
-            )
-        })? {
+    Ok(match cand.iter().position(|&r| actual == r).ok_or_else(|| {
+        format!(
+            "it must be there? {:?} {:?}",
+            (actual.dist, actual.run()),
+            cand
+        )
+    })? {
         0 => 0,
         other => {
             // we guessed incorrectly, so we let the literal have the next position,
@@ -89,9 +82,7 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Resul
             }
         }
 
-        Code::Reference(r) => {
-            Some(find_reference_score(r, candidates)?)
-        }
+        Code::Reference(r) => Some(find_reference_score(r, candidates)?),
     })
 }
 
@@ -121,9 +112,7 @@ fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
 ) -> Option<Code> {
     let mut candidates = candidates.peekable();
     Some(match candidates.peek() {
-        Some(&r) if 1 == r.dist && 258 == r.run() => {
-            Code::Reference(r)
-        }
+        Some(&r) if 1 == r.dist && 258 == r.run() => Code::Reference(r),
         Some(_) => {
             let candidates = sorted_candidates(candidates);
 
@@ -260,18 +249,13 @@ mod tests {
 
     #[test]
     fn re_4_zero_run() {
-        let exp = &[
-            L(b'0'),
-            r(1, 10 + 3),
-        ];
+        let exp = &[L(b'0'), r(1, 10 + 3)];
         assert_eq!(vec![0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
     fn re_5_ref_before() {
-        let exp = &[
-            r(1, 13),
-        ];
+        let exp = &[r(1, 13)];
         assert_eq!(
             exp.iter().map(|_| 0usize).collect::<Vec<usize>>(),
             decode_maybe(&[0], exp)
@@ -280,13 +264,7 @@ mod tests {
 
     #[test]
     fn re_11_ref_long_before() {
-        let exp = &[
-            L(b'a'),
-            L(b'b'),
-            L(b'c'),
-            L(b'd'),
-            r(7, 13),
-        ];
+        let exp = &[L(b'a'), L(b'b'), L(b'c'), L(b'd'), r(7, 13)];
         assert_eq!(
             &[0],
             decode_maybe(&[b'q', b'r', b's', b't', b'u'], exp).as_slice()
@@ -295,30 +273,20 @@ mod tests {
 
     #[test]
     fn re_12_ref_over_edge() {
-        let exp = &[
-            L(b'd'),
-            r(2, 3),
-        ];
+        let exp = &[L(b'd'), r(2, 3)];
         assert_eq!(&[0], decode_maybe(&[b's', b't', b'u'], exp).as_slice());
     }
 
     #[test]
     fn re_6_just_long_run() {
-        let exp = &[
-            L(5),
-            r(1, 258),
-        ];
+        let exp = &[L(5), r(1, 258)];
 
         assert_eq!(vec![0], decode_then_reencode_single_block(exp));
     }
 
     #[test]
     fn re_7_two_long_run() {
-        let exp = &[
-            L(5),
-            r(1, 258),
-            r(1, 258),
-        ];
+        let exp = &[L(5), r(1, 258), r(1, 258)];
 
         assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
     }
@@ -332,10 +300,7 @@ mod tests {
 
         exp.push(L(5));
 
-        exp.extend(vec![
-            r(1, 258);
-            ENOUGH_TO_WRAP_AROUND
-        ]);
+        exp.extend(vec![r(1, 258); ENOUGH_TO_WRAP_AROUND]);
 
         assert_eq!(vec![0; 137], decode_then_reencode_single_block(&exp));
     }
@@ -390,10 +355,7 @@ mod tests {
         // a122b122222
         // 01234567890
 
-        let exp = &[
-            L(b'a'),
-            r(1, 3),
-        ];
+        let exp = &[L(b'a'), r(1, 3)];
 
         assert_eq!(vec![0], decode_then_reencode_single_block(exp));
     }
@@ -447,10 +409,7 @@ mod tests {
 
     #[test]
     fn long_prelude() {
-        let exp = &[
-            L(b'b'),
-            r(3, 3),
-        ];
+        let exp = &[L(b'b'), r(3, 3)];
 
         let pre = concat(&[b'|'; 32768 + 1], b"ponies");
 

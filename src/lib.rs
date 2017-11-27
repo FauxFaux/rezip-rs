@@ -37,51 +37,11 @@ pub struct Ref {
     run_minus_3: u8,
 }
 
-impl Ref {
-    fn new(dist: u16, run: u16) -> Self {
-        Ref {
-            dist,
-            run_minus_3: Ref::pack_run(run),
-        }
-    }
-
-    pub fn run(&self) -> u16 {
-        Ref::unpack_run(self.run_minus_3)
-    }
-
-    #[inline]
-    fn unpack_run(run_minus_3: u8) -> u16 {
-        u16::from(run_minus_3) + 3
-    }
-
-    #[inline]
-    fn pack_run(run: u16) -> u8 {
-        assert!(run <= 258);
-        assert!(run >= 3);
-
-        (run - 3) as u8
-    }
-}
-
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Code {
     Literal(u8),
     Reference(Ref),
 }
-
-//impl<'a> From<&'a (u16, u8)> for Code {
-//    fn from(&(dist, run_minus_3): &'a (u16, u8)) -> Self {
-//        Code::Reference(Ref {
-//            dist, run_minus_3
-//        })
-//    }
-//}
-//
-//impl<'a> From<&'a Ref> for Code {
-//    fn from(r: &Ref) -> Self {
-//        Code::Reference(*r)
-//    }
-//}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Block {
@@ -126,24 +86,38 @@ impl Code {
     }
 }
 
+impl Ref {
+    #[inline]
+    fn new(dist: u16, run: u16) -> Self {
+        assert!(run <= 258);
+        assert!(run >= 3);
+
+        let run_minus_3 = (run - 3) as u8;
+        Ref { dist, run_minus_3 }
+    }
+
+    #[inline]
+    pub fn run(&self) -> u16 {
+        u16::from(self.run_minus_3) + 3
+    }
+}
+
+impl fmt::Debug for Code {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Code::Literal(byte) => write!(f, "L(0x{:02x} {:?})", byte, byte as char),
+            Code::Reference(r) => write!(f, "R(-{}, {})", r.dist, r.run()),
+        }
+    }
+}
+
 #[inline]
 fn u16_from(val: usize) -> u16 {
     assert!(val <= (std::u16::MAX as usize));
     val as u16
 }
 
-
-impl fmt::Debug for Code {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Code::Literal(byte) => write!(f, "L(0x{:02x} {:?})", byte, byte as char),
-            Code::Reference(r) => {
-                write!(f, "R(-{}, {})", r.dist, r.run())
-            }
-        }
-    }
-}
-
+#[inline]
 fn usize_from(val: u16) -> usize {
     val as usize
 }

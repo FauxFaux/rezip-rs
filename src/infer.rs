@@ -72,47 +72,27 @@ mod tests {
     fn range() {
         assert_eq!((false, false), outside_range_or_hit_zero(&[L(5)]));
 
-        assert_eq!(
-            (true, false),
-            outside_range_or_hit_zero(&[
-                r(1, 3 + 3)
-            ],)
-        );
+        assert_eq!((true, false), outside_range_or_hit_zero(&[r(1, 3 + 3)],));
 
         assert_eq!(
             (false, true),
-            outside_range_or_hit_zero(&[
-                L(5),
-                r(1, 3 + 3)
-            ],)
+            outside_range_or_hit_zero(&[L(5), r(1, 3 + 3)],)
         );
 
         assert_eq!(
             (false, false),
-            outside_range_or_hit_zero(&[
-                L(5),
-                L(5),
-                r(1, 3 + 3)
-            ],)
+            outside_range_or_hit_zero(&[L(5), L(5), r(1, 3 + 3)],)
         );
 
         // Not an encoding a real tool would generate
         assert_eq!(
             (false, true),
-            outside_range_or_hit_zero(&[
-                L(5),
-                r(1, 20 + 3),
-                r(15, 3 + 3)
-            ],)
+            outside_range_or_hit_zero(&[L(5), r(1, 20 + 3), r(15, 3 + 3)],)
         );
 
         assert_eq!(
             (true, true),
-            outside_range_or_hit_zero(&[
-                L(5),
-                r(1, 4 + 3),
-                r(15, 3 + 3)
-            ],)
+            outside_range_or_hit_zero(&[L(5), r(1, 4 + 3), r(15, 3 + 3)],)
         );
     }
     #[test]
@@ -122,14 +102,7 @@ mod tests {
                 window_size: 1,
                 first_byte_bug: true,
             },
-            guess_settings(
-                &[],
-                &[
-                    L(5),
-                    L(5),
-                    r(1, 5 + 3)
-                ],
-            )
+            guess_settings(&[], &[L(5), L(5), r(1, 5 + 3)],)
         );
     }
 }

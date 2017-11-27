@@ -10,6 +10,7 @@ use librezip::Result;
 use librezip::Block;
 use librezip::Code;
 
+use librezip::bestguess;
 use librezip::infer;
 use librezip::serialise;
 use librezip::circles::CircularBuffer;
@@ -78,10 +79,11 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     if max.is_some() {
         println!("   validate_reencode:");
 
-        for reduced in librezip::bestguess::reduce_entropy(old_dictionary, &decompressed, codes)?
-        {
-            println!("{}", reduced);
+        for reduced in bestguess::reduce_entropy(old_dictionary, &decompressed, codes)? {
+            print!("{}", reduced);
         }
+
+        println!();
     }
 
     Ok(())

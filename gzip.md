@@ -87,7 +87,7 @@ So, the bit stream is:
 
  * `1`: this is the last block in the sequence
  * `10`: this is a `fixed` `huffman` block, so there's no following tree.
- * `111100010`: This code can be looked up in `fixed-huffman.txt`,
+ * `111100010`: This code can be looked up in `huffman-fixed.txt`,
     which explains that it maps to the literal byte `0xe2`.
  * `110011000`: Also a fixed huffman code: literal byte `0x98`.
  * `10110011`: Also a fixed huffman code: literal byte `0x83`.

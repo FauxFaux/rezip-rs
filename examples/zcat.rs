@@ -12,6 +12,7 @@ use librezip::Block;
 use librezip::Code;
 
 use librezip::infer;
+use librezip::serialise;
 use librezip::circles::CircularBuffer;
 
 quick_main!(run);
@@ -32,7 +33,7 @@ fn run() -> Result<()> {
     for (id, block) in librezip::parse_deflate(&mut reader).into_iter().enumerate() {
         let block = block?;
 
-        write!(stderr, "block {}\n", id)?;
+        write!(stdout, "\n\nblock {}\n\n", id)?;
         use self::Block::*;
         match block {
             Uncompressed(data) => {
@@ -40,13 +41,11 @@ fn run() -> Result<()> {
                 stdout.write_all(&data)?;
                 dictionary.extend(&data);
             }
-            FixedHuffman(codes) | DynamicHuffman { codes, .. } => {
+            FixedHuffman(ref codes) | DynamicHuffman { ref codes, .. } => {
                 write!(stderr, " - huffman codes: {}\n", codes.len())?;
-                let decompressed: Vec<u8> =
-                    librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter())
-                        .collect();
+                let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
+                serialise::decompressed_block(&mut decompressed, &mut dictionary, &block);
                 stdout.write_all(&decompressed)?;
-                dictionary.extend(&decompressed);
             }
         }
     }

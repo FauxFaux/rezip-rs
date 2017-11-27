@@ -177,7 +177,7 @@ mod tests {
     use Code::Literal as L;
     use Ref;
 
-    fn r(dist: u16, run: u16) {
+    fn r(dist: u16, run: u16) -> Code {
         Code::Reference(Ref::new(dist, run))
     }
 
@@ -191,10 +191,7 @@ mod tests {
             L(b'e'),
             L(b'f'),
             L(b' '),
-            R {
-                dist: 6,
-                run_minus_3: 2,
-            },
+            r(6, 2 + 3),
             L(b'g'),
             L(b'h'),
             L(b'i'),
@@ -224,18 +221,12 @@ mod tests {
             L(b'j'),
             L(b'k'),
             L(b'l'),
-            R {
-                dist: 14,
-                run_minus_3: 0,
-            },
+            r(14, 0 + 3),
             L(b'm'),
             L(b'n'),
             L(b'o'),
             L(b'p'),
-            R {
-                dist: 14,
-                run_minus_3: 0,
-            },
+            r(14, 0 + 3),
             L(b'q'),
             L(b'r'),
             L(b's'),
@@ -255,18 +246,12 @@ mod tests {
             L(b'b'),
             L(b'c'),
             L(b'd'),
-            R {
-                dist: 6,
-                run_minus_3: 0,
-            },
+            r(6, 0 + 3),
             L(b'4'),
             L(b'5'),
             L(b'e'),
             L(b'f'),
-            R {
-                dist: 5,
-                run_minus_3: 0,
-            },
+            r(5, 0 + 3),
             L(b'g'),
         ];
 
@@ -277,10 +262,7 @@ mod tests {
     fn re_4_zero_run() {
         let exp = &[
             L(b'0'),
-            R {
-                dist: 1,
-                run_minus_3: 10,
-            },
+            r(1, 10 + 3),
         ];
         assert_eq!(vec![0], decode_then_reencode_single_block(exp));
     }
@@ -288,10 +270,7 @@ mod tests {
     #[test]
     fn re_5_ref_before() {
         let exp = &[
-            R {
-                dist: 1,
-                run_minus_3: ::pack_run(13),
-            },
+            r(1, 13),
         ];
         assert_eq!(
             exp.iter().map(|_| 0usize).collect::<Vec<usize>>(),
@@ -306,10 +285,7 @@ mod tests {
             L(b'b'),
             L(b'c'),
             L(b'd'),
-            R {
-                dist: 7,
-                run_minus_3: ::pack_run(13),
-            },
+            r(7, 13),
         ];
         assert_eq!(
             &[0],
@@ -321,10 +297,7 @@ mod tests {
     fn re_12_ref_over_edge() {
         let exp = &[
             L(b'd'),
-            R {
-                dist: 2,
-                run_minus_3: ::pack_run(3),
-            },
+            r(2, 3),
         ];
         assert_eq!(&[0], decode_maybe(&[b's', b't', b'u'], exp).as_slice());
     }
@@ -333,10 +306,7 @@ mod tests {
     fn re_6_just_long_run() {
         let exp = &[
             L(5),
-            R {
-                dist: 1,
-                run_minus_3: ::pack_run(258),
-            },
+            r(1, 258),
         ];
 
         assert_eq!(vec![0], decode_then_reencode_single_block(exp));
@@ -346,14 +316,8 @@ mod tests {
     fn re_7_two_long_run() {
         let exp = &[
             L(5),
-            R {
-                dist: 1,
-                run_minus_3: ::pack_run(258),
-            },
-            R {
-                dist: 1,
-                run_minus_3: ::pack_run(258),
-            },
+            r(1, 258),
+            r(1, 258),
         ];
 
         assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
@@ -369,10 +333,7 @@ mod tests {
         exp.push(L(5));
 
         exp.extend(vec![
-            R {
-                dist: 1,
-                run_minus_3: ::pack_run(258),
-            };
+            r(1, 258);
             ENOUGH_TO_WRAP_AROUND
         ]);
 
@@ -393,14 +354,8 @@ mod tests {
             L(b'2'),
             L(b'3'),
             L(b'4'),
-            R {
-                dist: 4,
-                run_minus_3: ::pack_run(3),
-            },
-            R {
-                dist: 7,
-                run_minus_3: ::pack_run(4),
-            },
+            r(4, 3),
+            r(7, 4),
         ];
 
         assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
@@ -437,10 +392,7 @@ mod tests {
 
         let exp = &[
             L(b'a'),
-            R {
-                dist: 1,
-                run_minus_3: ::pack_run(3),
-            },
+            r(1, 3),
         ];
 
         assert_eq!(vec![0], decode_then_reencode_single_block(exp));
@@ -457,14 +409,8 @@ mod tests {
             L(b'2'),
             L(b'2'),
             L(b'b'),
-            R {
-                dist: 4,
-                run_minus_3: ::pack_run(3),
-            },
-            R {
-                dist: 1,
-                run_minus_3: ::pack_run(3),
-            },
+            r(4, 3),
+            r(1, 3),
         ];
 
         assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
@@ -493,10 +439,7 @@ mod tests {
             L(b'2'),
             L(b'f'),
             L(b'4'),
-            R {
-                dist: 8,
-                run_minus_3: ::pack_run(4),
-            },
+            r(8, 4),
         ];
 
         assert_eq!(&[1, 0], decode_then_reencode_single_block(exp).as_slice());
@@ -506,10 +449,7 @@ mod tests {
     fn long_prelude() {
         let exp = &[
             L(b'b'),
-            R {
-                dist: 3,
-                run_minus_3: ::pack_run(3),
-            },
+            r(3, 3),
         ];
 
         let pre = concat(&[b'|'; 32768 + 1], b"ponies");

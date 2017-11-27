@@ -60,9 +60,13 @@ mod tests {
 
     use WindowSettings;
 
+    use Code;
     use Code::Literal as L;
-    use Code::Reference as R;
+    use Ref;
 
+    fn r(dist: u16, run: u16) -> Code {
+        Code::Reference(Ref::new(dist, run))
+    }
 
     #[test]
     fn range() {
@@ -71,10 +75,7 @@ mod tests {
         assert_eq!(
             (true, false),
             outside_range_or_hit_zero(&[
-                R {
-                    dist: 1,
-                    run_minus_3: 3,
-                }
+                r(1, 3 + 3)
             ],)
         );
 
@@ -82,10 +83,7 @@ mod tests {
             (false, true),
             outside_range_or_hit_zero(&[
                 L(5),
-                R {
-                    dist: 1,
-                    run_minus_3: 3,
-                }
+                r(1, 3 + 3)
             ],)
         );
 
@@ -94,10 +92,7 @@ mod tests {
             outside_range_or_hit_zero(&[
                 L(5),
                 L(5),
-                R {
-                    dist: 1,
-                    run_minus_3: 3,
-                }
+                r(1, 3 + 3)
             ],)
         );
 
@@ -106,14 +101,8 @@ mod tests {
             (false, true),
             outside_range_or_hit_zero(&[
                 L(5),
-                R {
-                    dist: 1,
-                    run_minus_3: 20,
-                },
-                R {
-                    dist: 15,
-                    run_minus_3: 3,
-                }
+                r(1, 20 + 3),
+                r(15, 3 + 3)
             ],)
         );
 
@@ -121,14 +110,8 @@ mod tests {
             (true, true),
             outside_range_or_hit_zero(&[
                 L(5),
-                R {
-                    dist: 1,
-                    run_minus_3: 4,
-                },
-                R {
-                    dist: 15,
-                    run_minus_3: 3,
-                }
+                r(1, 4 + 3),
+                r(15, 3 + 3)
             ],)
         );
     }
@@ -144,10 +127,7 @@ mod tests {
                 &[
                     L(5),
                     L(5),
-                    R {
-                        dist: 1,
-                        run_minus_3: 5,
-                    }
+                    r(1, 5 + 3)
                 ],
             )
         );

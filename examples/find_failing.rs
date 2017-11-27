@@ -47,7 +47,8 @@ fn run() -> Result<()> {
             n -= 1;
         }
     }
-    Ok(())
+
+    unreachable!()
 }
 
 fn compressed_file(n: usize, mut rng: &mut rand::ThreadRng) -> Result<Vec<u8>> {

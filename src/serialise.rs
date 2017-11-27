@@ -198,24 +198,6 @@ fn encode_distance<W: Write>(
     Ok(())
 }
 
-use std::io;
-
-struct NullWriter {}
-
-impl Write for NullWriter {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-
-    fn write_all(&mut self, _: &[u8]) -> io::Result<()> {
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;

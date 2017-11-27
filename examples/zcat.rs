@@ -9,9 +9,7 @@ use std::io::Write;
 
 use librezip::Result;
 use librezip::Block;
-use librezip::Code;
 
-use librezip::infer;
 use librezip::serialise;
 use librezip::circles::CircularBuffer;
 
@@ -32,17 +30,15 @@ fn run() -> Result<()> {
 
     for (id, block) in librezip::parse_deflate(&mut reader).into_iter().enumerate() {
         let block = block?;
-
-        write!(stdout, "\n\nblock {}\n\n", id)?;
         use self::Block::*;
         match block {
             Uncompressed(data) => {
-                write!(stderr, " - uncompressed: {} bytes\n", data.len())?;
+                write!(stderr, "block {}: uncompressed: {} bytes\n", id, data.len())?;
                 stdout.write_all(&data)?;
                 dictionary.extend(&data);
             }
             FixedHuffman(ref codes) | DynamicHuffman { ref codes, .. } => {
-                write!(stderr, " - huffman codes: {}\n", codes.len())?;
+                write!(stderr, "block {}: huffman codes: {}\n", id, codes.len())?;
                 let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
                 serialise::decompressed_block(&mut decompressed, &mut dictionary, &block)?;
                 stdout.write_all(&decompressed)?;

@@ -1,4 +1,3 @@
-use std;
 use std::io::Write;
 
 use bit::BitVec;
@@ -51,72 +50,6 @@ pub fn decompressed_codes<W: Write>(
 
     Ok(())
 }
-
-pub struct DecompressedBytes<C> {
-    cap: usize,
-    dictionary: CircularBuffer,
-    codes: C,
-}
-
-impl<'a, C> DecompressedBytes<C>
-where
-    C: Iterator<Item = &'a Code>,
-{
-    pub fn new(preroll: &[u8], codes: C) -> Self {
-        let mut dictionary = CircularBuffer::with_capacity(32 * 1024 + 256 + 3 + 1);
-        let cap = preroll.len();
-        dictionary.extend(preroll);
-
-        DecompressedBytes {
-            cap,
-            dictionary,
-            codes,
-        }
-    }
-}
-
-impl<'a, C> Iterator for DecompressedBytes<C>
-where
-    C: Iterator<Item = &'a Code>,
-{
-    type Item = u8;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if 0 == self.cap {
-            use self::Code::*;
-
-            self.cap += match self.codes.next() {
-                Some(&Literal(byte)) => {
-                    self.dictionary.push(byte);
-                    1
-                }
-                Some(&Reference(r)) => {
-                    self.dictionary
-                        .copy(r.dist, r.run(), NullWriter {})
-                        .expect(&format!(
-                            "dist ({}), run (<258: {}) < 32kb ({})",
-                            r.dist,
-                            r.run(),
-                            self.dictionary.capacity()
-                        ));
-                    r.run() as usize
-                }
-                None => return None,
-            };
-        }
-
-        assert!(self.cap < (std::u16::MAX as usize));
-        let pos = self.cap as u16;
-        self.cap -= 1;
-        Some(self.dictionary.get_at_dist(pos))
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let (lower, upper) = self.codes.size_hint();
-        (lower, upper.and_then(|val| val.checked_mul(258)))
-    }
-}
-
 
 pub fn compressed_block<W: Write>(into: &mut BitWriter<W>, block: &Block) -> Result<()> {
     use self::Block::*;

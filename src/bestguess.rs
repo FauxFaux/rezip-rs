@@ -413,16 +413,6 @@ mod tests {
 
         let pre = concat(&[b'|'; 32768 + 1], b"ponies");
 
-        #[cfg(never)]
-        println!(
-            "{}",
-            String::from_utf8_lossy(
-                serialise::DecompressedBytes::new(&pre, exp.iter())
-                    .collect::<Vec<u8>>()
-                    .as_slice()
-            )
-        );
-
         assert_eq!(&[0], decode_maybe(&pre, exp).as_slice());
     }
 

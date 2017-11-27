@@ -44,7 +44,7 @@ fn run() -> Result<()> {
             FixedHuffman(ref codes) | DynamicHuffman { ref codes, .. } => {
                 write!(stderr, " - huffman codes: {}\n", codes.len())?;
                 let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
-                serialise::decompressed_block(&mut decompressed, &mut dictionary, &block);
+                serialise::decompressed_block(&mut decompressed, &mut dictionary, &block)?;
                 stdout.write_all(&decompressed)?;
             }
         }

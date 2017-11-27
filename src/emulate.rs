@@ -17,7 +17,7 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
     //  * if our best run is shorter (possibly zero), emit the saved run;
     //       it's guaranteed to squash this byte
 
-    let mut saved = None;
+    let mut saved: Option<Ref> = None;
 
     let mut pos = 0usize;
     while pos < data.len() {
@@ -29,43 +29,45 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
                 candidates.filter(move |r| usize_from(r.dist) != pos)
             })
             .and_then(best);
-        match saved {
-            None => match best {
-                Some(r) => {
-                    // there aren't any on going runs, so stash this run
-                    saved = Some(r);
+
+        println!("{}: saved: {:?} best: {:?}", pos, saved, best);
+
+        match best {
+            Some(best) => match saved {
+                Some(saved_ref) if best.run() > saved_ref.run()  => {
+                    // there's a new ref here, and it's better.
+                    // emit a literal for the saved ref, and save this instead.
+                    ret.push(Code::Literal(data[pos]));
+                    saved = Some(best);
+                    pos += 1;
+                }
+                Some(saved_ref) => {
+                    // the old ref was better than this ref, so emit it directly;
+                    // discarding these matches as they're bad
+                    ret.push(Code::Reference(saved_ref));
+                    saved = None;
+                    pos += usize_from(saved_ref.run());
                 }
                 None => {
-                    // there's nothing saved and nothing here, we can just emit it
-                    ret.push(Code::Literal(data[pos]));
-                }
-            },
-            Some(saved_run) => {
-                // something's saved, inspect the new run
-                let new_run = best.map(|r| r.run()).unwrap_or(0);
-                if new_run > saved_run.run() {
-                    // it's better. Emit a literal for the old run, and save this one instead
-                    saved = Some(best.unwrap());
-                    ret.push(Code::Literal(data[pos - 1]));
-                } else {
-                    // it's not better. Emit the old run, and save this run.
-                    ret.push(Code::Reference(saved_run));
-                    match best {
-                        Some(new_run) => {
-                            saved = Some(new_run);
-                        }
-                        None => {
-                            saved = None;
-                            ret.push(Code::Literal(data[pos]));
-                        }
-                    }
-
-                    pos += usize_from(saved_run.run() - 1);
+                    // nothing saved, so just save this run
+                    saved = Some(best);
+                    pos += 1;
                 }
             }
+            None => match saved {
+                Some(saved_ref) => {
+                    // no run here, if we have a saved ref, it's the one
+                    ret.push(Code::Reference(saved_ref));
+                    saved = None;
+                    pos += usize_from(saved_ref.run());
+                }
+                None => {
+                    // no run saved, and no run found, can only be a literal
+                    ret.push(Code::Literal(data[pos]));
+                    pos += 1;
+                }
+            },
         }
-
-        pos += 1;
     }
 
     assert!(saved.is_none());
@@ -84,7 +86,7 @@ fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
     }
 
     for candidate in candidates {
-        if candidate.run() > best.run() {
+        if best.run() > candidate.run() {
             best = candidate;
         }
 
@@ -134,7 +136,15 @@ mod tests {
     #[test]
     fn gzip_longer() {
         assert_eq!(
-            &[L(b'a'), L(b'1'), L(b'2'), L(b'3'), L(b'4'), r(4, 3), r(7, 4)],
+            &[
+                L(b'a'),
+                L(b'1'),
+                L(b'2'),
+                L(b'3'),
+                L(b'4'),
+                r(4, 3),
+                r(7, 4)
+            ],
             gzip(b"", b"a12341231234",).unwrap().as_slice()
         )
     }

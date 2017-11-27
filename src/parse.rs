@@ -8,6 +8,7 @@ use huffman;
 
 use Block;
 use Code;
+use Ref;
 
 pub fn parse_deflate<R: Read>(bytes: R) -> BlockIter<R> {
     BlockIter {
@@ -102,10 +103,7 @@ fn scan_huffman_data<R: Read>(
 
         ensure!(dist >= 1 && dist <= 32_786, "invalid distance");
 
-        ret.push(Code::Reference {
-            dist,
-            run_minus_3: ::pack_run(run),
-        });
+        ret.push(Code::Reference(Ref::new(dist, run)));
     }
 
     Ok(ret)

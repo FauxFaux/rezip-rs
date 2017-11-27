@@ -32,40 +32,39 @@
 use result::ResultOptionExt;
 
 use errors::*;
-use guesser::Ref;
 use guesser::RefGuesser;
 
 use usize_from;
 use Code;
+use Ref;
 
 
 fn sorted_candidates<I: Iterator<Item = Ref>>(candidates: I) -> Vec<Ref> {
     let mut us: Vec<Ref> = candidates.collect();
 
-    us.sort_by(|&(ld, lr), &(rd, rr)| rr.cmp(&lr).then(ld.cmp(&rd)));
+    us.sort_by(|&l, &r| r.run().cmp(&l.run()).then(l.dist.cmp(&r.dist)));
 
     us
 }
 
 fn find_reference_score<I: Iterator<Item = Ref>>(
-    actual_dist: u16,
-    actual_run_minus_3: u8,
+    actual: Ref,
     candidates: I,
 ) -> Result<usize> {
-    if 255 == actual_run_minus_3 && 1 == actual_dist {
+    if 258 == actual.run() && 1 == actual.dist {
         return Ok(0);
     }
 
     let cand = sorted_candidates(candidates);
 
     Ok(match cand.iter()
-        .position(|&(dist, run_minus_3)| {
-            actual_run_minus_3 == run_minus_3 && actual_dist == dist
+        .position(|&r| {
+            actual == r
         })
         .ok_or_else(|| {
             format!(
                 "it must be there? {:?} {:?}",
-                (actual_dist, actual_run_minus_3),
+                (actual.dist, actual.run()),
                 cand
             )
         })? {
@@ -90,8 +89,8 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Resul
             }
         }
 
-        Code::Reference { dist, run_minus_3 } => {
-            Some(find_reference_score(dist, run_minus_3, candidates)?)
+        Code::Reference(r) => {
+            Some(find_reference_score(r, candidates)?)
         }
     })
 }
@@ -122,8 +121,8 @@ fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
 ) -> Option<Code> {
     let mut candidates = candidates.peekable();
     Some(match candidates.peek() {
-        Some(&(dist, run_minus_3)) if 1 == dist && 255 == run_minus_3 => {
-            (&(dist, run_minus_3)).into()
+        Some(r) if 1 == r.dist && 258 == r.run() => {
+            Code::Reference(*r)
         }
         Some(_) => {
             let candidates = sorted_candidates(candidates);
@@ -132,9 +131,9 @@ fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
                 .next()
                 .expect("there were some candidates, so we should have some hints left")
             {
-                0 => candidates.get(0).expect("invalid input 1").into(),
+                0 => Code::Reference(*candidates.get(0).expect("invalid input 1")),
                 1 => return None,
-                other => candidates.get(other - 1).expect("invalid input 2").into(),
+                other => Code::Reference(*candidates.get(other - 1).expect("invalid input 2")),
             }
         }
         None => return None,

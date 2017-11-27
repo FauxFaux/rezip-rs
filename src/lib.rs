@@ -31,18 +31,57 @@ pub use parse::parse_deflate;
 pub use serialise::compressed_block;
 pub use serialise::decompressed_block;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Ref {
+    pub dist: u16,
+    run_minus_3: u8,
+}
+
+impl Ref {
+    fn new(dist: u16, run: u16) -> Self {
+        Ref {
+            dist,
+            run_minus_3: Ref::pack_run(run),
+        }
+    }
+
+    pub fn run(&self) -> u16 {
+        Ref::unpack_run(self.run_minus_3)
+    }
+
+    #[inline]
+    fn unpack_run(run_minus_3: u8) -> u16 {
+        u16::from(run_minus_3) + 3
+    }
+
+    #[inline]
+    fn pack_run(run: u16) -> u8 {
+        assert!(run <= 258);
+        assert!(run >= 3);
+
+        (run - 3) as u8
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Code {
     Literal(u8),
-    Reference { dist: u16, run_minus_3: u8 },
+    Reference(Ref),
 }
 
-impl<'a> From<&'a (u16, u8)> for Code {
-    fn from(&(dist, run_minus_3): &'a (u16, u8)) -> Self {
-        Code::Reference { dist, run_minus_3 }
-    }
-}
+//impl<'a> From<&'a (u16, u8)> for Code {
+//    fn from(&(dist, run_minus_3): &'a (u16, u8)) -> Self {
+//        Code::Reference(Ref {
+//            dist, run_minus_3
+//        })
+//    }
+//}
+//
+//impl<'a> From<&'a Ref> for Code {
+//    fn from(r: &Ref) -> Self {
+//        Code::Reference(*r)
+//    }
+//}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Block {
@@ -82,22 +121,9 @@ impl Code {
     fn emitted_bytes(&self) -> u16 {
         match *self {
             Code::Literal(_) => 1,
-            Code::Reference { run_minus_3, .. } => unpack_run(run_minus_3),
+            Code::Reference(r) => r.run(),
         }
     }
-}
-
-#[inline]
-pub fn unpack_run(run_minus_3: u8) -> u16 {
-    u16::from(run_minus_3) + 3
-}
-
-#[inline]
-fn pack_run(run: u16) -> u8 {
-    assert!(run <= 258);
-    assert!(run >= 3);
-
-    (run - 3) as u8
 }
 
 #[inline]
@@ -111,8 +137,8 @@ impl fmt::Debug for Code {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Code::Literal(byte) => write!(f, "L(0x{:02x} {:?})", byte, byte as char),
-            Code::Reference { dist, run_minus_3 } => {
-                write!(f, "R(-{}, {})", dist, u16::from(run_minus_3) + 3)
+            Code::Reference(r) => {
+                write!(f, "R(-{}, {})", r.dist, r.run())
             }
         }
     }

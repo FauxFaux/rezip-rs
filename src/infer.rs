@@ -5,8 +5,8 @@ pub fn max_distance(codes: &[Code]) -> Option<u16> {
     codes
         .iter()
         .flat_map(|code| {
-            if let Code::Reference { dist, .. } = *code {
-                Some(dist)
+            if let Code::Reference(r) = *code {
+                Some(r.dist)
             } else {
                 None
             }
@@ -21,12 +21,12 @@ pub fn outside_range_or_hit_zero(codes: &[Code]) -> (bool, bool) {
     let mut hit_zero = false;
 
     for code in codes {
-        if let Code::Reference { dist, .. } = *code {
-            if dist == pos {
+        if let Code::Reference(r) = *code {
+            if r.dist == pos {
                 hit_zero = true;
             }
 
-            if dist > pos {
+            if r.dist > pos {
                 return (true, hit_zero);
             }
         }

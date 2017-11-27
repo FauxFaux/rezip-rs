@@ -9,7 +9,6 @@ use errors::*;
 use huffman;
 use Block;
 use Code;
-use unpack_run;
 use usize_from;
 
 pub fn decompressed_block<W: Write>(
@@ -44,8 +43,8 @@ pub fn decompressed_codes<W: Write>(
                 dictionary.push(byte);
                 into.write_all(&[byte])?
             }
-            Reference { dist, run_minus_3 } => {
-                dictionary.copy(dist, unpack_run(run_minus_3), &mut into)?;
+            Reference(r) => {
+                dictionary.copy(r.dist, r.run(), &mut into)?;
             }
         }
     }
@@ -91,17 +90,16 @@ where
                     self.dictionary.push(byte);
                     1
                 }
-                Some(&Reference { dist, run_minus_3 }) => {
-                    let run = unpack_run(run_minus_3);
+                Some(&Reference(r)) => {
                     self.dictionary
-                        .copy(dist, run, NullWriter {})
+                        .copy(r.dist, r.run(), NullWriter {})
                         .expect(&format!(
                             "dist ({}), run (<258: {}) < 32kb ({})",
-                            dist,
-                            run,
+                            r.dist,
+                            r.run(),
                             self.dictionary.capacity()
                         ));
-                    run as usize
+                    r.run() as usize
                 }
                 None => return None,
             };
@@ -178,15 +176,15 @@ impl Lengths {
     pub fn length(&self, code: &Code) -> Option<u8> {
         match *code {
             Code::Literal(byte) => self.length[usize::from(byte)],
-            Code::Reference { dist, run_minus_3 } => {
-                let run = unpack_run(run_minus_3);
+            Code::Reference(r) => {
+                let run = r.run();
                 let run_symbol = huffman::encode_run_length(run);
                 let run_symbol_len = match self.length[usize_from(run_symbol)] {
                     Some(len) => len,
                     None => return None,
                 };
 
-                let (code, bit_count, _) = huffman::encode_distance(dist).unwrap();
+                let (code, bit_count, _) = huffman::encode_distance(r.dist).unwrap();
                 let distance_symbol_len = match self.distance[usize::from(code)] {
                     Some(len) => len,
                     None => return None,
@@ -218,9 +216,9 @@ fn compressed_codes<W: Write>(
                     .as_ref()
                     .ok_or("invalid literal")?)?;
             }
-            Reference { dist, run_minus_3 } => {
-                encode_run(into, &length_tree, unpack_run(run_minus_3))?;
-                encode_distance(into, distance_tree.as_ref(), dist)?;
+            Reference(r) => {
+                encode_run(into, &length_tree, r.run())?;
+                encode_distance(into, distance_tree.as_ref(), r.dist)?;
             }
         }
     }

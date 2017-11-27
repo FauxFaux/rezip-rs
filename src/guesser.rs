@@ -3,14 +3,12 @@ use std::iter;
 
 use itertools::Itertools;
 
-use pack_run;
 use u16_from;
 use usize_from;
 use Code;
+use Ref;
 
 type Key = (u8, u8, u8);
-// len, run_minus_3
-pub type Ref = (u16, u8);
 type BackMap = HashMap<Key, Vec<usize>>;
 
 pub struct RefGuesser<'p, 'd> {
@@ -81,8 +79,8 @@ impl<'a, 'p, 'd> RefGuesserCursor<'a, 'p, 'd> {
                 .rev()
                 .map(move |off| {
                     let dist = u16_from(pos - off);
-                    let run = pack_run(self.possible_run_length_at(dist));
-                    (dist, run)
+                    let run = self.possible_run_length_at(dist);
+                    Ref::new(dist, run)
                 }),
         ))
     }

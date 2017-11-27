@@ -66,6 +66,10 @@ impl<'p, 'd> AllOptions<'p, 'd> {
             data_pos: pos,
         }
     }
+
+    fn data_len(&self) -> usize {
+        self.data.len()
+    }
 }
 
 impl<'a, 'p, 'd> AllOptionsCursor<'a, 'p, 'd> {
@@ -79,10 +83,6 @@ impl<'a, 'p, 'd> AllOptionsCursor<'a, 'p, 'd> {
 
     fn pos(&self) -> usize {
         self.data_pos + self.inner.preroll.len()
-    }
-
-    pub fn can_advance(&self) -> bool {
-        self.data_pos < self.inner.data.len()
     }
 
     // None if we are out of possible keys, or Some(possibly empty list)
@@ -293,13 +293,8 @@ pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Cod
         pos += usize_from(orig.emitted_bytes());
     }
 
-    loop {
-        let options = options.at(pos);
-        if !options.can_advance() {
-            break;
-        }
-
-        ret.push(options.current_literal());
+    while pos < options.data_len() {
+        ret.push(options.at(pos).current_literal());
         pos += 1;
     }
 

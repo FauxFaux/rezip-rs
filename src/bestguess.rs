@@ -1,9 +1,32 @@
 /// Right, time to try the trace-like algorithm again.
-/// Ranking?
-///  1. The longest, closest run, if there is one.
-///  2. A literal
-///  3. The next closest run of the same length.
-///  4. The next slightly shorter run that's closest.
+/// The most likely cases:
+/// 1. There are no runs available:
+///    * a literal is coming out; encode this as the empty string
+/// 2. There's a run, but we can find a longer run in the near future. (this is what gzip does)
+///    * a literal, 'cos we're going to use the longer run
+///    * the encoded runs
+/// 3. There's a length-3 run, which we can insert, before a longer run is detected
+///    * the short run
+///    * a literal (gzip behaviour)
+///    * encoded runs
+/// 4. There's a run, and we can't immediately see longer runs in the future.
+///    * encoded runs, which will be:
+///      1. the longest run at the shortest distance
+///      2. a literal, in case the compressor is dumb (if we're not in one of the other modes)
+///      3. the longest run at the next shortest distance
+///      4. ...
+///      5. the next longest run, at the shortest distance,
+///      5. the next longest run, at the next shortest distance,
+///      6. ..
+///
+///    114. the longest run, but terminating early by 1
+///    115. the longest run, but terminating early by 2
+///    115. the longest run, but terminating early by ..
+///    116. the longest run, but at length 3
+///    117. the longest run, but at the next furthest distance?
+///    118. the longest run, but at the next furthest distance, but terminating early by 1
+/// ..
+///
 
 
 use std::collections::HashMap;

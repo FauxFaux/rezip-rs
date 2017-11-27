@@ -46,6 +46,7 @@ fn run() -> Result<()> {
                     librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter())
                         .collect();
                 stdout.write_all(&decompressed)?;
+                dictionary.extend(&decompressed);
             }
         }
     }

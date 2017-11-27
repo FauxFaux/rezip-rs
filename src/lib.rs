@@ -32,7 +32,7 @@ pub use parse::parse_deflate;
 pub use serialise::compressed_block;
 pub use serialise::decompressed_block;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Ref {
     pub dist: u16,
     run_minus_3: u8,
@@ -109,6 +109,12 @@ impl fmt::Debug for Code {
             Code::Literal(byte) => write!(f, "L(0x{:02x} {:?})", byte, byte as char),
             Code::Reference(r) => write!(f, "R(-{}, {})", r.dist, r.run()),
         }
+    }
+}
+
+impl fmt::Debug for Ref {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "R[{}, {}]", self.dist, self.run())
     }
 }
 

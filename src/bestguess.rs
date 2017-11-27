@@ -41,7 +41,6 @@ fn find_all_options<'p, 'd>(preroll: &'p [u8], data: &'d [u8]) -> AllOptions<'p,
         preroll,
         data,
         map,
-        data_pos: 0,
     }
 }
 
@@ -49,6 +48,10 @@ struct AllOptions<'p, 'd> {
     preroll: &'p [u8],
     data: &'d [u8],
     map: BackMap,
+}
+
+struct AllOptionsCursor<'a, 'p: 'a, 'd: 'a> {
+    inner: &'a AllOptions<'p, 'd>,
     data_pos: usize,
 }
 
@@ -57,28 +60,33 @@ fn key_from_bytes(from: &[u8]) -> Key {
 }
 
 impl<'p, 'd> AllOptions<'p, 'd> {
-    pub fn advance(&mut self, n: usize) {
-        self.data_pos += n;
+    fn at(&self, pos: usize) -> AllOptionsCursor {
+        AllOptionsCursor {
+            inner: self,
+            data_pos: pos,
+        }
     }
+}
 
+impl<'a, 'p, 'd> AllOptionsCursor<'a, 'p, 'd> {
     pub fn key(&self) -> Option<Key> {
-        if self.data_pos + 2 < self.data.len() {
-            Some(key_from_bytes(&self.data[self.data_pos..]))
+        if self.data_pos + 2 < self.inner.data.len() {
+            Some(key_from_bytes(&self.inner.data[self.data_pos..]))
         } else {
             None
         }
     }
 
     fn pos(&self) -> usize {
-        self.data_pos + self.preroll.len()
+        self.data_pos + self.inner.preroll.len()
     }
 
     pub fn can_advance(&self) -> bool {
-        self.data_pos < self.data.len()
+        self.data_pos < self.inner.data.len()
     }
 
     // None if we are out of possible keys, or Some(possibly empty list)
-    pub fn all_candidates<'a>(&'a self) -> Option<Box<Iterator<Item = Ref> + 'a>> {
+    pub fn all_candidates<'m>(&'m self) -> Option<Box<Iterator<Item = Ref> + 'm>> {
         let key = match self.key() {
             Some(key) => key,
             None => return None,
@@ -94,7 +102,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
         }
 
         Some(Box::new(
-            self.map
+            self.inner.map
                 .get(&key)
                 .map(|v| {
                     sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
@@ -111,7 +119,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
     }
 
     pub fn current_literal(&self) -> Code {
-        Code::Literal(self.data[self.data_pos])
+        Code::Literal(self.inner.data[self.data_pos])
     }
 
     fn get_at_dist(&self, dist: u16) -> u8 {
@@ -120,14 +128,14 @@ impl<'p, 'd> AllOptions<'p, 'd> {
         let dist = usize_from(dist);
 
         if dist <= pos {
-            self.data[pos - dist]
+            self.inner.data[pos - dist]
         } else {
-            self.preroll[self.preroll.len() - (dist - pos)]
+            self.inner.preroll[self.inner.preroll.len() - (dist - pos)]
         }
     }
 
     fn possible_run_length_at(&self, dist: u16) -> u16 {
-        let upcoming_data = &self.data[self.data_pos..];
+        let upcoming_data = &self.inner.data[self.data_pos..];
         let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
 
         for cur in 3..dist.min(upcoming_data.len() as u16) {
@@ -221,18 +229,21 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Resul
 }
 
 pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Result<Vec<usize>> {
-    let mut options = find_all_options(preroll, data);
+    let options = find_all_options(preroll, data);
+
+    let mut pos = 0usize;
 
     codes
         .into_iter()
         .flat_map(|orig| {
+            let options = options.at(pos);
             let reduced: Option<Result<usize>> = options.all_candidates().and_then(|candidates| {
                 reduce_code(orig, candidates)
                     .chain_err(|| format!("looking for {:?}", options.key()))
                     .invert()
             });
 
-            options.advance(usize_from(orig.emitted_bytes()));
+            pos += usize_from(orig.emitted_bytes());
 
             reduced
         })
@@ -264,12 +275,14 @@ fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
 }
 
 pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Code> {
-    let mut options = find_all_options(preroll, data);
+    let options = find_all_options(preroll, data);
     let mut hints = hints.into_iter().map(|x| *x);
 
     let mut ret = Vec::with_capacity(data.len());
+    let mut pos = 0usize;
 
     loop {
+        let options = options.at(pos);
         let orig = match options.all_candidates() {
             Some(candidates) => {
                 increase_code(candidates, &mut hints).unwrap_or_else(|| options.current_literal())
@@ -277,12 +290,17 @@ pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Cod
             None => break,
         };
         ret.push(orig);
-        options.advance(usize_from(orig.emitted_bytes()));
+        pos += usize_from(orig.emitted_bytes());
     }
 
-    while options.can_advance() {
+    loop {
+        let options = options.at(pos);
+        if !options.can_advance() {
+            break;
+        }
+
         ret.push(options.current_literal());
-        options.advance(1);
+        pos += 1;
     }
 
     ret

@@ -11,6 +11,7 @@ use librezip::Block;
 use librezip::Code;
 
 use librezip::infer;
+use librezip::serialise;
 use librezip::circles::CircularBuffer;
 
 quick_main!(run);
@@ -69,29 +70,19 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     println!("   outta bounds: {}", outside_range);
     println!("       hit zero: {}", hit_zero);
 
-    let decompressed: Vec<u8> =
-        librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter()).collect();
+    let old_dictionary = &dictionary.vec();
 
-    {
-        use std::io::Write;
-        fs::OpenOptions::new()
-            .append(true)
-            .create(true)
-            .write(true)
-            .open("a")?
-            .write_all(&decompressed)?;
-    }
+    let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
+    serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
     if max.is_some() {
         println!("   validate_reencode:");
 
-        for reduced in librezip::bestguess::reduce_entropy(&dictionary.vec(), &decompressed, codes)?
+        for reduced in librezip::bestguess::reduce_entropy(old_dictionary, &decompressed, codes)?
         {
             println!("{}", reduced);
         }
     }
-
-    dictionary.extend(&decompressed);
 
     Ok(())
 }

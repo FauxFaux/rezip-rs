@@ -34,14 +34,14 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-struct AllOptions<'p, 'd> {
+struct RefGuesser<'p, 'd> {
     preroll: &'p [u8],
     data: &'d [u8],
     map: BackMap,
 }
 
-struct AllOptionsCursor<'a, 'p: 'a, 'd: 'a> {
-    inner: &'a AllOptions<'p, 'd>,
+struct RefGuesserCursor<'a, 'p: 'a, 'd: 'a> {
+    inner: &'a RefGuesser<'p, 'd>,
     data_pos: usize,
 }
 
@@ -49,7 +49,7 @@ fn key_from_bytes(from: &[u8]) -> Key {
     (from[0], from[1], from[2])
 }
 
-impl<'p, 'd> AllOptions<'p, 'd> {
+impl<'p, 'd> RefGuesser<'p, 'd> {
     fn new(preroll: &'p [u8], data: &'d [u8]) -> Self {
         Self {
             preroll,
@@ -58,8 +58,8 @@ impl<'p, 'd> AllOptions<'p, 'd> {
         }
     }
 
-    fn at(&self, pos: usize) -> AllOptionsCursor {
-        AllOptionsCursor {
+    fn at(&self, pos: usize) -> RefGuesserCursor {
+        RefGuesserCursor {
             inner: self,
             data_pos: pos,
         }
@@ -70,7 +70,7 @@ impl<'p, 'd> AllOptions<'p, 'd> {
     }
 }
 
-impl<'a, 'p, 'd> AllOptionsCursor<'a, 'p, 'd> {
+impl<'a, 'p, 'd> RefGuesserCursor<'a, 'p, 'd> {
     pub fn key(&self) -> Option<Key> {
         if self.data_pos + 2 < self.inner.data.len() {
             Some(key_from_bytes(&self.inner.data[self.data_pos..]))
@@ -227,17 +227,17 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Resul
 }
 
 pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Result<Vec<usize>> {
-    let options = AllOptions::new(preroll, data);
+    let guesser = RefGuesser::new(preroll, data);
 
     let mut pos = 0usize;
 
     codes
         .into_iter()
         .flat_map(|orig| {
-            let options = options.at(pos);
-            let reduced: Option<Result<usize>> = options.all_candidates().and_then(|candidates| {
+            let guesser = guesser.at(pos);
+            let reduced: Option<Result<usize>> = guesser.all_candidates().and_then(|candidates| {
                 reduce_code(orig, candidates)
-                    .chain_err(|| format!("looking for {:?}", options.key()))
+                    .chain_err(|| format!("looking for {:?}", guesser.key()))
                     .invert()
             });
 
@@ -273,17 +273,17 @@ fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
 }
 
 pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Code> {
-    let options = AllOptions::new(preroll, data);
+    let guesser = RefGuesser::new(preroll, data);
     let mut hints = hints.into_iter().map(|x| *x);
 
     let mut ret = Vec::with_capacity(data.len());
     let mut pos = 0usize;
 
     loop {
-        let options = options.at(pos);
-        let orig = match options.all_candidates() {
+        let guesser = guesser.at(pos);
+        let orig = match guesser.all_candidates() {
             Some(candidates) => {
-                increase_code(candidates, &mut hints).unwrap_or_else(|| options.current_literal())
+                increase_code(candidates, &mut hints).unwrap_or_else(|| guesser.current_literal())
             }
             None => break,
         };
@@ -291,8 +291,8 @@ pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Cod
         pos += usize_from(orig.emitted_bytes());
     }
 
-    while pos < options.data_len() {
-        ret.push(options.at(pos).current_literal());
+    while pos < guesser.data_len() {
+        ret.push(guesser.at(pos).current_literal());
         pos += 1;
     }
 

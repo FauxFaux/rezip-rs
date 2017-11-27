@@ -22,21 +22,19 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
     let mut pos = 0usize;
     while pos < data.len() {
         let cursor = guesser.at(pos);
-        let best = cursor
-            .all_candidates()
-            .map(|candidates| {
-                // first byte bug
-                candidates.filter(move |r| usize_from(r.dist) != pos)
-            })
-            .and_then(best);
+        let best = match cursor.all_candidates() {
+            Some(candidates) => best(candidates.filter(move |r| usize_from(r.dist) != pos)),
+            None => break,
+        };
 
         println!("{}: saved: {:?} best: {:?}", pos, saved, best);
 
         match best {
             Some(best) => match saved {
-                Some(saved_ref) if best.run() > saved_ref.run()  => {
+                Some(saved_ref) if best.run() > saved_ref.run() => {
                     // there's a new ref here, and it's better.
                     // emit a literal for the saved ref, and save this instead.
+                    println!(" - better: literal {:?}, saving {:?}, +1", data[pos], best);
                     ret.push(Code::Literal(data[pos]));
                     saved = Some(best);
                     pos += 1;
@@ -44,24 +42,28 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
                 Some(saved_ref) => {
                     // the old ref was better than this ref, so emit it directly;
                     // discarding these matches as they're bad
+                    println!(" - worse: taking {:?}, dropping, +run", saved_ref);
                     ret.push(Code::Reference(saved_ref));
                     saved = None;
-                    pos += usize_from(saved_ref.run());
+                    pos += usize_from(saved_ref.run() - 1);
                 }
                 None => {
+                    println!(" - just us: saving {:?}, +1", best);
                     // nothing saved, so just save this run
                     saved = Some(best);
                     pos += 1;
                 }
-            }
+            },
             None => match saved {
                 Some(saved_ref) => {
                     // no run here, if we have a saved ref, it's the one
+                    println!(" - nothing here, using saved: {:?}, dropping, +run", saved_ref);
                     ret.push(Code::Reference(saved_ref));
                     saved = None;
-                    pos += usize_from(saved_ref.run());
+                    pos += usize_from(saved_ref.run()) - 1;
                 }
                 None => {
+                    println!(" - nothing here, nothing saved, lit: {:?}, +1", data[pos]);
                     // no run saved, and no run found, can only be a literal
                     ret.push(Code::Literal(data[pos]));
                     pos += 1;
@@ -70,7 +72,15 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
         }
     }
 
-    assert!(saved.is_none());
+    if let Some(saved_ref) = saved {
+        ret.push(Code::Reference(saved_ref));
+        pos += usize_from(saved_ref.run());
+    }
+
+    while pos < data.len() {
+        ret.push(Code::Literal(data[pos]));
+        pos += 1;
+    }
 
     Ok(ret)
 }
@@ -81,17 +91,13 @@ fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
         None => return None,
     };
 
-    if best.run() == 258 {
-        return Some(best);
-    }
-
     for candidate in candidates {
         if best.run() > candidate.run() {
             best = candidate;
         }
 
         if best.run() == 258 {
-            return Some(best);
+            break;
         }
     }
 

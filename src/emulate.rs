@@ -92,7 +92,7 @@ fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
     };
 
     for candidate in candidates {
-        if best.run() > candidate.run() {
+        if candidate.run() > best.run() {
             best = candidate;
         }
 
@@ -113,6 +113,12 @@ mod tests {
 
     fn r(dist: u16, run: u16) -> Code {
         Code::Reference(Ref::new(dist, run))
+    }
+
+    #[test]
+    fn best_in_the_right_order() {
+        use super::best;
+        assert_eq!(Some(Ref::new(2, 5)), best(vec![Ref::new(1, 3), Ref::new(2, 5)].into_iter()));
     }
 
     #[test]

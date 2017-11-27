@@ -32,20 +32,34 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
         match saved {
             None => match best {
                 Some(r) => {
+                    // there aren't any on going runs, so stash this run
                     saved = Some(r);
                 }
                 None => {
+                    // there's nothing saved and nothing here, we can just emit it
                     ret.push(Code::Literal(data[pos]));
                 }
             },
             Some(saved_run) => {
+                // something's saved, inspect the new run
                 let new_run = best.map(|r| r.run()).unwrap_or(0);
                 if new_run > saved_run.run() {
-                    saved = Some(saved_run);
-                    ret.push(Code::Literal(data[pos]));
+                    // it's better. Emit a literal for the old run, and save this one instead
+                    saved = Some(best.unwrap());
+                    ret.push(Code::Literal(data[pos - 1]));
                 } else {
-                    saved = None;
+                    // it's not better. Emit the old run, and save this run.
                     ret.push(Code::Reference(saved_run));
+                    match best {
+                        Some(new_run) => {
+                            saved = Some(new_run);
+                        }
+                        None => {
+                            saved = None;
+                            ret.push(Code::Literal(data[pos]));
+                        }
+                    }
+
                     pos += usize_from(saved_run.run() - 1);
                 }
             }

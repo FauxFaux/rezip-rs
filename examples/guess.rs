@@ -72,6 +72,16 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     let decompressed: Vec<u8> =
         librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter()).collect();
 
+    {
+        use std::io::Write;
+        fs::OpenOptions::new()
+            .append(true)
+            .create(true)
+            .write(true)
+            .open("a")?
+            .write_all(&decompressed)?;
+    }
+
     if max.is_some() {
         println!("   validate_reencode:");
 

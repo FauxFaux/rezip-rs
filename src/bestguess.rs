@@ -34,16 +34,6 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-fn find_all_options<'p, 'd>(preroll: &'p [u8], data: &'d [u8]) -> AllOptions<'p, 'd> {
-    let map = whole_map(preroll.iter().chain(data).map(|x| *x));
-
-    AllOptions {
-        preroll,
-        data,
-        map,
-    }
-}
-
 struct AllOptions<'p, 'd> {
     preroll: &'p [u8],
     data: &'d [u8],
@@ -60,6 +50,14 @@ fn key_from_bytes(from: &[u8]) -> Key {
 }
 
 impl<'p, 'd> AllOptions<'p, 'd> {
+    fn new(preroll: &'p [u8], data: &'d [u8]) -> Self {
+        Self {
+            preroll,
+            data,
+            map: whole_map(preroll.iter().chain(data).map(|x| *x)),
+        }
+    }
+
     fn at(&self, pos: usize) -> AllOptionsCursor {
         AllOptionsCursor {
             inner: self,
@@ -229,7 +227,7 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Resul
 }
 
 pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Result<Vec<usize>> {
-    let options = find_all_options(preroll, data);
+    let options = AllOptions::new(preroll, data);
 
     let mut pos = 0usize;
 
@@ -275,7 +273,7 @@ fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
 }
 
 pub fn increase_entropy(preroll: &[u8], data: &[u8], hints: &[usize]) -> Vec<Code> {
-    let options = find_all_options(preroll, data);
+    let options = AllOptions::new(preroll, data);
     let mut hints = hints.into_iter().map(|x| *x);
 
     let mut ret = Vec::with_capacity(data.len());

@@ -87,11 +87,13 @@ So, the bit stream is:
 
  * `1`: this is the last block in the sequence
  * `10`: this is a `fixed` `huffman` block, so there's no following tree.
- * `111100010`: `0xe2`
- * `110011000`: `0x98`
- * `10110011`: `0x83`
- * `0000000`: end of stream marker
- * `0000`: padding back up to a byte, at the end of the stream
+ * `111100010`: This code can be looked up in `fixed-huffman.txt`,
+    which explains that it maps to the literal byte `0xe2`.
+ * `110011000`: Also a fixed huffman code: literal byte `0x98`.
+ * `10110011`: Also a fixed huffman code: literal byte `0x83`.
+ * `0000000`: Also a fixed huffman code, this time for the end of stream marker,
+    which means we should stop reading now.
+ * `0000`: padding back up to a byte boundary, at the end of the stream.
 
 So, our data is 0xe2, 0x98, 0x83:
 
@@ -112,11 +114,11 @@ block 0:
 ```
 
 Unfortunately, due to the (3+7+4=) 14 bit overhead, and using nine bits to
-represent two of the three eight bit values, this hasn't actually compressed
-the snowman. The snowman is sad.
+represent two of the three eight bit values, this hasn't actually reduced the
+size of the snowman. The snowman is sad.
 
 
-### Actual compression?
+### Actual size reduction?
 
 Let's look at a slightly more interesting example:
 

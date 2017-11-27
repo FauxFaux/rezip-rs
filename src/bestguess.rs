@@ -500,22 +500,6 @@ mod tests {
     }
 
     #[test]
-    fn sub_range() {
-        use super::sub_range_inclusive as s;
-        assert_eq!(&[5, 6], s(5, 6, &[4, 5, 6, 7]));
-        assert_eq!(&[5, 6], s(5, 6, &[5, 6, 7]));
-        assert_eq!(&[5, 6], s(5, 6, &[4, 5, 6]));
-
-        assert_eq!(&[5, 6], s(4, 7, &[2, 3, 5, 6, 8, 9]));
-        assert_eq!(&[5, 6], s(4, 7, &[5, 6, 8, 9]));
-        assert_eq!(&[5, 6], s(4, 7, &[2, 3, 5, 6]));
-
-        assert_eq!(&[0usize; 0], s(7, 8, &[4, 5, 6]));
-        assert_eq!(&[0usize; 0], s(7, 8, &[9, 10]));
-        assert_eq!(&[0usize; 0], s(7, 8, &[]));
-    }
-
-    #[test]
     fn long_prelude() {
         let exp = &[
             L(b'b'),

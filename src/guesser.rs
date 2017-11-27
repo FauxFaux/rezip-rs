@@ -13,16 +13,6 @@ type Key = (u8, u8, u8);
 pub type Ref = (u16, u8);
 type BackMap = HashMap<Key, Vec<usize>>;
 
-fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
-    let mut map = BackMap::with_capacity(32 * 1024);
-
-    for (pos, keys) in data.tuple_windows::<Key>().enumerate() {
-        map.entry(keys).or_insert_with(|| Vec::new()).push(pos);
-    }
-
-    map
-}
-
 pub struct RefGuesser<'p, 'd> {
     preroll: &'p [u8],
     data: &'d [u8],
@@ -32,10 +22,6 @@ pub struct RefGuesser<'p, 'd> {
 pub struct RefGuesserCursor<'a, 'p: 'a, 'd: 'a> {
     inner: &'a RefGuesser<'p, 'd>,
     data_pos: usize,
-}
-
-fn key_from_bytes(from: &[u8]) -> Key {
-    (from[0], from[1], from[2])
 }
 
 impl<'p, 'd> RefGuesser<'p, 'd> {
@@ -137,6 +123,10 @@ impl<'a, 'p, 'd> RefGuesserCursor<'a, 'p, 'd> {
     }
 }
 
+fn key_from_bytes(from: &[u8]) -> Key {
+    (from[0], from[1], from[2])
+}
+
 fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
     let end_idx = match range.binary_search(&end) {
         Ok(e) => e + 1,
@@ -151,4 +141,33 @@ fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
     };
 
     &range[start_idx..]
+}
+
+fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
+    let mut map = BackMap::with_capacity(32 * 1024);
+
+    for (pos, keys) in data.tuple_windows::<Key>().enumerate() {
+        map.entry(keys).or_insert_with(|| Vec::new()).push(pos);
+    }
+
+    map
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn sub_range() {
+        use super::sub_range_inclusive as s;
+        assert_eq!(&[5, 6], s(5, 6, &[4, 5, 6, 7]));
+        assert_eq!(&[5, 6], s(5, 6, &[5, 6, 7]));
+        assert_eq!(&[5, 6], s(5, 6, &[4, 5, 6]));
+
+        assert_eq!(&[5, 6], s(4, 7, &[2, 3, 5, 6, 8, 9]));
+        assert_eq!(&[5, 6], s(4, 7, &[5, 6, 8, 9]));
+        assert_eq!(&[5, 6], s(4, 7, &[2, 3, 5, 6]));
+
+        assert_eq!(&[0usize; 0], s(7, 8, &[4, 5, 6]));
+        assert_eq!(&[0usize; 0], s(7, 8, &[9, 10]));
+        assert_eq!(&[0usize; 0], s(7, 8, &[]));
+    }
 }

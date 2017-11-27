@@ -15,6 +15,7 @@ pub mod bestguess;
 mod bit;
 pub mod circles;
 mod code_tree;
+pub mod emulate;
 mod errors;
 pub mod filter;
 mod guesser;

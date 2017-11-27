@@ -5,7 +5,7 @@ use Code;
 use Ref;
 use usize_from;
 
-fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
+pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
     let mut ret = Vec::with_capacity(data.len() / 258);
     let guesser = RefGuesser::new(preroll, data);
 
@@ -22,7 +22,13 @@ fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
     let mut pos = 0usize;
     while pos < data.len() {
         let cursor = guesser.at(pos);
-        let best = cursor.all_candidates().and_then(best);
+        let best = cursor
+            .all_candidates()
+            .map(|candidates| {
+                // first byte bug
+                candidates.filter(move |r| usize_from(r.dist) != pos)
+            })
+            .and_then(best);
         match saved {
             None => match best {
                 Some(r) => {
@@ -32,20 +38,23 @@ fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
                     ret.push(Code::Literal(data[pos]));
                 }
             },
-            Some(r) => {
+            Some(saved_run) => {
                 let new_run = best.map(|r| r.run()).unwrap_or(0);
-                if new_run > r.run() {
-                    saved = Some(r);
+                if new_run > saved_run.run() {
+                    saved = Some(saved_run);
                     ret.push(Code::Literal(data[pos]));
                 } else {
-                    ret.push(Code::Reference(r));
-                    pos += usize_from(r.run() - 1);
+                    saved = None;
+                    ret.push(Code::Reference(saved_run));
+                    pos += usize_from(saved_run.run() - 1);
                 }
             }
         }
 
         pos += 1;
     }
+
+    assert!(saved.is_none());
 
     Ok(ret)
 }
@@ -85,7 +94,7 @@ mod tests {
     }
 
     #[test]
-    fn simple() {
+    fn gzip_simple_ref() {
         assert_eq!(
             &[L(b'a'), L(b'a'), L(b'b'), L(b'c'), r(3, 3)],
             gzip(b"", b"aabcabc",).unwrap().as_slice()
@@ -93,10 +102,26 @@ mod tests {
     }
 
     #[test]
-    fn first_byte_bug() {
+    fn gzip_simple_ref_then() {
+        assert_eq!(
+            &[L(b'a'), L(b'a'), L(b'b'), L(b'c'), r(3, 3), L(b'd')],
+            gzip(b"", b"aabcabcd",).unwrap().as_slice()
+        )
+    }
+
+    #[test]
+    fn gzip_first_byte_bug() {
         assert_eq!(
             &[L(b'a'), L(b'b'), L(b'c'), L(b'a'), L(b'b'), L(b'c')],
             gzip(b"", b"abcabc",).unwrap().as_slice()
+        )
+    }
+
+    #[test]
+    fn gzip_longer() {
+        assert_eq!(
+            &[L(b'a'), L(b'1'), L(b'2'), L(b'3'), L(b'4'), r(4, 3), r(7, 4)],
+            gzip(b"", b"a12341231234",).unwrap().as_slice()
         )
     }
 }

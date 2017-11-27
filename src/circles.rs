@@ -174,4 +174,11 @@ mod tests {
         assert_eq!(b'1', buf.get_at_dist(4));
         assert_eq!(3, buf.possible_run_length_at(4, b"122222"));
     }
+
+    #[test]
+    fn veccy() {
+        let mut buf = CircularBuffer::with_capacity(6);
+        buf.extend(b"abcdefghij");
+        assert_eq!(b"efghij", buf.vec().as_slice());
+    }
 }

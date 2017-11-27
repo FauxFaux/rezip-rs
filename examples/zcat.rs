@@ -32,15 +32,16 @@ fn run() -> Result<()> {
     for (id, block) in librezip::parse_deflate(&mut reader).into_iter().enumerate() {
         let block = block?;
 
-        write!(stderr, "block {}:", id);
+        write!(stderr, "block {}\n", id)?;
         use self::Block::*;
         match block {
             Uncompressed(data) => {
-                write!(stderr, " - uncompressed: {} bytes", data.len())?;
+                write!(stderr, " - uncompressed: {} bytes\n", data.len())?;
                 stdout.write_all(&data)?;
                 dictionary.extend(&data);
             }
             FixedHuffman(codes) | DynamicHuffman { codes, .. } => {
+                write!(stderr, " - huffman codes: {}\n", codes.len())?;
                 let decompressed: Vec<u8> =
                     librezip::serialise::DecompressedBytes::new(&dictionary.vec(), codes.iter())
                         .collect();

@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate error_chain;
 extern crate librezip;
+#[macro_use]
+extern crate pretty_assertions;
 
 use std::env;
 use std::fs;

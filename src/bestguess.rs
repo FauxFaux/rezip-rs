@@ -79,10 +79,6 @@ impl<'a, 'p, 'd> RefGuesserCursor<'a, 'p, 'd> {
         }
     }
 
-    fn pos(&self) -> usize {
-        self.data_pos + self.inner.preroll.len()
-    }
-
     // None if we are out of possible keys, or Some(possibly empty list)
     pub fn all_candidates<'m>(&'m self) -> Option<Box<Iterator<Item = Ref> + 'm>> {
         let key = match self.key() {
@@ -90,8 +86,7 @@ impl<'a, 'p, 'd> RefGuesserCursor<'a, 'p, 'd> {
             None => return None,
         };
 
-        // TODO: off-by-ones?
-        let pos = self.pos();
+        let pos = self.inner.preroll.len() + self.data_pos;
 
         // we can only find ourselves, which is invalid, and not handled by (inclusive) range code
         // Maybe I should fix the inclusive range code? Or pretend this is an optimisation.
@@ -100,7 +95,8 @@ impl<'a, 'p, 'd> RefGuesserCursor<'a, 'p, 'd> {
         }
 
         Some(Box::new(
-            self.inner.map
+            self.inner
+                .map
                 .get(&key)
                 .map(|v| {
                     sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
@@ -220,8 +216,7 @@ fn reduce_code<I: Iterator<Item = Ref>>(orig: &Code, mut candidates: I) -> Resul
         }
 
         Code::Reference { dist, run_minus_3 } => {
-            Some(find_reference_score(dist, run_minus_3, candidates)
-                .chain_err(|| format!("looking for {:?}", orig))?)
+            Some(find_reference_score(dist, run_minus_3, candidates)?)
         }
     })
 }
@@ -235,11 +230,9 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Result<Vec
         .into_iter()
         .flat_map(|orig| {
             let guesser = guesser.at(pos);
-            let reduced: Option<Result<usize>> = guesser.all_candidates().and_then(|candidates| {
-                reduce_code(orig, candidates)
-                    .chain_err(|| format!("looking for {:?}", guesser.key()))
-                    .invert()
-            });
+            let reduced = guesser
+                .all_candidates()
+                .and_then(|candidates| reduce_code(orig, candidates).invert());
 
             pos += usize_from(orig.emitted_bytes());
 
@@ -250,7 +243,7 @@ pub fn reduce_entropy(preroll: &[u8], data: &[u8], codes: &[Code]) -> Result<Vec
 
 fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
     candidates: I,
-    mut hint: J,
+    mut hints: J,
 ) -> Option<Code> {
     let mut candidates = candidates.peekable();
     Some(match candidates.peek() {
@@ -260,7 +253,7 @@ fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
         Some(_) => {
             let candidates = sorted_candidates(candidates);
 
-            match hint.next()
+            match hints.next()
                 .expect("there were some candidates, so we should have some hints left")
             {
                 0 => candidates.get(0).expect("invalid input 1").into(),

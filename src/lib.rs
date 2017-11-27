@@ -17,6 +17,7 @@ pub mod circles;
 mod code_tree;
 mod errors;
 pub mod filter;
+mod guesser;
 pub mod gzip;
 mod huffman;
 pub mod infer;

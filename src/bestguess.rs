@@ -121,8 +121,8 @@ fn increase_code<I: Iterator<Item = Ref>, J: Iterator<Item = usize>>(
 ) -> Option<Code> {
     let mut candidates = candidates.peekable();
     Some(match candidates.peek() {
-        Some(r) if 1 == r.dist && 258 == r.run() => {
-            Code::Reference(*r)
+        Some(&r) if 1 == r.dist && 258 == r.run() => {
+            Code::Reference(r)
         }
         Some(_) => {
             let candidates = sorted_candidates(candidates);
@@ -175,7 +175,11 @@ mod tests {
     use serialise;
     use Code;
     use Code::Literal as L;
-    use Code::Reference as R;
+    use Ref;
+
+    fn r(dist: u16, run: u16) {
+        Code::Reference(Ref::new(dist, run))
+    }
 
     #[test]
     fn re_1_single_backref_abcdef_bcdefghi() {

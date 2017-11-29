@@ -35,7 +35,7 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
                     // there's a new ref here, and it's better.
                     // emit a literal for the saved ref, and save this instead.
                     println!(" - better: literal {:?}, saving {:?}, +1", data[pos], best);
-                    ret.push(Code::Literal(data[pos]));
+                    ret.push(Code::Literal(data[pos - 1]));
                     saved = Some(best);
                     pos += 1;
                 }
@@ -164,4 +164,32 @@ mod tests {
             gzip(b"", b"a12341231234",).unwrap().as_slice()
         )
     }
+
+    #[test]
+    fn lazy_longer_ref() {
+        // Finally, a test for this gzip behaviour.
+        // It only does this with zip levels >3, including the default.
+
+        // a123412f41234
+        // 0123456789012
+
+        // It gets to position 8, and it's ignoring the "412" (at position 6),
+        // instead taking the longer run of "1234" at position 1.
+
+        // I bet it thinks it's so smart.
+
+        assert_eq!(&[
+            L(b'a'),
+            L(b'1'),
+            L(b'2'),
+            L(b'3'),
+            L(b'4'),
+            L(b'1'),
+            L(b'2'),
+            L(b'f'),
+            L(b'4'),
+            r(8, 4),
+        ], gzip(&[], b"a123412f41234").unwrap().as_slice());
+    }
+
 }

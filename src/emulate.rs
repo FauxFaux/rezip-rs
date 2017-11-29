@@ -101,7 +101,11 @@ fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
         }
     }
 
-    Some(best)
+    if best.dist > 4096 && 3 == best.run() {
+        None
+    } else {
+        Some(best)
+    }
 }
 
 #[cfg(test)]

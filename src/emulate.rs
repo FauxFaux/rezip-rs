@@ -57,7 +57,10 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
             None => match saved {
                 Some(saved_ref) => {
                     // no run here, if we have a saved ref, it's the one
-                    println!(" - nothing here, using saved: {:?}, dropping, +run", saved_ref);
+                    println!(
+                        " - nothing here, using saved: {:?}, dropping, +run",
+                        saved_ref
+                    );
                     ret.push(Code::Reference(saved_ref));
                     saved = None;
                     pos += usize_from(saved_ref.run()) - 1;
@@ -85,6 +88,62 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
     Ok(ret)
 }
 
+
+pub fn three_zip(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
+    let first = guesser.at(pos);
+    let first_best = match first.all_candidates().and_then(best) {
+        // there's a good run, use it
+        Some(r) if r.run() > 3 => return vec![r.into()],
+
+        // there's a possibly bad run
+        Some(r) => r,
+
+        // there's no run, or we're at the end: only a literal
+        None => return vec![first.current_literal()],
+    };
+
+    assert_eq!(3, first_best.run());
+
+    let second = guesser.at(pos + 1);
+    let second_best = second
+        .all_candidates()
+        .and_then(best)
+        .and_then(discard_three);
+
+    // optimisation:
+    if let Some(r) = second_best {
+        if r.run() == 258 {
+            // no point searching for a 3-length run, as this will win.
+            return vec![first.current_literal(), r.into()];
+        }
+    }
+
+    let third = guesser.at(pos + 2);
+    let third_best = third
+        .all_candidates()
+        .and_then(best)
+        .and_then(discard_three);
+
+    let third_result = |third_run: Ref| {
+        vec![
+            first.current_literal(),
+            second.current_literal(),
+            third_run.into(),
+        ]
+    };
+
+    match second_best {
+        Some(second_run) => match third_best {
+            Some(third_run) if third_run.run() > second_run.run() => third_result(third_run),
+            Some(_) | None => vec![first.current_literal(), second_run.into()],
+        },
+        None => match third_best {
+            Some(third_run) => third_result(third_run),
+            None => vec![first_best.into()],
+        },
+    }
+}
+
 fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
     let mut best = match candidates.next() {
         Some(r) => r,
@@ -108,6 +167,14 @@ fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
     }
 }
 
+fn discard_three(from: Ref) -> Option<Ref> {
+    if from.run() > 3 {
+        Some(from)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::gzip;
@@ -122,7 +189,10 @@ mod tests {
     #[test]
     fn best_in_the_right_order() {
         use super::best;
-        assert_eq!(Some(Ref::new(2, 5)), best(vec![Ref::new(1, 3), Ref::new(2, 5)].into_iter()));
+        assert_eq!(
+            Some(Ref::new(2, 5)),
+            best(vec![Ref::new(1, 3), Ref::new(2, 5)].into_iter())
+        );
     }
 
     #[test]
@@ -178,18 +248,21 @@ mod tests {
 
         // I bet it thinks it's so smart.
 
-        assert_eq!(&[
-            L(b'a'),
-            L(b'1'),
-            L(b'2'),
-            L(b'3'),
-            L(b'4'),
-            L(b'1'),
-            L(b'2'),
-            L(b'f'),
-            L(b'4'),
-            r(8, 4),
-        ], gzip(&[], b"a123412f41234").unwrap().as_slice());
+        assert_eq!(
+            &[
+                L(b'a'),
+                L(b'1'),
+                L(b'2'),
+                L(b'3'),
+                L(b'4'),
+                L(b'1'),
+                L(b'2'),
+                L(b'f'),
+                L(b'4'),
+                r(8, 4)
+            ],
+            gzip(&[], b"a123412f41234").unwrap().as_slice()
+        );
     }
 
 }

@@ -103,6 +103,12 @@ impl Ref {
     }
 }
 
+impl From<Ref> for Code {
+    fn from(r: Ref) -> Self {
+        Code::Reference(r)
+    }
+}
+
 impl fmt::Debug for Code {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {

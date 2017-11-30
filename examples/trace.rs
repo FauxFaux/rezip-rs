@@ -13,10 +13,13 @@ use librezip::Code;
 use librezip::bestguess;
 use librezip::circles::CircularBuffer;
 use librezip::emulate;
+use librezip::guesser::RefGuesser;
 use librezip::infer;
 use librezip::serialise;
 use librezip::serialise_trace;
 use librezip::trace;
+
+use librezip::Trace;
 
 quick_main!(run);
 
@@ -56,20 +59,36 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
 
     let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
+
+    let rg = RefGuesser::new(old_dictionary, &decompressed);
     let trace = trace::validate(old_dictionary, codes, emulate::three_zip);
     let serialise = serialise_trace::verify(&trace);
     print!("   * codes: ");
     for c in codes {
         match *c {
-            Code::Literal(byte) if char::from(byte).is_alphanumeric() => print!("{}", char::from(byte)),
+            Code::Literal(byte) if char::from(byte).is_alphanumeric() => {
+                print!("{}", char::from(byte))
+            }
             Code::Literal(byte) => print!("{:?}", char::from(byte)),
             Code::Reference(r) => print!(" -- {:?} -- ", r),
         }
     }
     println!();
     print!("   * trace: ");
-    for t in trace {
-        print!("{:?}", t);
+    let mut pos = 0;
+    for (t, c) in trace.iter().zip(codes.iter()) {
+        match *t {
+            Trace::Correct => {},
+            Trace::Actual(correct) => print!(
+                "   {:4}. {:10?} guess: {:?} trace: {:?}\n",
+                pos,
+                String::from_utf8_lossy(&decompressed[(pos-5).max(0)..(pos+5).min(decompressed.len())]),
+                emulate::three_zip(&rg, pos),
+                correct
+            ),
+        }
+
+        pos += c.emitted_bytes() as usize;
     }
     println!();
     println!("   * after: {}", serialise.len());

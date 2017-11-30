@@ -20,7 +20,7 @@ mod code_tree;
 pub mod emulate;
 mod errors;
 pub mod filter;
-mod guesser;
+pub mod guesser;
 pub mod gzip;
 mod huffman;
 pub mod infer;
@@ -89,7 +89,7 @@ pub enum Trace {
 }
 
 impl Code {
-    fn emitted_bytes(&self) -> u16 {
+    pub fn emitted_bytes(&self) -> u16 {
         match *self {
             Code::Literal(_) => 1,
             Code::Reference(r) => r.run(),

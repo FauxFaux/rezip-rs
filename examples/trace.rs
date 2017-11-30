@@ -58,6 +58,20 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
     let trace = trace::validate(old_dictionary, codes, emulate::three_zip);
     let serialise = serialise_trace::verify(&trace);
+    print!("   * codes: ");
+    for c in codes {
+        match *c {
+            Code::Literal(byte) if char::from(byte).is_alphanumeric() => print!("{}", char::from(byte)),
+            Code::Literal(byte) => print!("{:?}", char::from(byte)),
+            Code::Reference(r) => print!(" -- {:?} -- ", r),
+        }
+    }
+    println!();
+    print!("   * trace: ");
+    for t in trace {
+        print!("{:?}", t);
+    }
+    println!();
     println!("   * after: {}", serialise.len());
 
     Ok(())

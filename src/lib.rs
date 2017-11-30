@@ -82,7 +82,7 @@ pub struct WindowSettings {
     first_byte_bug: bool,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Trace {
     Correct,
     Actual(Code),
@@ -127,6 +127,15 @@ impl fmt::Debug for Code {
         match *self {
             Code::Literal(byte) => write!(f, "L(0x{:02x} {:?})", byte, byte as char),
             Code::Reference(r) => write!(f, "R(-{}, {})", r.dist, r.run()),
+        }
+    }
+}
+
+impl fmt::Debug for Trace {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Trace::Correct => write!(f, "✓"),
+            Trace::Actual(code) => write!(f, "c{:?}", code),
         }
     }
 }

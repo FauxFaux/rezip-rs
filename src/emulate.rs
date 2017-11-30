@@ -113,7 +113,7 @@ pub fn three_zip(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
     // optimisation:
     if let Some(r) = second_best {
         if r.run() == 258 {
-            // no point searching for a 3-length run, as this will win.
+            // no point searching for a third run, as this will win.
             return vec![first.current_literal(), r.into()];
         }
     }

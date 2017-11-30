@@ -1,3 +1,5 @@
+extern crate byteorder;
+
 #[macro_use]
 extern crate error_chain;
 
@@ -24,6 +26,7 @@ mod huffman;
 pub mod infer;
 pub mod parse;
 pub mod serialise;
+pub mod serialise_trace;
 pub mod trace;
 
 use bit::BitVec;

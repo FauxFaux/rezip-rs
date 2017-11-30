@@ -1,3 +1,5 @@
+#![feature(option_filter)]
+
 extern crate byteorder;
 
 #[macro_use]

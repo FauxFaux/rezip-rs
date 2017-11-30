@@ -108,7 +108,7 @@ pub fn three_zip(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
     let second_best = second
         .all_candidates()
         .and_then(best)
-        .and_then(discard_three);
+        .filter(|x| x.run() > 3);
 
     // optimisation:
     if let Some(r) = second_best {
@@ -122,7 +122,7 @@ pub fn three_zip(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
     let third_best = third
         .all_candidates()
         .and_then(best)
-        .and_then(discard_three);
+        .filter(|x| x.run() > 4);
 
     let third_result = |third_run: Ref| {
         vec![
@@ -164,14 +164,6 @@ fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
         None
     } else {
         Some(best)
-    }
-}
-
-fn discard_three(from: Ref) -> Option<Ref> {
-    if from.run() > 3 {
-        Some(from)
-    } else {
-        None
     }
 }
 

@@ -12,18 +12,11 @@ pub enum Trace {
     Actual(Code),
 }
 
-pub fn trace<F>(preroll: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
+pub fn trace<F>(preroll: &[u8], data: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
 where
     F: Fn(&RefGuesser, usize) -> Vec<Code>,
 {
     let mut ret = Vec::with_capacity(codes.len());
-
-    let mut data = Vec::with_capacity(codes.len());
-    {
-        let mut prebuf = CircularBuffer::with_capacity(32 * 1024);
-        prebuf.extend(preroll);
-        serialise::decompressed_codes(&mut data, &mut prebuf, codes).unwrap();
-    }
 
     let rg = RefGuesser::new(preroll, &data);
     let mut pos = 0;
@@ -89,6 +82,27 @@ where
     }
 
     ret
+}
+
+pub fn validate<F>(preroll: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
+where
+    F: Fn(&RefGuesser, usize) -> Vec<Code>,
+{
+    let data = decode(preroll, codes);
+    let trace = trace(preroll, &data, codes, &guesser);
+    let restored = restore(preroll, &data, &trace, guesser);
+
+    assert_eq!(codes, restored.as_slice());
+
+    trace
+}
+
+fn decode(preroll: &[u8], codes: &[Code]) -> Vec<u8> {
+    let mut data = Vec::with_capacity(codes.len());
+    let mut prebuf = CircularBuffer::with_capacity(32 * 1024);
+    prebuf.extend(preroll);
+    serialise::decompressed_codes(&mut data, &mut prebuf, codes).unwrap();
+    data
 }
 
 fn shared_prefix<'l, 't, T: 't + Eq, I: Iterator<Item = &'t T>>(

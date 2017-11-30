@@ -12,9 +12,9 @@ pub enum Trace {
     Actual(Code),
 }
 
-pub fn trace<F>(preroll: &[u8], codes: &[Code], mut guesser: F) -> Vec<Trace>
+pub fn trace<F>(preroll: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
 where
-    F: FnMut(&RefGuesser, usize) -> Vec<Code>,
+    F: Fn(&RefGuesser, usize) -> Vec<Code>,
 {
     let mut ret = Vec::with_capacity(codes.len());
 
@@ -32,6 +32,8 @@ where
 
     while pos < rg.data_len() {
         let guesses = guesser(&rg, pos);
+        assert!(!guesses.is_empty());
+
         let matches = shared_prefix(&guesses, &mut codes);
         for matched in matches {
             ret.push(Trace::Correct);
@@ -48,6 +50,41 @@ where
                 pos += usize_from(code.emitted_bytes());
             }
             None => panic!("the guesser guessed more than there actually are?"),
+        }
+    }
+
+    ret
+}
+
+pub fn restore<F>(preroll: &[u8], data: &[u8], trace: &[Trace], guesser: F) -> Vec<Code>
+where
+    F: Fn(&RefGuesser, usize) -> Vec<Code>,
+{
+    let mut ret = Vec::with_capacity(trace.len());
+
+    let rg = RefGuesser::new(preroll, data);
+    let mut pos = 0;
+
+    let mut trace = trace.into_iter().peekable();
+
+    while pos < rg.data_len() {
+        let guesses = guesser(&rg, pos);
+        assert!(!guesses.is_empty());
+
+        for guess in guesses {
+            let hint = *trace.next().expect("not out of data");
+            let orig = match hint {
+                Trace::Correct => guess,
+                Trace::Actual(other) => other,
+            };
+
+            pos += usize_from(orig.emitted_bytes());
+            ret.push(orig);
+
+            if let Trace::Actual(_) = hint {
+                // the guesser was wrong, and we moved in a way it doesn't understand; ignore it
+                break;
+            }
         }
     }
 
@@ -103,7 +140,16 @@ mod tests {
             trace(
                 &[],
                 &[Code::Literal(b'a')],
-                |_, _| vec![Code::Literal(b'b')]
+                |_, _| vec![Code::Literal(b'N')]
+            )
+        );
+
+        assert_eq!(
+            vec![C],
+            trace(
+                &[],
+                &[Code::Literal(b'a')],
+                |_, _| vec![Code::Literal(b'a')]
             )
         );
     }

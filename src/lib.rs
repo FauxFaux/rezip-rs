@@ -79,6 +79,12 @@ pub struct WindowSettings {
     first_byte_bug: bool,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Trace {
+    Correct,
+    Actual(Code),
+}
+
 impl Code {
     fn emitted_bytes(&self) -> u16 {
         match *self {
@@ -91,8 +97,11 @@ impl Code {
 impl Ref {
     #[inline]
     fn new(dist: u16, run: u16) -> Self {
-        assert!(run <= 258);
         assert!(run >= 3);
+        assert!(run <= 258);
+
+        assert!(dist >= 1);
+        assert!(dist <= 32768);
 
         let run_minus_3 = (run - 3) as u8;
         Ref { dist, run_minus_3 }

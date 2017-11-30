@@ -4,13 +4,8 @@ use circles::CircularBuffer;
 use guesser::RefGuesser;
 use serialise;
 use Code;
+use Trace;
 use usize_from;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Trace {
-    Correct,
-    Actual(Code),
-}
 
 pub fn trace<F>(preroll: &[u8], data: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
 where
@@ -125,6 +120,10 @@ fn shared_prefix<'l, 't, T: 't + Eq, I: Iterator<Item = &'t T>>(
 mod tests {
     use std::iter;
 
+    use guesser::RefGuesser;
+    use Code;
+    use Trace;
+
     #[test]
     fn prefix() {
         use super::shared_prefix;
@@ -143,10 +142,15 @@ mod tests {
         assert!(shared_prefix(&[1, 5, 7], &mut iter::empty().peekable()).is_empty());
     }
 
+    fn trace<F>(preroll: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
+    where
+        F: Fn(&RefGuesser, usize) -> Vec<Code>,
+    {
+        super::trace(preroll, &super::decode(preroll, codes), codes, guesser)
+    }
+
     #[test]
     fn trace_dumb() {
-        use Code;
-        use super::trace;
         use super::Trace::Correct as C;
         use super::Trace::Actual as A;
         assert_eq!(

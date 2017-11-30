@@ -75,14 +75,16 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     }
     println!();
     print!("   * trace: ");
-    let mut pos = 0;
+    let mut pos = 0usize;
     for (t, c) in trace.iter().zip(codes.iter()) {
         match *t {
-            Trace::Correct => {},
+            Trace::Correct => {}
             Trace::Actual(correct) => print!(
                 "   {:4}. {:10?} guess: {:?} trace: {:?}\n",
                 pos,
-                String::from_utf8_lossy(&decompressed[(pos-5).max(0)..(pos+5).min(decompressed.len())]),
+                String::from_utf8_lossy(
+                    &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())]
+                ),
                 emulate::three_zip(&rg, pos),
                 correct
             ),

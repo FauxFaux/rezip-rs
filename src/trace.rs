@@ -4,21 +4,19 @@ use circles::CircularBuffer;
 use guesser::RefGuesser;
 use serialise;
 use Code;
+use Technique;
 use Trace;
 use usize_from;
 
-pub fn trace<F>(codes: &[Code], guesser: F, data_len: usize) -> Vec<Trace>
-where
-    F: Fn(usize) -> Vec<Code>,
-{
+pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
     let mut ret = Vec::with_capacity(codes.len());
 
     let mut pos = 0;
 
     let mut codes = codes.into_iter().peekable();
 
-    while pos < data_len {
-        let guesses = guesser(pos);
+    while pos < technique.data_len() {
+        let guesses = technique.codes_at(pos);
         assert!(!guesses.is_empty());
 
         let matches = shared_prefix(&guesses, &mut codes);
@@ -43,18 +41,15 @@ where
     ret
 }
 
-pub fn restore<F>(trace: &[Trace], guesser: F, data_len: usize) -> Vec<Code>
-where
-    F: Fn(usize) -> Vec<Code>,
-{
+pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
     let mut ret = Vec::with_capacity(trace.len());
 
     let mut pos = 0;
 
     let mut trace = trace.into_iter().peekable();
 
-    while pos < data_len {
-        let guesses = guesser(pos);
+    while pos < technique.data_len() {
+        let guesses = technique.codes_at(pos);
         assert!(!guesses.is_empty());
 
         for guess in guesses {
@@ -77,14 +72,10 @@ where
     ret
 }
 
-pub fn validate<F>(preroll: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
-where
-    F: Fn(&RefGuesser, usize) -> Vec<Code>,
-{
+pub fn validate(preroll: &[u8], codes: &[Code], technique: &Technique) -> Vec<Trace> {
     let data = decode(preroll, codes);
-    let rg = RefGuesser::new(preroll, &data);
-    let trace = trace(codes, |pos| guesser(&rg, pos), rg.data_len());
-    let restored = restore(&trace, |pos| guesser(&rg, pos), rg.data_len());
+    let trace = trace(codes, technique);
+    let restored = restore(&trace, technique);
 
     assert_eq!(codes, restored.as_slice());
 
@@ -147,7 +138,7 @@ mod tests {
     {
         let data = super::decode(preroll, codes);
         let rg = RefGuesser::new(preroll, &data);
-        super::trace(codes, guesser, rg.data_len())
+        super::trace(codes, &::Technique { rg: rg })
     }
 
     #[test]
@@ -156,20 +147,12 @@ mod tests {
         use super::Trace::Actual as A;
         assert_eq!(
             vec![A(Code::Literal(b'a'))],
-            trace(
-                &[],
-                &[Code::Literal(b'a')],
-                | _| vec![Code::Literal(b'N')]
-            )
+            trace(&[], &[Code::Literal(b'a')], |_| vec![Code::Literal(b'N')])
         );
 
         assert_eq!(
             vec![C],
-            trace(
-                &[],
-                &[Code::Literal(b'a')],
-                | _| vec![Code::Literal(b'a')]
-            )
+            trace(&[], &[Code::Literal(b'a')], |_| vec![Code::Literal(b'a')])
         );
     }
 }

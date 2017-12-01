@@ -9,6 +9,13 @@ pub fn drop_far_threes<I: Iterator<Item = Ref>>(candidates: I) -> Option<Ref> {
     longest(candidates).filter(|r| r.run() > 3 || r.dist <= 4096)
 }
 
+pub enum Picker {
+    Longest,
+    DropFarThrees,
+}
+
+impl Picker {}
+
 #[cfg(test)]
 mod tests {
     use Ref;

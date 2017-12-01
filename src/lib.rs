@@ -64,6 +64,19 @@ pub trait Finder {
     fn data_len(&self) -> usize;
 }
 
+pub struct Technique<'p, 'd> {
+    pub rg: guesser::RefGuesser<'p, 'd>,
+}
+
+impl<'p, 'd> Technique<'p, 'd> {
+    pub fn codes_at(&self, pos: usize) -> Vec<Code> {
+        lookahead::gzip(&self.rg, pos)
+    }
+    pub fn data_len(&self) -> usize {
+        self.rg.data_len()
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct WindowSettings {
     window_size: u16,

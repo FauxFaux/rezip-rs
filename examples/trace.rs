@@ -59,9 +59,8 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
     let rg = RefGuesser::new(old_dictionary, &decompressed);
-    let trace = trace::validate(old_dictionary, codes, |finder, pos| {
-        lookahead::three_zip(finder, pos)
-    });
+    let technique = librezip::Technique { rg };
+    let trace = trace::validate(old_dictionary, codes, &technique);
     let serialise = serialise_trace::verify(&trace);
     if false {
         print!("   * codes: ");
@@ -88,7 +87,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
                 String::from_utf8_lossy(
                     &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())]
                 ),
-                lookahead::three_zip(&rg, pos),
+                lookahead::three_zip(&technique.rg, pos),
                 correct
             ),
         }

@@ -2,6 +2,12 @@ use Code;
 use Finder;
 use Ref;
 
+pub enum Lookahead {
+    Greedy,
+    Gzip,
+    ThreeZip,
+}
+
 pub fn greedy<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
     vec![
         match finder.best_candidate(pos) {

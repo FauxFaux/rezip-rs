@@ -32,35 +32,26 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         }
     }
 
-    pub fn at(&self, pos: usize) -> AllRefsCursor {
-        AllRefsCursor {
-            inner: self,
-            data_pos: pos,
-        }
-    }
-
     pub fn data_len(&self) -> usize {
         self.data.len()
     }
-}
 
-impl<'a, 'p, 'd> AllRefsCursor<'a, 'p, 'd> {
-    fn key(&self) -> Option<Key> {
-        if self.data_pos + 2 < self.inner.data.len() {
-            Some(key_from_bytes(&self.inner.data[self.data_pos..]))
+    fn key(&self, data_pos: usize) -> Option<Key> {
+        if data_pos + 2 < self.data.len() {
+            Some(key_from_bytes(&self.data[data_pos..]))
         } else {
             None
         }
     }
 
     // None if we are out of possible keys, or Some(possibly empty list)
-    pub fn all_refs<'m>(&'m self) -> Option<Box<Iterator<Item = Ref> + 'm>> {
-        let key = match self.key() {
+    pub fn at<'m>(&'m self, data_pos: usize) -> Option<Box<Iterator<Item = Ref> + 'm>> {
+        let key = match self.key(data_pos) {
             Some(key) => key,
             None => return None,
         };
 
-        let pos = self.inner.preroll.len() + self.data_pos;
+        let pos = self.preroll.len() + data_pos;
 
         // we can only find ourselves, which is invalid, and not handled by (inclusive) range code
         // Maybe I should fix the inclusive range code? Or pretend this is an optimisation.
@@ -69,8 +60,7 @@ impl<'a, 'p, 'd> AllRefsCursor<'a, 'p, 'd> {
         }
 
         Some(Box::new(
-            self.inner
-                .map
+            self.map
                 .get(&key)
                 .map(|v| {
                     sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
@@ -80,34 +70,30 @@ impl<'a, 'p, 'd> AllRefsCursor<'a, 'p, 'd> {
                 .rev()
                 .map(move |off| {
                     let dist = u16_from(pos - off);
-                    let run = self.possible_run_length_at(dist);
+                    let run = self.possible_run_length_at(data_pos, dist);
                     Ref::new(dist, run)
                 }),
         ))
     }
 
-    fn current_literal(&self) -> Code {
-        Code::Literal(self.inner.data[self.data_pos])
-    }
-
-    fn get_at_dist(&self, dist: u16) -> u8 {
+    fn get_at_dist(&self, data_pos: usize, dist: u16) -> u8 {
         debug_assert!(dist > 0);
-        let pos = self.data_pos;
+        let pos = data_pos;
         let dist = usize_from(dist);
 
         if dist <= pos {
-            self.inner.data[pos - dist]
+            self.data[pos - dist]
         } else {
-            self.inner.preroll[self.inner.preroll.len() - (dist - pos)]
+            self.preroll[self.preroll.len() - (dist - pos)]
         }
     }
 
-    fn possible_run_length_at(&self, dist: u16) -> u16 {
-        let upcoming_data = &self.inner.data[self.data_pos..];
+    fn possible_run_length_at(&self, data_pos: usize, dist: u16) -> u16 {
+        let upcoming_data = &self.data[data_pos..];
         let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
 
         for cur in 3..dist.min(upcoming_data.len() as u16) {
-            if upcoming_data[cur as usize] != self.get_at_dist(dist - cur) {
+            if upcoming_data[cur as usize] != self.get_at_dist(data_pos, dist - cur) {
                 return cur;
             }
         }

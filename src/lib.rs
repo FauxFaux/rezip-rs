@@ -85,8 +85,7 @@ impl<'p, 'd> DataLen for Technique<'p, 'd> {
 
 impl<'p, 'd> Looker for Technique<'p, 'd> {
     fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
-        let here = self.all_refs.at(pos);
-        let candidates = here.all_refs();
+        let candidates = self.all_refs.at(pos);
         (
             self.all_refs.data[pos],
             candidates.and_then(|it| self.picker.picker(it)),

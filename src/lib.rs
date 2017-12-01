@@ -15,7 +15,7 @@ extern crate sha2;
 
 use std::fmt;
 
-pub mod bestguess;
+mod bestguess;
 mod bit;
 pub mod circles;
 mod code_tree;

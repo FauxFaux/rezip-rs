@@ -10,11 +10,9 @@ use librezip::Result;
 use librezip::Block;
 use librezip::Code;
 
-use librezip::bestguess;
 use librezip::circles::CircularBuffer;
 use librezip::emulate;
 use librezip::guesser::RefGuesser;
-use librezip::infer;
 use librezip::serialise;
 use librezip::serialise_trace;
 use librezip::trace;

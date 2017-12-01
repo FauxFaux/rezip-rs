@@ -1,7 +1,7 @@
 use std::iter;
 
 use circles::CircularBuffer;
-use guesser::RefGuesser;
+use all_refs::AllRefs;
 use serialise;
 use Code;
 use DataLen;

@@ -12,18 +12,18 @@ use Ref;
 type Key = (u8, u8, u8);
 type BackMap = HashMap<Key, Vec<usize>>;
 
-pub struct RefGuesser<'p, 'd> {
+pub struct AllRefs<'p, 'd> {
     preroll: &'p [u8],
     pub data: &'d [u8],
     map: BackMap,
 }
 
-pub struct RefGuesserCursor<'a, 'p: 'a, 'd: 'a> {
-    inner: &'a RefGuesser<'p, 'd>,
+pub struct AllRefsCursor<'a, 'p: 'a, 'd: 'a> {
+    inner: &'a AllRefs<'p, 'd>,
     data_pos: usize,
 }
 
-impl<'p, 'd> RefGuesser<'p, 'd> {
+impl<'p, 'd> AllRefs<'p, 'd> {
     pub fn new(preroll: &'p [u8], data: &'d [u8]) -> Self {
         Self {
             preroll,
@@ -32,8 +32,8 @@ impl<'p, 'd> RefGuesser<'p, 'd> {
         }
     }
 
-    pub fn at(&self, pos: usize) -> RefGuesserCursor {
-        RefGuesserCursor {
+    pub fn at(&self, pos: usize) -> AllRefsCursor {
+        AllRefsCursor {
             inner: self,
             data_pos: pos,
         }
@@ -44,7 +44,7 @@ impl<'p, 'd> RefGuesser<'p, 'd> {
     }
 }
 
-impl<'a, 'p, 'd> RefGuesserCursor<'a, 'p, 'd> {
+impl<'a, 'p, 'd> AllRefsCursor<'a, 'p, 'd> {
     pub fn key(&self) -> Option<Key> {
         if self.data_pos + 2 < self.inner.data.len() {
             Some(key_from_bytes(&self.inner.data[self.data_pos..]))
@@ -54,7 +54,7 @@ impl<'a, 'p, 'd> RefGuesserCursor<'a, 'p, 'd> {
     }
 
     // None if we are out of possible keys, or Some(possibly empty list)
-    pub fn all_candidates<'m>(&'m self) -> Option<Box<Iterator<Item = Ref> + 'm>> {
+    pub fn all_refs<'m>(&'m self) -> Option<Box<Iterator<Item = Ref> + 'm>> {
         let key = match self.key() {
             Some(key) => key,
             None => return None,

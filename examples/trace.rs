@@ -12,7 +12,7 @@ use librezip::Code;
 
 use librezip::circles::CircularBuffer;
 use librezip::lookahead;
-use librezip::guesser::RefGuesser;
+use librezip::all_refs::AllRefs;
 use librezip::serialise;
 use librezip::serialise_trace;
 use librezip::trace;
@@ -61,9 +61,9 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
-    let rg = RefGuesser::new(old_dictionary, &decompressed);
+    let all_refs = AllRefs::new(old_dictionary, &decompressed);
     let technique = librezip::Technique {
-        rg,
+        all_refs,
         picker: Picker::DropFarThrees,
         lookahead: Lookahead::Gzip,
     };

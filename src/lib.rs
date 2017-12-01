@@ -22,7 +22,7 @@ mod code_tree;
 pub mod lookahead;
 mod errors;
 pub mod filter;
-pub mod guesser;
+pub mod all_refs;
 pub mod gzip;
 mod huffman;
 pub mod infer;
@@ -72,23 +72,23 @@ pub trait Guesser: DataLen {
 }
 
 pub struct Technique<'p, 'd> {
-    pub rg: guesser::RefGuesser<'p, 'd>,
+    pub all_refs: all_refs::AllRefs<'p, 'd>,
     pub lookahead: lookahead::Lookahead,
     pub picker: picker::Picker,
 }
 
 impl<'p, 'd> DataLen for Technique<'p, 'd> {
     fn data_len(&self) -> usize {
-        self.rg.data_len()
+        self.all_refs.data_len()
     }
 }
 
 impl<'p, 'd> Looker for Technique<'p, 'd> {
     fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
-        let here = self.rg.at(pos);
-        let candidates = here.all_candidates();
+        let here = self.all_refs.at(pos);
+        let candidates = here.all_refs();
         (
-            self.rg.data[pos],
+            self.all_refs.data[pos],
             candidates.and_then(|it| self.picker.picker(it)),
         )
     }

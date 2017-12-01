@@ -1,4 +1,8 @@
-pub fn capped_max_by<F, T, C: Eq + Ord, I: Iterator<Item = T>>(mut it: I, cap: C, func: F) -> Option<T>
+pub fn capped_max_by<F, T, C: Eq + Ord, I: Iterator<Item = T>>(
+    mut it: I,
+    cap: C,
+    func: F,
+) -> Option<T>
 where
     F: Fn(&T) -> C,
 {

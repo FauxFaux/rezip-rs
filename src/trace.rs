@@ -7,19 +7,18 @@ use Code;
 use Trace;
 use usize_from;
 
-pub fn trace<F>(preroll: &[u8], data: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
+pub fn trace<F>(codes: &[Code], guesser: F, data_len: usize) -> Vec<Trace>
 where
-    F: Fn(&RefGuesser, usize) -> Vec<Code>,
+    F: Fn(usize) -> Vec<Code>,
 {
     let mut ret = Vec::with_capacity(codes.len());
 
-    let rg = RefGuesser::new(preroll, &data);
     let mut pos = 0;
 
     let mut codes = codes.into_iter().peekable();
 
-    while pos < rg.data_len() {
-        let guesses = guesser(&rg, pos);
+    while pos < data_len {
+        let guesses = guesser(pos);
         assert!(!guesses.is_empty());
 
         let matches = shared_prefix(&guesses, &mut codes);
@@ -44,19 +43,18 @@ where
     ret
 }
 
-pub fn restore<F>(preroll: &[u8], data: &[u8], trace: &[Trace], guesser: F) -> Vec<Code>
+pub fn restore<F>(trace: &[Trace], guesser: F, data_len: usize) -> Vec<Code>
 where
-    F: Fn(&RefGuesser, usize) -> Vec<Code>,
+    F: Fn(usize) -> Vec<Code>,
 {
     let mut ret = Vec::with_capacity(trace.len());
 
-    let rg = RefGuesser::new(preroll, data);
     let mut pos = 0;
 
     let mut trace = trace.into_iter().peekable();
 
-    while pos < rg.data_len() {
-        let guesses = guesser(&rg, pos);
+    while pos < data_len {
+        let guesses = guesser(pos);
         assert!(!guesses.is_empty());
 
         for guess in guesses {
@@ -84,8 +82,9 @@ where
     F: Fn(&RefGuesser, usize) -> Vec<Code>,
 {
     let data = decode(preroll, codes);
-    let trace = trace(preroll, &data, codes, &guesser);
-    let restored = restore(preroll, &data, &trace, guesser);
+    let rg = RefGuesser::new(preroll, &data);
+    let trace = trace(codes, |pos| guesser(&rg, pos), rg.data_len());
+    let restored = restore(&trace, |pos| guesser(&rg, pos), rg.data_len());
 
     assert_eq!(codes, restored.as_slice());
 
@@ -144,9 +143,11 @@ mod tests {
 
     fn trace<F>(preroll: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
     where
-        F: Fn(&RefGuesser, usize) -> Vec<Code>,
+        F: Fn(usize) -> Vec<Code>,
     {
-        super::trace(preroll, &super::decode(preroll, codes), codes, guesser)
+        let data = super::decode(preroll, codes);
+        let rg = RefGuesser::new(preroll, &data);
+        super::trace(codes, guesser, rg.data_len())
     }
 
     #[test]
@@ -158,7 +159,7 @@ mod tests {
             trace(
                 &[],
                 &[Code::Literal(b'a')],
-                |_, _| vec![Code::Literal(b'N')]
+                | _| vec![Code::Literal(b'N')]
             )
         );
 
@@ -167,7 +168,7 @@ mod tests {
             trace(
                 &[],
                 &[Code::Literal(b'a')],
-                |_, _| vec![Code::Literal(b'a')]
+                | _| vec![Code::Literal(b'a')]
             )
         );
     }

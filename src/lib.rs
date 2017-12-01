@@ -61,6 +61,7 @@ pub enum Block {
 
 pub trait Finder {
     fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>);
+    fn data_len(&self) -> usize;
 }
 
 #[derive(Debug, Eq, PartialEq)]

@@ -48,7 +48,14 @@ impl<'p, 'd> Finder for RefGuesser<'p, 'd> {
     fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
         let here = self.at(pos);
         let candidates = here.all_candidates();
-        (self.data[pos], candidates.and_then(::picker::drop_far_threes))
+        (
+            self.data[pos],
+            candidates.and_then(::picker::drop_far_threes),
+        )
+    }
+
+    fn data_len(&self) -> usize {
+        self.data_len()
     }
 }
 

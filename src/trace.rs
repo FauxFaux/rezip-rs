@@ -1,7 +1,5 @@
 use std::iter;
 
-use serialise;
-use circles::CircularBuffer;
 use technique::Technique;
 use Code;
 use DataLen;
@@ -73,21 +71,13 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
     ret
 }
 
-pub fn validate(preroll: &[u8], codes: &[Code], technique: &Technique) -> Vec<Trace> {
+pub fn validate(codes: &[Code], technique: &Technique) -> Vec<Trace> {
     let trace = trace(codes, technique);
     let restored = restore(&trace, technique);
 
     assert_eq!(codes, restored.as_slice());
 
     trace
-}
-
-fn decode(preroll: &[u8], codes: &[Code]) -> Vec<u8> {
-    let mut data = Vec::with_capacity(codes.len());
-    let mut prebuf = CircularBuffer::with_capacity(32 * 1024);
-    prebuf.extend(preroll);
-    serialise::decompressed_codes(&mut data, &mut prebuf, codes).unwrap();
-    data
 }
 
 fn shared_prefix<'l, 't, T: 't + Eq, I: Iterator<Item = &'t T>>(

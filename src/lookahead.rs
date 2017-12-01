@@ -91,29 +91,6 @@ pub fn three_zip<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
     }
 }
 
-pub fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
-    let mut best = match candidates.next() {
-        Some(r) => r,
-        None => return None,
-    };
-
-    for candidate in candidates {
-        if candidate.run() > best.run() {
-            best = candidate;
-        }
-
-        if best.run() == 258 {
-            break;
-        }
-    }
-
-    if best.dist > 4096 && 3 == best.run() {
-        None
-    } else {
-        Some(best)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use Code;
@@ -122,15 +99,6 @@ mod tests {
 
     fn r(dist: u16, run: u16) -> Code {
         Code::Reference(Ref::new(dist, run))
-    }
-
-    #[test]
-    fn best_in_the_right_order() {
-        use super::best;
-        assert_eq!(
-            Some(Ref::new(2, 5)),
-            best(vec![Ref::new(1, 3), Ref::new(2, 5)].into_iter())
-        );
     }
 
     fn gzip(_: &[u8], _: &[u8]) -> ::errors::Result<Vec<Code>> {

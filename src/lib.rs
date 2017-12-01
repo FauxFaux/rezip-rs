@@ -28,6 +28,7 @@ mod huffman;
 pub mod infer;
 mod iters;
 pub mod parse;
+pub mod picker;
 pub mod serialise;
 pub mod serialise_trace;
 pub mod trace;

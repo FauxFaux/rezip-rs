@@ -26,6 +26,7 @@ pub mod guesser;
 pub mod gzip;
 mod huffman;
 pub mod infer;
+mod iters;
 pub mod parse;
 pub mod serialise;
 pub mod serialise_trace;

@@ -11,7 +11,7 @@ use librezip::Block;
 use librezip::Code;
 
 use librezip::circles::CircularBuffer;
-use librezip::emulate;
+use librezip::lookahead;
 use librezip::guesser::RefGuesser;
 use librezip::serialise;
 use librezip::serialise_trace;
@@ -59,7 +59,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
     let rg = RefGuesser::new(old_dictionary, &decompressed);
-    let trace = trace::validate(old_dictionary, codes, emulate::three_zip);
+    let trace = trace::validate(old_dictionary, codes, lookahead::three_zip);
     let serialise = serialise_trace::verify(&trace);
     print!("   * codes: ");
     for c in codes {
@@ -83,7 +83,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
                 String::from_utf8_lossy(
                     &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())]
                 ),
-                emulate::three_zip(&rg, pos),
+                lookahead::three_zip(&rg, pos),
                 correct
             ),
         }

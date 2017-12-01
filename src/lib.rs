@@ -19,7 +19,7 @@ mod bestguess;
 mod bit;
 pub mod circles;
 mod code_tree;
-pub mod emulate;
+pub mod lookahead;
 mod errors;
 pub mod filter;
 pub mod guesser;

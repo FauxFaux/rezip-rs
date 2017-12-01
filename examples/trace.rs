@@ -16,6 +16,8 @@ use librezip::guesser::RefGuesser;
 use librezip::serialise;
 use librezip::serialise_trace;
 use librezip::trace;
+use librezip::picker::Picker;
+use librezip::lookahead::Lookahead;
 
 use librezip::Trace;
 
@@ -59,7 +61,11 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
     let rg = RefGuesser::new(old_dictionary, &decompressed);
-    let technique = librezip::Technique { rg };
+    let technique = librezip::Technique {
+        rg,
+        picker: Picker::DropFarThrees,
+        lookahead: Lookahead::Gzip,
+    };
     let trace = trace::validate(old_dictionary, codes, &technique);
     let serialise = serialise_trace::verify(&trace);
     if false {
@@ -87,7 +93,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
                 String::from_utf8_lossy(
                     &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())]
                 ),
-                lookahead::three_zip(&technique, pos),
+                technique.codes_at(pos),
                 correct
             ),
         }

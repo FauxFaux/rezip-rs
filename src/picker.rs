@@ -1,20 +1,27 @@
 use iters;
 use Ref;
 
-pub fn longest<I: Iterator<Item = Ref>>(candidates: I) -> Option<Ref> {
-    iters::capped_max_by(candidates, 258, |r| r.run())
-}
-
-pub fn drop_far_threes<I: Iterator<Item = Ref>>(candidates: I) -> Option<Ref> {
-    longest(candidates).filter(|r| r.run() > 3 || r.dist <= 4096)
-}
-
 pub enum Picker {
     Longest,
     DropFarThrees,
 }
 
-impl Picker {}
+impl Picker {
+    pub fn picker<I: Iterator<Item = Ref>>(&self, candidates: I) -> Option<Ref> {
+        match *self {
+            Picker::Longest => longest(candidates),
+            Picker::DropFarThrees => drop_far_threes(candidates),
+        }
+    }
+}
+
+fn longest<I: Iterator<Item = Ref>>(candidates: I) -> Option<Ref> {
+    iters::capped_max_by(candidates, 258, |r| r.run())
+}
+
+fn drop_far_threes<I: Iterator<Item = Ref>>(candidates: I) -> Option<Ref> {
+    longest(candidates).filter(|r| r.run() > 3 || r.dist <= 4096)
+}
 
 #[cfg(test)]
 mod tests {

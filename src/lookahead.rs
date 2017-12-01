@@ -8,7 +8,17 @@ pub enum Lookahead {
     ThreeZip,
 }
 
-pub fn greedy<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
+impl Lookahead {
+    pub fn lookahead<F: Finder>(&self, finder: &F, pos: usize) -> Vec<Code> {
+        match *self {
+            Lookahead::Greedy => greedy(finder, pos),
+            Lookahead::Gzip => gzip(finder, pos),
+            Lookahead::ThreeZip => three_zip(finder, pos),
+        }
+    }
+}
+
+fn greedy<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
     vec![
         match finder.best_candidate(pos) {
             (_, Some(r)) => Code::Reference(r),
@@ -20,7 +30,7 @@ pub fn greedy<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
 //cursor.all_candidates().and_then(|candidates| {
 //best(candidates.filter(move |r| usize_from(r.dist) != pos))
 //})
-pub fn gzip<F: Finder>(finder: &F, mut pos: usize) -> Vec<Code> {
+fn gzip<F: Finder>(finder: &F, mut pos: usize) -> Vec<Code> {
     let mut ret = Vec::with_capacity(3);
 
     let mut current = match finder.best_candidate(pos) {
@@ -45,7 +55,7 @@ pub fn gzip<F: Finder>(finder: &F, mut pos: usize) -> Vec<Code> {
     ret
 }
 
-pub fn three_zip<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
+fn three_zip<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
     let (first_literal, first_best) = match finder.best_candidate(pos) {
         // there's a good run, use it
         (_, Some(r)) if r.run() > 3 => return vec![r.into()],

@@ -66,11 +66,13 @@ pub trait Finder {
 
 pub struct Technique<'p, 'd> {
     pub rg: guesser::RefGuesser<'p, 'd>,
+    pub lookahead: lookahead::Lookahead,
+    pub picker: picker::Picker,
 }
 
 impl<'p, 'd> Technique<'p, 'd> {
     pub fn codes_at(&self, pos: usize) -> Vec<Code> {
-        lookahead::gzip(self, pos)
+        self.lookahead.lookahead(self, pos)
     }
     pub fn data_len(&self) -> usize {
         self.rg.data_len()
@@ -83,7 +85,7 @@ impl<'p, 'd> Finder for Technique<'p, 'd> {
         let candidates = here.all_candidates();
         (
             self.rg.data[pos],
-            candidates.and_then(::picker::drop_far_threes),
+            candidates.and_then(|it| self.picker.picker(it)),
         )
     }
 

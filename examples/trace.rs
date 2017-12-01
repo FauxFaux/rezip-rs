@@ -63,17 +63,20 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         lookahead::three_zip(finder, pos)
     });
     let serialise = serialise_trace::verify(&trace);
-    print!("   * codes: ");
-    for c in codes {
-        match *c {
-            Code::Literal(byte) if char::from(byte).is_alphanumeric() => {
-                print!("{}", char::from(byte))
+    if false {
+        print!("   * codes: ");
+        for c in codes {
+            match *c {
+                Code::Literal(byte) if char::from(byte).is_alphanumeric() => {
+                    print!("{}", char::from(byte))
+                }
+                Code::Literal(byte) => print!("{:?}", char::from(byte)),
+                Code::Reference(r) => print!(" -- {:?} -- ", r),
             }
-            Code::Literal(byte) => print!("{:?}", char::from(byte)),
-            Code::Reference(r) => print!(" -- {:?} -- ", r),
         }
+        println!();
     }
-    println!();
+
     print!("   * trace: ");
     let mut pos = 0usize;
     for (t, c) in trace.iter().zip(codes.iter()) {

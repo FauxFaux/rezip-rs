@@ -34,20 +34,21 @@ fn greedy<L: Looker>(looker: &L, pos: usize) -> Vec<Code> {
 fn gzip<L: Looker>(looker: &L, mut pos: usize) -> Vec<Code> {
     let mut ret = Vec::with_capacity(3);
 
-    let mut current = match looker.best_candidate(pos) {
-        (_, Some(start)) => start,
+    let (mut curr_lit, mut curr_ref) = match looker.best_candidate(pos) {
+        (lit, Some(start)) => (lit, start),
         (b, None) => return vec![Code::Literal(b)],
     };
 
     loop {
         pos += 1;
-        current = match looker.best_candidate(pos) {
-            (b, Some(new)) if new.run() > current.run() => {
-                ret.push(Code::Literal(b));
-                new
+        match looker.best_candidate(pos) {
+            (b, Some(new)) if new.run() > curr_ref.run() => {
+                ret.push(Code::Literal(curr_lit));
+                curr_lit = b;
+                curr_ref = new;
             }
             (_, None) | (_, Some(_)) => {
-                ret.push(Code::Reference(current));
+                ret.push(Code::Reference(curr_ref));
                 break;
             }
         };

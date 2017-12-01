@@ -30,7 +30,7 @@ impl Config {
     pub fn gzip_16_good() -> Self {
         Config {
             lookahead: Lookahead::Gzip,
-            picker: Picker::Longest,
+            picker: Picker::DropFarThrees,
         }
     }
 

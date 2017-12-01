@@ -10,12 +10,13 @@ use librezip::Result;
 use librezip::Block;
 use librezip::Code;
 
-use librezip::circles::CircularBuffer;
-use librezip::all_refs::AllRefs;
 use librezip::serialise;
 use librezip::serialise_trace;
 use librezip::trace;
 
+use librezip::all_refs::AllRefs;
+use librezip::circles::CircularBuffer;
+use librezip::Config;
 use librezip::Guesser;
 use librezip::Trace;
 
@@ -58,10 +59,6 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
-    let all_refs = AllRefs::new(old_dictionary, &decompressed);
-    let technique = librezip::Technique::new(librezip::Config::gzip_16_good(), &all_refs);
-    let trace = trace::validate(codes, &technique);
-    let serialise = serialise_trace::verify(&trace);
     if false {
         print!("   * codes: ");
         for c in codes {
@@ -76,7 +73,18 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!();
     }
 
-    print!("   * trace: ");
+    let all_refs = AllRefs::new(old_dictionary, &decompressed);
+    try_trace(&all_refs, "gzip --best", Config::gzip_16_good(), codes, &decompressed);
+    try_trace(&all_refs, "gzip --fast", Config::gzip_16_fast(), codes, &decompressed);
+
+    Ok(())
+}
+
+fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], decompressed: &[u8]) {
+    let technique = librezip::Technique::new(config, all_refs);
+    let trace = trace::validate(codes, &technique);
+    let serialise = serialise_trace::verify(&trace);
+    println!("   * trace: {} -> {}", name, serialise.len());
     let mut pos = 0usize;
     for (t, c) in trace.iter().zip(codes.iter()) {
         match *t {
@@ -95,7 +103,4 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         pos += c.emitted_bytes() as usize;
     }
     println!();
-    println!("   * after: {}", serialise.len());
-
-    Ok(())
 }

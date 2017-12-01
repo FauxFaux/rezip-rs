@@ -62,11 +62,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
     let all_refs = AllRefs::new(old_dictionary, &decompressed);
-    let technique = librezip::technique::Technique {
-        all_refs: &all_refs,
-        picker: Picker::DropFarThrees,
-        lookahead: Lookahead::Gzip,
-    };
+    let technique = librezip::Technique::new(librezip::Config::gzip_16_good(), &all_refs);
     let trace = trace::validate(old_dictionary, codes, &technique);
     let serialise = serialise_trace::verify(&trace);
     if false {

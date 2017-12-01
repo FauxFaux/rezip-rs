@@ -2,6 +2,7 @@ use Code;
 use Looker;
 use Ref;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Lookahead {
     Greedy,
     Gzip,

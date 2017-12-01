@@ -1,6 +1,7 @@
 use iters;
 use Ref;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Picker {
     Longest,
     DropFarThrees,

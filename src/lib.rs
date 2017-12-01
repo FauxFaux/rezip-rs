@@ -31,7 +31,7 @@ pub mod parse;
 pub mod picker;
 pub mod serialise;
 pub mod serialise_trace;
-pub mod technique;
+mod technique;
 pub mod trace;
 
 use bit::BitVec;
@@ -40,6 +40,9 @@ pub use errors::*;
 pub use parse::parse_deflate;
 pub use serialise::compressed_block;
 pub use serialise::decompressed_block;
+
+pub use technique::Config;
+pub use technique::Technique;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Ref {

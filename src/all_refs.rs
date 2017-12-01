@@ -45,7 +45,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
 }
 
 impl<'a, 'p, 'd> AllRefsCursor<'a, 'p, 'd> {
-    pub fn key(&self) -> Option<Key> {
+    fn key(&self) -> Option<Key> {
         if self.data_pos + 2 < self.inner.data.len() {
             Some(key_from_bytes(&self.inner.data[self.data_pos..]))
         } else {
@@ -86,7 +86,7 @@ impl<'a, 'p, 'd> AllRefsCursor<'a, 'p, 'd> {
         ))
     }
 
-    pub fn current_literal(&self) -> Code {
+    fn current_literal(&self) -> Code {
         Code::Literal(self.inner.data[self.data_pos])
     }
 

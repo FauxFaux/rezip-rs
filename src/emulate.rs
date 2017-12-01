@@ -88,6 +88,14 @@ pub fn gzip(preroll: &[u8], data: &[u8]) -> Result<Vec<Code>> {
     Ok(ret)
 }
 
+pub fn greedy(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
+    let here = guesser.at(pos);
+    let candidates = here.all_candidates();
+    vec![match candidates.and_then(best) {
+        Some(r) => r.into(),
+        None => here.current_literal()
+    }]
+}
 
 pub fn three_zip(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
     let first = guesser.at(pos);

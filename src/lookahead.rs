@@ -1,10 +1,6 @@
-use guesser::RefGuesser;
-use errors::*;
-
 use Code;
 use Finder;
 use Ref;
-use usize_from;
 
 pub fn greedy<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
     vec![
@@ -68,7 +64,7 @@ pub fn three_zip<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
         }
     }
 
-    let (third_literal, mut third_best) = finder.best_candidate(pos + 2);
+    let (_, mut third_best) = finder.best_candidate(pos + 2);
     third_best = third_best.filter(|x| x.run() > 4);
 
     let third_result = |third_run: Ref| {

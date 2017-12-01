@@ -8,19 +8,19 @@ use Guesser;
 use Looker;
 use Ref;
 
-pub struct Technique<'p, 'd> {
-    pub all_refs: AllRefs<'p, 'd>,
+pub struct Technique<'a, 'p: 'a, 'd: 'a> {
+    pub all_refs: &'a AllRefs<'p, 'd>,
     pub lookahead: Lookahead,
     pub picker: Picker,
 }
 
-impl<'p, 'd> DataLen for Technique<'p, 'd> {
+impl<'a, 'p, 'd> DataLen for Technique<'a, 'p, 'd> {
     fn data_len(&self) -> usize {
         self.all_refs.data_len()
     }
 }
 
-impl<'p, 'd> Looker for Technique<'p, 'd> {
+impl<'a, 'p, 'd> Looker for Technique<'a, 'p, 'd> {
     fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
         let candidates = self.all_refs.at(pos);
         (
@@ -30,7 +30,7 @@ impl<'p, 'd> Looker for Technique<'p, 'd> {
     }
 }
 
-impl<'p, 'd> Guesser for Technique<'p, 'd> {
+impl<'a, 'p, 'd> Guesser for Technique<'a, 'p, 'd> {
     fn codes_at(&self, pos: usize) -> Vec<Code> {
         self.lookahead.lookahead(self, pos)
     }

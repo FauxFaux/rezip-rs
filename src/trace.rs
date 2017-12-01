@@ -1,7 +1,6 @@
 use std::iter;
 
 use serialise;
-use all_refs::AllRefs;
 use circles::CircularBuffer;
 use technique::Technique;
 use Code;

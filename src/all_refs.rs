@@ -5,8 +5,6 @@ use itertools::Itertools;
 
 use u16_from;
 use usize_from;
-use Code;
-use Looker;
 use Ref;
 
 type Key = (u8, u8, u8);
@@ -16,11 +14,6 @@ pub struct AllRefs<'p, 'd> {
     preroll: &'p [u8],
     pub data: &'d [u8],
     map: BackMap,
-}
-
-pub struct AllRefsCursor<'a, 'p: 'a, 'd: 'a> {
-    inner: &'a AllRefs<'p, 'd>,
-    data_pos: usize,
 }
 
 impl<'p, 'd> AllRefs<'p, 'd> {

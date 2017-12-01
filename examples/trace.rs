@@ -63,7 +63,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
 
     let all_refs = AllRefs::new(old_dictionary, &decompressed);
     let technique = librezip::technique::Technique {
-        all_refs,
+        all_refs: &all_refs,
         picker: Picker::DropFarThrees,
         lookahead: Lookahead::Gzip,
     };

@@ -73,7 +73,6 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
 }
 
 pub fn validate(preroll: &[u8], codes: &[Code], technique: &Technique) -> Vec<Trace> {
-    let data = decode(preroll, codes);
     let trace = trace(codes, technique);
     let restored = restore(&trace, technique);
 
@@ -110,10 +109,6 @@ fn shared_prefix<'l, 't, T: 't + Eq, I: Iterator<Item = &'t T>>(
 mod tests {
     use std::iter;
 
-    use guesser::RefGuesser;
-    use Code;
-    use Trace;
-
     #[test]
     fn prefix() {
         use super::shared_prefix;
@@ -130,29 +125,5 @@ mod tests {
         assert_eq!(Some(&2), it.next());
 
         assert!(shared_prefix(&[1, 5, 7], &mut iter::empty().peekable()).is_empty());
-    }
-
-    fn trace<F>(preroll: &[u8], codes: &[Code], guesser: F) -> Vec<Trace>
-    where
-        F: Fn(usize) -> Vec<Code>,
-    {
-        let data = super::decode(preroll, codes);
-        let rg = RefGuesser::new(preroll, &data);
-        super::trace(codes, &::Technique { rg: rg })
-    }
-
-    #[test]
-    fn trace_dumb() {
-        use super::Trace::Correct as C;
-        use super::Trace::Actual as A;
-        assert_eq!(
-            vec![A(Code::Literal(b'a'))],
-            trace(&[], &[Code::Literal(b'a')], |_| vec![Code::Literal(b'N')])
-        );
-
-        assert_eq!(
-            vec![C],
-            trace(&[], &[Code::Literal(b'a')], |_| vec![Code::Literal(b'a')])
-        );
     }
 }

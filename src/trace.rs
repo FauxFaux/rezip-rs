@@ -4,6 +4,7 @@ use circles::CircularBuffer;
 use guesser::RefGuesser;
 use serialise;
 use Code;
+use Finder;
 use Trace;
 use usize_from;
 

@@ -2,42 +2,38 @@ use guesser::RefGuesser;
 use errors::*;
 
 use Code;
+use Finder;
 use Ref;
 use usize_from;
 
-pub fn greedy(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
-    let here = guesser.at(pos);
-    let candidates = here.all_candidates();
+pub fn greedy<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
     vec![
-        match candidates.and_then(best) {
-            Some(r) => r.into(),
-            None => here.current_literal(),
+        match finder.best_candidate(pos) {
+            (_, Some(r)) => Code::Reference(r),
+            (b, None) => Code::Literal(b),
         },
     ]
 }
 
-pub fn gzip(guesser: &RefGuesser, mut pos: usize) -> Vec<Code> {
+//cursor.all_candidates().and_then(|candidates| {
+//best(candidates.filter(move |r| usize_from(r.dist) != pos))
+//})
+pub fn gzip<F: Finder>(finder: &F, mut pos: usize) -> Vec<Code> {
     let mut ret = Vec::with_capacity(3);
 
-    let cursor = guesser.at(pos);
-    let mut current = match cursor.all_candidates().and_then(|candidates| {
-        best(candidates.filter(move |r| usize_from(r.dist) != pos))
-    }) {
-        Some(start) => start,
-        None => return vec![cursor.current_literal()],
+    let mut current = match finder.best_candidate(pos) {
+        (_, Some(start)) => start,
+        (b, None) => return vec![Code::Literal(b)],
     };
 
     loop {
         pos += 1;
-        let cursor = guesser.at(pos);
-        current = match cursor.all_candidates().and_then(|candidates| {
-            best(candidates.filter(move |r| usize_from(r.dist) != pos))
-        }) {
-            Some(new) if new.run() > current.run() => {
-                ret.push(cursor.current_literal());
+        current = match finder.best_candidate(pos) {
+            (b, Some(new)) if new.run() > current.run() => {
+                ret.push(Code::Literal(b));
                 new
             }
-            None | Some(_) => {
+            (_, None) | (_, Some(_)) => {
                 ret.push(Code::Reference(current));
                 break;
             }
@@ -47,46 +43,38 @@ pub fn gzip(guesser: &RefGuesser, mut pos: usize) -> Vec<Code> {
     ret
 }
 
-
-pub fn three_zip(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
-    let first = guesser.at(pos);
-    let first_best = match first.all_candidates().and_then(best) {
+pub fn three_zip<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
+    let (first_literal, first_best) = match finder.best_candidate(pos) {
         // there's a good run, use it
-        Some(r) if r.run() > 3 => return vec![r.into()],
+        (_, Some(r)) if r.run() > 3 => return vec![r.into()],
 
         // there's a possibly bad run
-        Some(r) => r,
+        (l, Some(r)) => (l, r),
 
         // there's no run, or we're at the end: only a literal
-        None => return vec![first.current_literal()],
+        (b, None) => return vec![Code::Literal(b)],
     };
 
     assert_eq!(3, first_best.run());
 
-    let second = guesser.at(pos + 1);
-    let second_best = second
-        .all_candidates()
-        .and_then(best)
-        .filter(|x| x.run() > 3);
+    let (second_literal, mut second_best) = finder.best_candidate(pos + 1);
+    second_best = second_best.filter(|x| x.run() > 3);
 
     // optimisation:
     if let Some(r) = second_best {
         if r.run() == 258 {
             // no point searching for a third run, as this will win.
-            return vec![first.current_literal(), r.into()];
+            return vec![Code::Literal(first_literal), r.into()];
         }
     }
 
-    let third = guesser.at(pos + 2);
-    let third_best = third
-        .all_candidates()
-        .and_then(best)
-        .filter(|x| x.run() > 4);
+    let (third_literal, mut third_best) = finder.best_candidate(pos + 2);
+    third_best = third_best.filter(|x| x.run() > 4);
 
     let third_result = |third_run: Ref| {
         vec![
-            first.current_literal(),
-            second.current_literal(),
+            Code::Literal(first_literal),
+            Code::Literal(second_literal),
             third_run.into(),
         ]
     };
@@ -94,7 +82,7 @@ pub fn three_zip(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
     match second_best {
         Some(second_run) => match third_best {
             Some(third_run) if third_run.run() > second_run.run() => third_result(third_run),
-            Some(_) | None => vec![first.current_literal(), second_run.into()],
+            Some(_) | None => vec![Code::Literal(first_literal), second_run.into()],
         },
         None => match third_best {
             Some(third_run) => third_result(third_run),
@@ -103,7 +91,7 @@ pub fn three_zip(guesser: &RefGuesser, pos: usize) -> Vec<Code> {
     }
 }
 
-fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
+pub fn best<I: Iterator<Item = Ref>>(mut candidates: I) -> Option<Ref> {
     let mut best = match candidates.next() {
         Some(r) => r,
         None => return None,

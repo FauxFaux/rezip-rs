@@ -6,6 +6,7 @@ use itertools::Itertools;
 use u16_from;
 use usize_from;
 use Code;
+use Finder;
 use Ref;
 
 type Key = (u8, u8, u8);
@@ -40,6 +41,14 @@ impl<'p, 'd> RefGuesser<'p, 'd> {
 
     pub fn data_len(&self) -> usize {
         self.data.len()
+    }
+}
+
+impl<'p, 'd> Finder for RefGuesser<'p, 'd> {
+    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
+        let here = self.at(pos);
+        let candidates = here.all_candidates();
+        (self.data[pos], candidates.and_then(::lookahead::best))
     }
 }
 

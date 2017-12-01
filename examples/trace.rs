@@ -59,7 +59,9 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
     let rg = RefGuesser::new(old_dictionary, &decompressed);
-    let trace = trace::validate(old_dictionary, codes, lookahead::three_zip);
+    let trace = trace::validate(old_dictionary, codes, |finder, pos| {
+        lookahead::three_zip(finder, pos)
+    });
     let serialise = serialise_trace::verify(&trace);
     print!("   * codes: ");
     for c in codes {

@@ -58,6 +58,10 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
+pub trait Finder {
+    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>);
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct WindowSettings {
     window_size: u16,

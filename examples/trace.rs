@@ -19,6 +19,7 @@ use librezip::trace;
 use librezip::picker::Picker;
 use librezip::lookahead::Lookahead;
 
+use librezip::Guesser;
 use librezip::Trace;
 
 quick_main!(run);

@@ -59,9 +59,16 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
-pub trait Finder {
-    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>);
+pub trait DataLen {
     fn data_len(&self) -> usize;
+}
+
+pub trait Looker: DataLen {
+    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>);
+}
+
+pub trait Guesser: DataLen {
+    fn codes_at(&self, pos: usize) -> Vec<Code>;
 }
 
 pub struct Technique<'p, 'd> {
@@ -70,16 +77,13 @@ pub struct Technique<'p, 'd> {
     pub picker: picker::Picker,
 }
 
-impl<'p, 'd> Technique<'p, 'd> {
-    pub fn codes_at(&self, pos: usize) -> Vec<Code> {
-        self.lookahead.lookahead(self, pos)
-    }
-    pub fn data_len(&self) -> usize {
+impl<'p, 'd> DataLen for Technique<'p, 'd> {
+    fn data_len(&self) -> usize {
         self.rg.data_len()
     }
 }
 
-impl<'p, 'd> Finder for Technique<'p, 'd> {
+impl<'p, 'd> Looker for Technique<'p, 'd> {
     fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
         let here = self.rg.at(pos);
         let candidates = here.all_candidates();
@@ -88,9 +92,11 @@ impl<'p, 'd> Finder for Technique<'p, 'd> {
             candidates.and_then(|it| self.picker.picker(it)),
         )
     }
+}
 
-    fn data_len(&self) -> usize {
-        self.data_len()
+impl<'p, 'd> Guesser for Technique<'p, 'd> {
+    fn codes_at(&self, pos: usize) -> Vec<Code> {
+        self.lookahead.lookahead(self, pos)
     }
 }
 

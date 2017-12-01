@@ -1,5 +1,5 @@
 use Code;
-use Finder;
+use Looker;
 use Ref;
 
 pub enum Lookahead {
@@ -9,18 +9,18 @@ pub enum Lookahead {
 }
 
 impl Lookahead {
-    pub fn lookahead<F: Finder>(&self, finder: &F, pos: usize) -> Vec<Code> {
+    pub fn lookahead<L: Looker>(&self, looker: &L, pos: usize) -> Vec<Code> {
         match *self {
-            Lookahead::Greedy => greedy(finder, pos),
-            Lookahead::Gzip => gzip(finder, pos),
-            Lookahead::ThreeZip => three_zip(finder, pos),
+            Lookahead::Greedy => greedy(looker, pos),
+            Lookahead::Gzip => gzip(looker, pos),
+            Lookahead::ThreeZip => three_zip(looker, pos),
         }
     }
 }
 
-fn greedy<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
+fn greedy<L: Looker>(looker: &L, pos: usize) -> Vec<Code> {
     vec![
-        match finder.best_candidate(pos) {
+        match looker.best_candidate(pos) {
             (_, Some(r)) => Code::Reference(r),
             (b, None) => Code::Literal(b),
         },
@@ -30,17 +30,17 @@ fn greedy<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
 //cursor.all_candidates().and_then(|candidates| {
 //best(candidates.filter(move |r| usize_from(r.dist) != pos))
 //})
-fn gzip<F: Finder>(finder: &F, mut pos: usize) -> Vec<Code> {
+fn gzip<L: Looker>(looker: &L, mut pos: usize) -> Vec<Code> {
     let mut ret = Vec::with_capacity(3);
 
-    let mut current = match finder.best_candidate(pos) {
+    let mut current = match looker.best_candidate(pos) {
         (_, Some(start)) => start,
         (b, None) => return vec![Code::Literal(b)],
     };
 
     loop {
         pos += 1;
-        current = match finder.best_candidate(pos) {
+        current = match looker.best_candidate(pos) {
             (b, Some(new)) if new.run() > current.run() => {
                 ret.push(Code::Literal(b));
                 new
@@ -55,8 +55,8 @@ fn gzip<F: Finder>(finder: &F, mut pos: usize) -> Vec<Code> {
     ret
 }
 
-fn three_zip<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
-    let (first_literal, first_best) = match finder.best_candidate(pos) {
+fn three_zip<L: Looker>(looker: &L, pos: usize) -> Vec<Code> {
+    let (first_literal, first_best) = match looker.best_candidate(pos) {
         // there's a good run, use it
         (_, Some(r)) if r.run() > 3 => return vec![r.into()],
 
@@ -69,7 +69,7 @@ fn three_zip<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
 
     assert_eq!(3, first_best.run());
 
-    let (second_literal, mut second_best) = finder.best_candidate(pos + 1);
+    let (second_literal, mut second_best) = looker.best_candidate(pos + 1);
     second_best = second_best.filter(|x| x.run() > 3);
 
     // optimisation:
@@ -80,7 +80,7 @@ fn three_zip<F: Finder>(finder: &F, pos: usize) -> Vec<Code> {
         }
     }
 
-    let (_, mut third_best) = finder.best_candidate(pos + 2);
+    let (_, mut third_best) = looker.best_candidate(pos + 2);
     third_best = third_best.filter(|x| x.run() > 4);
 
     let third_result = |third_run: Ref| {

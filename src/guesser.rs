@@ -6,7 +6,7 @@ use itertools::Itertools;
 use u16_from;
 use usize_from;
 use Code;
-use Finder;
+use Looker;
 use Ref;
 
 type Key = (u8, u8, u8);

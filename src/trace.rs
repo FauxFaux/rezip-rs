@@ -4,6 +4,8 @@ use circles::CircularBuffer;
 use guesser::RefGuesser;
 use serialise;
 use Code;
+use DataLen;
+use Guesser;
 use Technique;
 use Trace;
 use usize_from;

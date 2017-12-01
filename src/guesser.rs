@@ -14,7 +14,7 @@ type BackMap = HashMap<Key, Vec<usize>>;
 
 pub struct RefGuesser<'p, 'd> {
     preroll: &'p [u8],
-    data: &'d [u8],
+    pub data: &'d [u8],
     map: BackMap,
 }
 
@@ -41,21 +41,6 @@ impl<'p, 'd> RefGuesser<'p, 'd> {
 
     pub fn data_len(&self) -> usize {
         self.data.len()
-    }
-}
-
-impl<'p, 'd> Finder for RefGuesser<'p, 'd> {
-    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
-        let here = self.at(pos);
-        let candidates = here.all_candidates();
-        (
-            self.data[pos],
-            candidates.and_then(::picker::drop_far_threes),
-        )
-    }
-
-    fn data_len(&self) -> usize {
-        self.data_len()
     }
 }
 

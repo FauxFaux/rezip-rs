@@ -70,12 +70,28 @@ pub struct Technique<'p, 'd> {
 
 impl<'p, 'd> Technique<'p, 'd> {
     pub fn codes_at(&self, pos: usize) -> Vec<Code> {
-        lookahead::gzip(&self.rg, pos)
+        lookahead::gzip(self, pos)
     }
     pub fn data_len(&self) -> usize {
         self.rg.data_len()
     }
 }
+
+impl<'p, 'd> Finder for Technique<'p, 'd> {
+    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
+        let here = self.rg.at(pos);
+        let candidates = here.all_candidates();
+        (
+            self.rg.data[pos],
+            candidates.and_then(::picker::drop_far_threes),
+        )
+    }
+
+    fn data_len(&self) -> usize {
+        self.data_len()
+    }
+}
+
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct WindowSettings {

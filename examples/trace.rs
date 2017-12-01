@@ -87,7 +87,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
                 String::from_utf8_lossy(
                     &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())]
                 ),
-                lookahead::three_zip(&technique.rg, pos),
+                lookahead::three_zip(&technique, pos),
                 correct
             ),
         }

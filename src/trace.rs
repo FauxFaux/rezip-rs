@@ -1,12 +1,12 @@
 use std::iter;
 
-use circles::CircularBuffer;
-use all_refs::AllRefs;
 use serialise;
+use all_refs::AllRefs;
+use circles::CircularBuffer;
+use technique::Technique;
 use Code;
 use DataLen;
 use Guesser;
-use Technique;
 use Trace;
 use usize_from;
 

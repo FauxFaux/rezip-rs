@@ -1,6 +1,8 @@
 use all_refs::AllRefs;
 use lookahead::Lookahead;
 use picker::Picker;
+use wams;
+use wams::WamsOptimisations;
 
 use Code;
 use DataLen;
@@ -12,6 +14,7 @@ use Ref;
 pub struct Config {
     lookahead: Lookahead,
     picker: Picker,
+    wams: WamsOptimisations,
 }
 
 pub struct Technique<'a, 'p: 'a, 'd: 'a> {
@@ -20,17 +23,27 @@ pub struct Technique<'a, 'p: 'a, 'd: 'a> {
 }
 
 impl Config {
-    pub fn gzip_16_fast() -> Self {
+    pub fn gzip_16_fastest() -> Self {
         Config {
             lookahead: Lookahead::Greedy,
             picker: Picker::DropFarThrees,
+            wams: wams::CONFIGURATIONS[0],
         }
     }
 
-    pub fn gzip_16_good() -> Self {
+    pub fn gzip_16_default() -> Self {
         Config {
             lookahead: Lookahead::Gzip,
             picker: Picker::DropFarThrees,
+            wams: wams::CONFIGURATIONS[5],
+        }
+    }
+
+    pub fn gzip_16_best() -> Self {
+        Config {
+            lookahead: Lookahead::Gzip,
+            picker: Picker::DropFarThrees,
+            wams: wams::CONFIGURATIONS[8],
         }
     }
 
@@ -38,6 +51,7 @@ impl Config {
         Config {
             lookahead: Lookahead::ThreeZip,
             picker: Picker::DropFarThrees,
+            wams: wams::CONFIGURATIONS[8],
         }
     }
 }
@@ -55,11 +69,30 @@ impl<'a, 'p, 'd> DataLen for Technique<'a, 'p, 'd> {
 }
 
 impl<'a, 'p, 'd> Looker for Technique<'a, 'p, 'd> {
-    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
+    fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>) {
+        let current_literal = self.all_refs.data[pos];
+        let mut limit = self.config.wams.limit_count_of_distances;
+
+        if let Some(run) = other {
+            if let wams::Tweaks::Lookahead(l) = self.config.wams.tweaks {
+                if l.abort_lookahead_above_length > run {
+                    return (current_literal, None);
+                }
+
+                if run > l.apathetic_lookahead_above_length {
+                    limit /= 4;
+                }
+            }
+        }
+
         let candidates = self.all_refs.at(pos);
         (
-            self.all_refs.data[pos],
-            candidates.and_then(|it| self.config.picker.picker(it)),
+            current_literal,
+            candidates.and_then(|it| {
+                self.config
+                    .picker
+                    .picker(it.take(limit), self.config.wams.quit_search_above_length)
+            }),
         )
     }
 }

@@ -41,7 +41,7 @@ fn gzip<L: Looker>(looker: &L, mut pos: usize) -> Vec<Code> {
 
     loop {
         pos += 1;
-        match looker.best_candidate(pos) {
+        match looker.best_candidate_better_than(pos, Some(curr_ref.run())) {
             (b, Some(new)) if new.run() > curr_ref.run() => {
                 ret.push(Code::Literal(curr_lit));
                 curr_lit = b;

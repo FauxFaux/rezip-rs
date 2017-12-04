@@ -19,7 +19,7 @@ where
             max = candidate;
             max_score = candidate_score;
 
-            if cap == max_score {
+            if max_score >= cap {
                 break;
             }
         }

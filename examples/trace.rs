@@ -74,8 +74,31 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     }
 
     let all_refs = AllRefs::new(old_dictionary, &decompressed);
-    try_trace(&all_refs, "gzip --best", Config::gzip_16_good(), codes, &decompressed);
-    try_trace(&all_refs, "gzip --fast", Config::gzip_16_fast(), codes, &decompressed);
+
+    try_trace(
+        &all_refs,
+        "gzip --fast",
+        Config::gzip_16_fastest(),
+        codes,
+        &decompressed,
+    );
+
+    try_trace(
+        &all_refs,
+        "gzip [--default]",
+        Config::gzip_16_default(),
+        codes,
+        &decompressed,
+    );
+
+    try_trace(
+        &all_refs,
+        "gzip --best",
+        Config::gzip_16_best(),
+        codes,
+        &decompressed,
+    );
+
 
     Ok(())
 }

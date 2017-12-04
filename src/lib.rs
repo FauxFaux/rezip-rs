@@ -1,3 +1,4 @@
+#![feature(const_fn)]
 #![feature(option_filter)]
 
 extern crate byteorder;
@@ -33,6 +34,7 @@ pub mod serialise;
 pub mod serialise_trace;
 mod technique;
 pub mod trace;
+mod wams;
 
 use bit::BitVec;
 
@@ -68,7 +70,11 @@ pub trait DataLen {
 }
 
 pub trait Looker: DataLen {
-    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>);
+    fn best_candidate(&self, pos: usize) -> (u8, Option<Ref>) {
+        self.best_candidate_better_than(pos, None)
+    }
+
+    fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>);
 }
 
 pub trait Guesser: DataLen {

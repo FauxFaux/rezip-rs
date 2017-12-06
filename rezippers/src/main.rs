@@ -23,19 +23,18 @@ quick_main!(run);
 fn run() -> Result<()> {
     let matches = App::new("rezippers")
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
-        .subcommand(clap::SubCommand::with_name("cat")
-            .arg(Arg::with_name("file").index(1).required(false)))
-        .subcommand(clap::SubCommand::with_name("dump")
-            .arg(Arg::with_name("file").index(1).required(false)))
+        .subcommand(
+            clap::SubCommand::with_name("cat").arg(Arg::with_name("file").index(1).required(false)),
+        )
+        .subcommand(
+            clap::SubCommand::with_name("dump")
+                .arg(Arg::with_name("file").index(1).required(false)),
+        )
         .get_matches();
 
     match matches.subcommand() {
-        ("cat", Some(matches)) => {
-            cat::run(open_file(matches)?)
-        },
-        ("dump", Some(matches)) => {
-            dump::run(open_file(matches)?)
-        },
+        ("cat", Some(matches)) => cat::run(open_file(matches)?),
+        ("dump", Some(matches)) => dump::run(open_file(matches)?),
         _ => unreachable!(),
     }
 }

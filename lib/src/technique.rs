@@ -24,7 +24,10 @@ pub struct Technique<'a, 'p: 'a, 'd: 'a> {
 
 impl Config {
     pub fn gzip(level: u8) -> Self {
-        assert!(level >= 1 && level <= 9, "gzip levels are between 1 and 9, inclusive");
+        assert!(
+            level >= 1 && level <= 9,
+            "gzip levels are between 1 and 9, inclusive"
+        );
         Config {
             lookahead: Lookahead::Greedy,
             picker: Picker::DropFarThrees,

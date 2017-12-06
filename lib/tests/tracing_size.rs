@@ -16,7 +16,7 @@ fn try_gzip(level: u8, file: &[u8]) -> usize {
     for block in librezip::parse_deflate(&mut reader).into_iter() {
         let codes = match block.unwrap() {
             Block::Uncompressed(_) => unimplemented!(),
-            Block::DynamicHuffman { codes, .. } | Block::FixedHuffman(codes) => codes
+            Block::DynamicHuffman { codes, .. } | Block::FixedHuffman(codes) => codes,
         };
 
         let preroll = &dictionary.vec();
@@ -40,7 +40,6 @@ fn decaying_1_1() {
 fn decaying_1_2() {
     assert_eq!(2, try_gzip(2, include_bytes!("data/decaying-sixteen-1.gz")))
 }
-
 
 #[test]
 fn decaying_1_3() {

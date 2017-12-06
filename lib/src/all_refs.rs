@@ -21,7 +21,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         Self {
             preroll,
             data,
-            map: whole_map(preroll.iter().chain(data).map(|x| *x)),
+            map: whole_map(preroll.iter().chain(data).cloned()),
         }
     }
 

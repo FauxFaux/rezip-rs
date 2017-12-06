@@ -5,24 +5,21 @@ pub struct WamsOptimisations {
 
     /// Only consider the nearest N inserted distances when searching for a run.
     pub limit_count_of_distances: usize,
-    pub tweaks: Tweaks,
-}
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Tweaks {
-    /// Update references only if the match length is fewer than this
-    /// TODO: not implemented
-    InsertOnlyBelowLength(u16),
-    Lookahead(LookaheadConfig),
+    /// Update references only if the match length is fewer than this, otherwise always update
+    pub insert_only_below_length: Option<u16>,
+
+    /// Tweak lookahead, if enabled
+    pub lookahead: Option<LookaheadConfig>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct LookaheadConfig {
     /// If we already have a match this long, quarter the allowed number of distances to consider
-    pub apathetic_lookahead_above_length: u16,
+    pub apathetic_above_length: u16,
 
     /// Abort the lookahead procedure if we've found a run at least this long.
-    pub abort_lookahead_above_length: u16,
+    pub abort_above_length: u16,
 }
 
 pub const CONFIGURATIONS: [WamsOptimisations; 9] = [
@@ -45,22 +42,24 @@ const fn greedy(
     WamsOptimisations {
         quit_search_above_length,
         limit_count_of_distances,
-        tweaks: Tweaks::InsertOnlyBelowLength(insert_only_below_length),
+        insert_only_below_length: Some(insert_only_below_length),
+        lookahead: None,
     }
 }
 
 const fn lookahead(
     quit_search_above_length: u16,
     limit_count_of_distances: usize,
-    apathetic_lookahead_above_length: u16,
-    abort_lookahead_above_length: u16,
+    apathetic_above_length: u16,
+    abort_above_length: u16,
 ) -> WamsOptimisations {
     WamsOptimisations {
         quit_search_above_length,
         limit_count_of_distances,
-        tweaks: Tweaks::Lookahead(LookaheadConfig {
-            abort_lookahead_above_length,
-            apathetic_lookahead_above_length,
+        insert_only_below_length: None,
+        lookahead: Some(LookaheadConfig {
+            abort_above_length,
+            apathetic_above_length,
         }),
     }
 }

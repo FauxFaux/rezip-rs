@@ -74,12 +74,12 @@ impl<'a, 'p, 'd> Looker for Technique<'a, 'p, 'd> {
         let mut limit = self.config.wams.limit_count_of_distances;
 
         if let Some(run) = other {
-            if let wams::Tweaks::Lookahead(l) = self.config.wams.tweaks {
-                if l.abort_lookahead_above_length > run {
+            if let Some(lookahead) = self.config.wams.lookahead {
+                if lookahead.abort_above_length > run {
                     return (current_literal, None);
                 }
 
-                if run > l.apathetic_lookahead_above_length {
+                if run > lookahead.apathetic_above_length {
                     limit /= 4;
                 }
             }

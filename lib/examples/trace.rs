@@ -72,7 +72,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!();
     }
 
-    let all_refs = AllRefs::new(old_dictionary, &decompressed);
+    let all_refs = AllRefs::with_everything(old_dictionary, &decompressed);
 
     try_trace(
         &all_refs,

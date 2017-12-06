@@ -5,6 +5,7 @@ use itertools::Itertools;
 
 use u16_from;
 use usize_from;
+use Code;
 use Ref;
 
 type Key = (u8, u8, u8);
@@ -17,11 +18,19 @@ pub struct AllRefs<'p, 'd> {
 }
 
 impl<'p, 'd> AllRefs<'p, 'd> {
-    pub fn new(preroll: &'p [u8], data: &'d [u8]) -> Self {
+    pub fn with_everything(preroll: &'p [u8], data: &'d [u8]) -> Self {
         Self {
             preroll,
             data,
             map: whole_map(preroll.iter().chain(data).cloned()),
+        }
+    }
+
+    pub fn limited_by(preroll: &'p [u8], data: &'d [u8], codes: &[Code], skip_over: u16) -> Self {
+        Self {
+            preroll,
+            data,
+            map: limited_map(preroll.iter().chain(data).cloned(), codes, skip_over),
         }
     }
 
@@ -131,8 +140,56 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
+fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) -> BackMap {
+    let mut map = BackMap::with_capacity(32 * 1024);
+
+    // Argh.
+    // At each pos, we want to know if we're:
+    // * in a literal, so to add a ref
+    // * at the start of a code, so add a ref
+    // in the middle of a short-enough code, so add a ref
+    // in the middle of a longer ref, so not to do anything
+
+    let mut skip = 0u16;
+    let mut code_pos = 0usize;
+    let mut codes = codes.iter();
+
+    for (pos, keys) in data.tuple_windows::<Key>().enumerate() {
+        if skip > 0 {
+            skip -= 1;
+            continue;
+        }
+
+        if pos > code_pos {
+            assert_eq!(pos, code_pos + 1);
+
+            let run_len = codes.next().map(|code| code.emitted_bytes()).unwrap_or(0);
+
+            if run_len > skip_over {
+                skip = run_len - 1;
+            }
+
+            code_pos += usize_from(run_len);
+        }
+
+        map.entry(keys).or_insert_with(|| Vec::new()).push(pos);
+    }
+
+    map
+}
+
 #[cfg(test)]
 mod tests {
+    use super::Key;
+
+    use Code;
+    use Ref;
+
+    use Code::Literal as L;
+    fn r(dist: u16, run: u16) -> Code {
+        Code::Reference(Ref::new(dist, run))
+    }
+
     #[test]
     fn sub_range() {
         use super::sub_range_inclusive as s;
@@ -147,5 +204,61 @@ mod tests {
         assert_eq!(&[0usize; 0], s(7, 8, &[4, 5, 6]));
         assert_eq!(&[0usize; 0], s(7, 8, &[9, 10]));
         assert_eq!(&[0usize; 0], s(7, 8, &[]));
+    }
+
+    #[test]
+    fn whole() {
+        use super::whole_map;
+        assert_eq!(
+            hashmap! {
+                k(b"abc") => vec![0, 3],
+                k(b"bca") => vec![1],
+                k(b"cab") => vec![2],
+            },
+            whole_map(b"abcabc".iter().cloned())
+        )
+    }
+
+    #[test]
+    fn limited() {
+        use super::limited_map;
+
+        // the central "bcdef," is detected as a run,
+        // but is long enough to trigger the map corruption,
+        // so entries (8...12) inclusive ('c' -> ',') don't end
+        // up in the map. In `gzip -1`, this looks like the
+        // compression we see below, where the 4-length run is at
+        // dist 11, because it can't see the version at position 8.
+
+        assert_eq!(
+            hashmap! {
+                k(b"abc") => vec![0],
+                k(b"bcd") => vec![1, 7],
+                k(b"cde") => vec![2, 13],
+                k(b"def") => vec![3],
+                k(b"ef,") => vec![4],
+                k(b"f,b") => vec![5],
+                k(b",bc") => vec![6],
+            },
+            limited_map(
+                b"abcdef,bcdef,cdef".iter().cloned(),
+                &[
+                    L(b'a'),
+                    L(b'b'),
+                    L(b'c'),
+                    L(b'd'),
+                    L(b'e'),
+                    L(b'f'),
+                    r(6, 6),
+                    r(11, 4)
+                ],
+                4
+            )
+        )
+    }
+
+    fn k(from: &[u8]) -> Key {
+        assert_eq!(3, from.len());
+        (from[0], from[1], from[2])
     }
 }

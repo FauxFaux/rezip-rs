@@ -12,9 +12,9 @@ use Ref;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
-    lookahead: Lookahead,
-    picker: Picker,
-    wams: WamsOptimisations,
+    pub lookahead: Lookahead,
+    pub picker: Picker,
+    pub wams: WamsOptimisations,
 }
 
 pub struct Technique<'a, 'p: 'a, 'd: 'a> {
@@ -23,6 +23,15 @@ pub struct Technique<'a, 'p: 'a, 'd: 'a> {
 }
 
 impl Config {
+    pub fn gzip(level: u8) -> Self {
+        assert!(level >= 1 && level <= 9, "gzip levels are between 1 and 9, inclusive");
+        Config {
+            lookahead: Lookahead::Greedy,
+            picker: Picker::DropFarThrees,
+            wams: wams::CONFIGURATIONS[usize::from(level - 1)],
+        }
+    }
+
     pub fn gzip_16_fastest() -> Self {
         Config {
             lookahead: Lookahead::Greedy,

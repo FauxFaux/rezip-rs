@@ -36,6 +36,7 @@ mod serialise;
 pub mod serialise_trace;
 mod technique;
 pub mod trace;
+pub mod tracer;
 mod wams;
 
 use bit::BitVec;

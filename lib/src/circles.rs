@@ -93,25 +93,6 @@ impl CircularBuffer {
         self.valid_cap
     }
 
-    pub fn possible_run_length_at(&self, dist: u16, upcoming_data: &[u8]) -> u16 {
-        assert!(dist > 0, "dist must be positive");
-
-        let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
-        for pos in 3..dist.min(upcoming_data.len() as u16) {
-            if upcoming_data[pos as usize] != self.get_at_dist(dist - pos) {
-                return pos;
-            }
-        }
-
-        for pos in dist..(upcoming_data.len() as u16) {
-            if upcoming_data[(pos % dist) as usize] != upcoming_data[pos as usize] {
-                return pos;
-            }
-        }
-
-        return upcoming_data.len() as u16;
-    }
-
     pub fn vec(&self) -> Vec<u8> {
         // TODO: optimise
 
@@ -148,23 +129,6 @@ mod tests {
         let mut buf = CircularBuffer::with_capacity(10);
         buf.extend(b"abcdef");
         buf.get_at_dist(7);
-    }
-
-    #[test]
-    fn run_length_at() {
-        let mut buf = CircularBuffer::with_capacity(100);
-        buf.extend(b"abcdef b");
-        //   distances: "87654321"
-        assert_eq!(b'b', buf.get_at_dist(7));
-        assert_eq!(5, buf.possible_run_length_at(7, b"bcdef"));
-    }
-
-    #[test]
-    fn run_length_at_2() {
-        let mut buf = CircularBuffer::with_capacity(100);
-        buf.extend(b"a122b");
-        assert_eq!(b'1', buf.get_at_dist(4));
-        assert_eq!(3, buf.possible_run_length_at(4, b"122222"));
     }
 
     #[test]

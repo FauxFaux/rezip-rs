@@ -29,6 +29,22 @@ fn try_gzip(level: u8, file: &[u8]) -> usize {
     sum
 }
 
+// tiny-decay:
+// 1abcdef,bcdef-cdef
+// 012345678901234567
+// LLLLLLLLSRRRRLSRRR
+// 1: -----[6,5]-[11,4]
+// 3: -----[6,5]-[5,4]
+#[test]
+fn tiny_decay_1_1() {
+    assert_eq!(2, try_gzip(1, include_bytes!("data/tiny-decay-sixteen-1.gz")))
+}
+
+#[test]
+fn tiny_decay_3_3() {
+    assert_eq!(2, try_gzip(3, include_bytes!("data/tiny-decay-sixteen-3.gz")))
+}
+
 // decaying: S='defghijklm'; printf "0.abcdefg_hijklm,1.abc$S,2.bc$S,3.c$S,4.$S"
 // decaying: 0.abcdefg_hijklm,1.abcdefghijklm,2.bcdefghijklm,3.cdefghijklm,4.defghijklm
 #[test]

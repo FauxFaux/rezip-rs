@@ -150,6 +150,13 @@ fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) 
     // in the middle of a short-enough code, so add a ref
     // in the middle of a longer ref, so not to do anything
 
+    // conceptually, this could be converting:
+    // L, L, R(.., 4), L, R(.., 3),
+    // with a cut-off of allowing the 3, into:
+    // t, t, t, f,f,f, t, t, t, t,
+    // i.e. ignoring everything but the first true in the R(.., 4),
+    // then zip-with that and skip based on !x.
+
     let mut skip = 0u16;
     let mut code_pos = 0usize;
     let mut codes = codes.iter();

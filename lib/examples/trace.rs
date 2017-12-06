@@ -72,10 +72,13 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!();
     }
 
+    let refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 3);
+    let refs_4 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 4);
+    let refs_5 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 5);
     let all_refs = AllRefs::with_everything(old_dictionary, &decompressed);
 
     try_trace(
-        &all_refs,
+        &refs_3,
         "gzip --fast",
         Config::gzip_16_fastest(),
         codes,

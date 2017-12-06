@@ -10,12 +10,11 @@ use librezip::Result;
 use librezip::Block;
 use librezip::Code;
 
-use librezip::serialise;
 use librezip::serialise_trace;
 use librezip::trace;
 
 use librezip::all_refs::AllRefs;
-use librezip::circles::CircularBuffer;
+use librezip::CircularBuffer;
 use librezip::Config;
 use librezip::Guesser;
 use librezip::Trace;
@@ -57,7 +56,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     let old_dictionary = &dictionary.vec();
 
     let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
-    serialise::decompressed_codes(&mut decompressed, dictionary, codes)?;
+    librezip::decompressed_codes(&mut decompressed, dictionary, codes)?;
 
     if false {
         print!("   * codes: ");

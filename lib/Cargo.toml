@@ -8,7 +8,6 @@ byteorder = "1"
 error-chain = "0.11"
 itertools = "0.7"
 lazy_static = "0.2"
-result = "1"
 sha2 = "0.7"
 
 [dev-dependencies]

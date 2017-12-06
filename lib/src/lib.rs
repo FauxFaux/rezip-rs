@@ -11,26 +11,25 @@ extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 
-extern crate result;
 extern crate sha2;
 
 use std::fmt;
 
+pub mod all_refs;
 mod bestguess;
 mod bit;
-pub mod circles;
+mod circles;
 mod code_tree;
-mod lookahead;
 mod errors;
-pub mod filter;
-pub mod all_refs;
+mod filter;
 pub mod gzip;
 mod huffman;
-pub mod infer;
+mod infer;
 mod iters;
-pub mod parse;
+mod lookahead;
+mod parse;
 mod picker;
-pub mod serialise;
+mod serialise;
 pub mod serialise_trace;
 mod technique;
 pub mod trace;
@@ -39,9 +38,11 @@ mod wams;
 use bit::BitVec;
 
 pub use errors::*;
+pub use circles::CircularBuffer;
 pub use parse::parse_deflate;
 pub use serialise::compressed_block;
 pub use serialise::decompressed_block;
+pub use serialise::decompressed_codes;
 
 pub use technique::Config;
 pub use technique::Technique;

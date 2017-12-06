@@ -30,12 +30,9 @@ fn run() -> Result<()> {
             _ => continue,
         };
 
-        if librezip::infer::max_distance(&codes).is_none() {
-            // pure literals
-            continue;
-        }
+        // TODO: pure literals?
 
-        let result = librezip::infer::guess_settings(&[], &codes);
+        let result = unimplemented!();
         if unimplemented!() {
             if let Ok(mut f) = File::create(format!("brokey-{}.deflate", n)) {
                 f.write_all(&output)?;

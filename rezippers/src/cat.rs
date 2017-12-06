@@ -4,7 +4,7 @@ use std::io::Write;
 
 use librezip;
 use librezip::Block;
-use librezip::circles::CircularBuffer;
+use librezip::CircularBuffer;
 
 use errors::*;
 
@@ -26,7 +26,7 @@ pub fn run<R: Read>(mut reader: R) -> Result<()> {
             }
             FixedHuffman(ref codes) | DynamicHuffman { ref codes, .. } => {
                 let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());
-                librezip::serialise::decompressed_block(&mut decompressed, &mut dictionary, &block)?;
+                librezip::decompressed_block(&mut decompressed, &mut dictionary, &block)?;
                 stdout.write_all(&decompressed)?;
             }
         }

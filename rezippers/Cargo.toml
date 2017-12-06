@@ -1,0 +1,11 @@
+[package]
+authors = ["Chris West (Faux) <git@goeswhere.com>"]
+name = "rezippers"
+version = "0.1.0"
+
+[dependencies]
+error-chain = "0.11"
+clap = "2.28"
+
+[dependencies.librezip]
+path = "../lib"

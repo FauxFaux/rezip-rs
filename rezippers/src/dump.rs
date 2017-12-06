@@ -1,18 +1,12 @@
-#[macro_use]
-extern crate error_chain;
-extern crate librezip;
+use std::io::Read;
 
-use std::env;
-use std::fs;
-use std::io;
-
-use librezip::Result;
+use librezip;
 use librezip::Block;
 use librezip::Code;
 
-fn run() -> Result<()> {
-    let input = env::args().nth(1).ok_or("first argument: input-path.gz")?;
-    let mut reader = io::BufReader::new(fs::File::open(input)?);
+use errors::*;
+
+pub fn run<R: Read>(mut reader: R) -> Result<()> {
     librezip::gzip::discard_header(&mut reader)?;
     for (id, block) in librezip::parse_deflate(&mut reader).into_iter().enumerate() {
         let block = block?;
@@ -55,5 +49,3 @@ fn print(codes: &[Code]) {
         }
     }
 }
-
-quick_main!(run);

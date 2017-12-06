@@ -24,7 +24,6 @@ mod errors;
 mod filter;
 pub mod gzip;
 mod huffman;
-mod infer;
 mod iters;
 mod lookahead;
 mod parse;

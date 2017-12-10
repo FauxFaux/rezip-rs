@@ -76,9 +76,11 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     let refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 6);
     let all_refs = AllRefs::with_everything(old_dictionary, &decompressed);
 
-    println!("refs_1:\n{:?}", refs_1);
-    println!("refs_3:\n{:?}", refs_3);
-    println!("refs_all:\n{:?}", all_refs);
+    if false {
+        println!("refs_1:\n{:?}", refs_1);
+        println!("refs_3:\n{:?}", refs_3);
+        println!("refs_all:\n{:?}", all_refs);
+    }
 
     if true {
         try_trace(

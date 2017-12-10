@@ -33,6 +33,10 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         }
     }
 
+    // TODO: This requires prior-knowledge which isn't available during re-compression,
+    // TODO: so can't actually be used in the real world. It's here because I couldn't
+    // TODO: get the other way to work, so we should have a test implementation to
+    // TODO: compare against
     pub fn limited_by(preroll: &'p [u8], data: &'d [u8], codes: &[Code], skip_over: u16) -> Self {
         Self {
             preroll,
@@ -159,6 +163,7 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
+// TODO: see note on AllRefs::limited_by, the only caller of this method.
 fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) -> BackMap {
     let mut map = BackMap::with_capacity(32 * 1024);
 

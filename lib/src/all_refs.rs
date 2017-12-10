@@ -312,7 +312,7 @@ mod tests {
                 k(b"abc") => vec![1],
                 k(b"bcd") => vec![2, 8],
                 k(b"cde") => vec![3, 14],
-                k(b"def") => vec![4],
+                k(b"def") => vec![4, 15],
                 k(b"ef,") => vec![5],
                 k(b"f,b") => vec![6],
                 k(b",bc") => vec![7],

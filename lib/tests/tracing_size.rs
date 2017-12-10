@@ -71,3 +71,21 @@ fn decaying_2_2() {
 fn decaying_3_3() {
     assert_eq!(2, try_gzip(3, include_bytes!("data/decaying-sixteen-3.gz")))
 }
+
+// four-ref:
+// gzip -1 has maximum chain length of 4, so can't see the cat1 5 'cat' steps back,
+// so has to go with the shorter match in more recent history.
+// 0cat1cat2cat3cat4cat5cat1
+// 0123456789012345678901234
+// LLLLLR:4LR:4LR:4LR:4LR:20
+// 1: ------------------[4,3]
+// 2: ------------------[20,4]
+#[test]
+fn four_ref_1_1() {
+    assert_eq!(2, try_gzip(1, include_bytes!("data/four-ref-sixteen-1.gz")))
+}
+
+#[test]
+fn four_ref_2_2() {
+    assert_eq!(2, try_gzip(2, include_bytes!("data/four-ref-sixteen-2.gz")))
+}

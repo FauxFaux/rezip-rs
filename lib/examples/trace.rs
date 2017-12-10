@@ -72,35 +72,38 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!();
     }
 
-    let refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 3);
-    let refs_4 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 4);
-    let refs_5 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 5);
+    let refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 4);
     let all_refs = AllRefs::with_everything(old_dictionary, &decompressed);
 
-    try_trace(
-        &refs_3,
-        "gzip --fast",
-        Config::gzip_16_fastest(),
-        codes,
-        &decompressed,
-    );
+    if true {
+        try_trace(
+            &refs_3,
+            "gzip --fast",
+            Config::gzip_16_fastest(),
+            codes,
+            &decompressed,
+        );
+    }
 
-    try_trace(
-        &all_refs,
-        "gzip [--default]",
-        Config::gzip_16_default(),
-        codes,
-        &decompressed,
-    );
+    if false {
+        try_trace(
+            &all_refs,
+            "gzip [--default]",
+            Config::gzip_16_default(),
+            codes,
+            &decompressed,
+        );
+    }
 
-    try_trace(
-        &all_refs,
-        "gzip --best",
-        Config::gzip_16_best(),
-        codes,
-        &decompressed,
-    );
-
+    if false {
+        try_trace(
+            &all_refs,
+            "gzip --best",
+            Config::gzip_16_best(),
+            codes,
+            &decompressed,
+        );
+    }
 
     Ok(())
 }
@@ -110,6 +113,7 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
     let trace = trace::validate(codes, &technique);
     let serialise = serialise_trace::verify(&trace);
     println!("   * trace: {} -> {}", name, serialise.len());
+    println!("{:?}", all_refs);
     let mut pos = 0usize;
     for (t, c) in trace.iter().zip(codes.iter()) {
         match *t {

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::iter;
 
 use itertools::Itertools;
@@ -8,7 +9,13 @@ use usize_from;
 use Code;
 use Ref;
 
-type Key = (u8, u8, u8);
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+struct Key {
+    b0: u8,
+    b1: u8,
+    b2: u8,
+}
+
 type BackMap = HashMap<Key, Vec<usize>>;
 
 pub struct AllRefs<'p, 'd> {
@@ -110,8 +117,18 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     }
 }
 
+fn sorted_back_map(map: &BackMap) -> Vec<(&Key, &Vec<usize>)> {
+    let mut values: Vec<(&Key, &Vec<usize>)> = map.iter().collect();
+    values.sort_unstable_by_key(|&(_, poses)| poses);
+    values
+}
+
 fn key_from_bytes(from: &[u8]) -> Key {
-    (from[0], from[1], from[2])
+    Key {
+        b0: from[0],
+        b1: from[1],
+        b2: from[2],
+    }
 }
 
 fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
@@ -133,8 +150,10 @@ fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
 fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     let mut map = BackMap::with_capacity(32 * 1024);
 
-    for (pos, keys) in data.tuple_windows::<Key>().enumerate() {
-        map.entry(keys).or_insert_with(|| Vec::new()).push(pos);
+    for (pos, keys) in data.tuple_windows::<(u8, u8, u8)>().enumerate() {
+        map.entry(keys.into())
+            .or_insert_with(|| Vec::new())
+            .push(pos);
     }
 
     map
@@ -161,7 +180,7 @@ fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) 
     let mut code_pos = 0usize;
     let mut codes = codes.iter();
 
-    for (pos, keys) in data.tuple_windows::<Key>().enumerate() {
+    for (pos, keys) in data.tuple_windows::<(u8, u8, u8)>().enumerate() {
         if skip > 0 {
             skip -= 1;
             continue;
@@ -172,21 +191,69 @@ fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) 
 
             let run_len = codes.next().map(|code| code.emitted_bytes()).unwrap_or(0);
 
-            if run_len > skip_over {
+            if run_len >= skip_over {
                 skip = run_len - 1;
             }
 
             code_pos += usize_from(run_len);
         }
 
-        map.entry(keys).or_insert_with(|| Vec::new()).push(pos);
+        map.entry(keys.into())
+            .or_insert_with(|| Vec::new())
+            .push(pos);
     }
 
     map
 }
 
+impl From<(u8, u8, u8)> for Key {
+    fn from(tuple: (u8, u8, u8)) -> Self {
+        Key {
+            b0: tuple.0,
+            b1: tuple.1,
+            b2: tuple.2,
+        }
+    }
+}
+
+fn normal_char(c: u8) -> bool {
+    c.is_ascii_alphanumeric() || c.is_ascii_graphic() || c.is_ascii_punctuation()
+}
+
+impl fmt::Debug for Key {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if normal_char(self.b0) && normal_char(self.b1) && normal_char(self.b2) {
+            write!(
+                f,
+                "\"{}{}{}\"",
+                self.b0 as char,
+                self.b1 as char,
+                self.b2 as char
+            )
+        } else {
+            write!(
+                f,
+                "{:?}{:?}{:?}",
+                self.b0 as char,
+                self.b1 as char,
+                self.b2 as char
+            )
+        }
+    }
+}
+
+impl<'p, 'd> fmt::Debug for AllRefs<'p, 'd> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (key, val) in sorted_back_map(&self.map) {
+            writeln!(f, " - {:?}: {:?}", key, val)?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::sorted_back_map;
     use super::Key;
 
     use Code;
@@ -237,35 +304,45 @@ mod tests {
         // compression we see below, where the 4-length run is at
         // dist 11, because it can't see the version at position 8.
 
+        // sorting just for better error messages
         assert_eq!(
-            hashmap! {
-                k(b"abc") => vec![0],
-                k(b"bcd") => vec![1, 7],
-                k(b"cde") => vec![2, 13],
-                k(b"def") => vec![3],
-                k(b"ef,") => vec![4],
-                k(b"f,b") => vec![5],
-                k(b",bc") => vec![6],
-            },
-            limited_map(
-                b"abcdef,bcdef,cdef".iter().cloned(),
+            sorted_back_map(&hashmap! {
+                k(b"1ab") => vec![0],
+                k(b"abc") => vec![1],
+                k(b"bcd") => vec![2, 8],
+                k(b"cde") => vec![3, 14],
+                k(b"def") => vec![4],
+                k(b"ef,") => vec![5],
+                k(b"f,b") => vec![6],
+                k(b",bc") => vec![7],
+                k(b"-cd") => vec![13],
+            }),
+            sorted_back_map(&limited_map(
+                b"1abcdef,bcdef-cdef".iter().cloned(),
                 &[
+                    L(b'1'),
                     L(b'a'),
                     L(b'b'),
                     L(b'c'),
                     L(b'd'),
                     L(b'e'),
                     L(b'f'),
-                    r(6, 6),
+                    L(b','),
+                    r(6, 5),
+                    L(b'-'),
                     r(11, 4)
                 ],
-                3
-            )
+                4
+            ))
         )
     }
 
     fn k(from: &[u8]) -> Key {
         assert_eq!(3, from.len());
-        (from[0], from[1], from[2])
+        Key {
+            b0: from[0],
+            b1: from[1],
+            b2: from[2],
+        }
     }
 }

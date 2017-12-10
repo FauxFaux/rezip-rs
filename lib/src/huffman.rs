@@ -223,9 +223,8 @@ pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u
 
     if sym <= 29 {
         let num_extra_bits = (sym / 2 - 1) as u8;
-        return Ok(
-            (((sym % 2 + 2) as u16) << num_extra_bits) + 1 + reader.read_part(num_extra_bits)?,
-        );
+        return Ok((((sym % 2 + 2) as u16) << num_extra_bits) + 1
+            + reader.read_part(num_extra_bits)?);
     }
 
     bail!("reserved distance symbol")

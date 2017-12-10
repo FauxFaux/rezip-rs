@@ -79,9 +79,10 @@ pub fn read<R: Read>(mut data: R) -> Result<Vec<Trace>> {
         } else if first <= 32768 {
             let dist = first;
             let run_minus_3 = data.read_u8()?;
-            ret.push(Trace::Actual(
-                Code::Reference(Ref::new(dist, u16::from(run_minus_3 + 3))),
-            ));
+            ret.push(Trace::Actual(Code::Reference(Ref::new(
+                dist,
+                u16::from(run_minus_3 + 3),
+            ))));
         } else {
             let count = first - 32768;
             for _ in 0..count {

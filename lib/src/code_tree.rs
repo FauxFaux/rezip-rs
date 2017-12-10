@@ -41,9 +41,12 @@ impl CodeTree {
             }
 
             // pair up old nodes into internal nodes in the new tree
-            new_nodes.extend(nodes.into_iter().tuples().map(|(first, second)| {
-                Node::Internal(Box::new(first), Box::new(second))
-            }));
+            new_nodes.extend(
+                nodes
+                    .into_iter()
+                    .tuples()
+                    .map(|(first, second)| Node::Internal(Box::new(first), Box::new(second))),
+            );
 
             nodes = new_nodes;
         }

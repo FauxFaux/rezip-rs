@@ -30,7 +30,11 @@ impl Config {
         );
         Config {
             lookahead: Lookahead::Greedy,
-            picker: Picker::DropFarThrees,
+            picker: if level >= 4 {
+                Picker::DropFarThrees
+            } else {
+                Picker::Longest
+            },
             wams: wams::CONFIGURATIONS[usize::from(level - 1)],
         }
     }

@@ -181,7 +181,6 @@ fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) 
     let mut codes = codes.iter();
 
     for (pos, keys) in data.tuple_windows::<(u8, u8, u8)>().enumerate() {
-
         if pos > code_pos {
             assert_eq!(pos, code_pos + 1);
 

@@ -298,9 +298,9 @@ mod tests {
     fn limited() {
         use super::limited_map;
 
-        // the central "bcdef," is detected as a run,
+        // the central "bcdef" is detected as a run,
         // but is long enough to trigger the map corruption,
-        // so entries (8...12) inclusive ('c' -> ',') don't end
+        // so entries (9...12) inclusive ('c' -> 'f') don't end
         // up in the map. In `gzip -1`, this looks like the
         // compression we see below, where the 4-length run is at
         // dist 11, because it can't see the version at position 8.

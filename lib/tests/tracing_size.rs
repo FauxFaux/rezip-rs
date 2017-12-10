@@ -54,12 +54,12 @@ fn decaying_1_1() {
 
 #[test]
 fn decaying_1_2() {
-    assert_eq!(2, try_gzip(2, include_bytes!("data/decaying-sixteen-1.gz")))
+    assert_eq!(7, try_gzip(2, include_bytes!("data/decaying-sixteen-1.gz")))
 }
 
 #[test]
 fn decaying_1_3() {
-    assert_eq!(2, try_gzip(3, include_bytes!("data/decaying-sixteen-1.gz")))
+    assert_eq!(12, try_gzip(3, include_bytes!("data/decaying-sixteen-1.gz")))
 }
 
 #[test]

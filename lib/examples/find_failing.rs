@@ -10,6 +10,7 @@ use std::io::Write;
 
 use rand::Rng;
 
+use librezip::Block;
 use librezip::Result;
 
 quick_main!(run);
@@ -18,29 +19,30 @@ fn run() -> Result<()> {
     let mut rng = rand::thread_rng();
     let mut n = 25;
     loop {
-        let output = compressed_file(n, &mut rng)?;
-        let block = match librezip::parse_deflate(Cursor::new(&output)).next() {
+        let (uncompressed, compressed) = compressed_file(n, &mut rng)?;
+        let block = match librezip::parse_deflate(Cursor::new(&compressed)).next() {
             Some(Ok(block)) => block,
             other => bail!("couldn't deflate: {:?}", other),
         };
 
         let codes = match block {
-            librezip::Block::FixedHuffman(codes)
-            | librezip::Block::DynamicHuffman { codes, .. } => codes,
-            _ => continue,
+            Block::FixedHuffman(codes)
+            | Block::DynamicHuffman { codes, .. } => codes,
+            Block::Uncompressed(_) => continue,
         };
 
         // TODO: pure literals?
 
-        let result = unimplemented!();
-        if unimplemented!() {
+        let slice = librezip::tracer::try_gzip(1, &[], &uncompressed, &codes);
+
+        if slice.len() != 2 {
             if let Ok(mut f) = File::create(format!("brokey-{}.deflate", n)) {
-                f.write_all(&output)?;
+                f.write_all(&compressed)?;
             } else {
                 println!("beaten");
                 n -= 1;
             }
-            println!("found a failure at n={}: {:?}", n, result);
+            println!("found a failure at n={}: {:?} {:?}", n, slice.len(), slice);
             n -= 1;
         }
     }
@@ -48,12 +50,12 @@ fn run() -> Result<()> {
     unreachable!()
 }
 
-fn compressed_file(n: usize, mut rng: &mut rand::ThreadRng) -> Result<Vec<u8>> {
+fn compressed_file(n: usize, mut rng: &mut rand::ThreadRng) -> Result<(Vec<u8>, Vec<u8>)> {
     let mut encoder =
-        flate2::write::DeflateEncoder::new(Vec::with_capacity(n), flate2::Compression::Default);
+        flate2::write::DeflateEncoder::new(Vec::with_capacity(n), flate2::Compression::fast());
     let input: Vec<u8> = (0..n).map(|_| random_printable(&mut rng)).collect();
     encoder.write(&input)?;
-    Ok(encoder.finish()?)
+    Ok((input, encoder.finish()?))
 }
 
 fn random_printable(rng: &mut rand::ThreadRng) -> u8 {

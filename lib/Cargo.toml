@@ -18,7 +18,7 @@ rand = "0.3"
 [dev-dependencies.flate2]
 default-features = false
 features = ["zlib"]
-version = "0.2"
+version = "1"
 
 [features]
 tracing = []

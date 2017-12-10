@@ -187,7 +187,7 @@ fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) 
 
             let run_len = codes.next().map(|code| code.emitted_bytes()).unwrap_or(0);
 
-            if run_len >= skip_over {
+            if run_len > skip_over {
                 skip = run_len - 1;
             }
 

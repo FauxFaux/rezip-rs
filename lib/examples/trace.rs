@@ -72,14 +72,29 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!();
     }
 
-    let refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 4);
+    let refs_1 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 4);
+    let refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 6);
     let all_refs = AllRefs::with_everything(old_dictionary, &decompressed);
+
+    println!("refs_1:\n{:?}", refs_1);
+    println!("refs_3:\n{:?}", refs_3);
+    println!("refs_all:\n{:?}", all_refs);
+
+    if true {
+        try_trace(
+            &refs_1,
+            "gzip --fast",
+            Config::gzip_16_fastest(),
+            codes,
+            &decompressed,
+        );
+    }
 
     if true {
         try_trace(
             &refs_3,
-            "gzip --fast",
-            Config::gzip_16_fastest(),
+            "gzip -3",
+            Config::gzip(3),
             codes,
             &decompressed,
         );
@@ -113,7 +128,6 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
     let trace = trace::validate(codes, &technique);
     let serialise = serialise_trace::verify(&trace);
     println!("   * trace: {} -> {}", name, serialise.len());
-    println!("{:?}", all_refs);
     let mut pos = 0usize;
     for (t, c) in trace.iter().zip(codes.iter()) {
         match *t {

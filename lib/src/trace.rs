@@ -68,9 +68,9 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
             match hint {
                 Trace::ActuallyLiteral | Trace::Actually(_) => {
                     // the guesser was wrong, and we moved in a way it doesn't understand; ignore it
-                    break
-                },
-                Trace::Correct => {},
+                    break;
+                }
+                Trace::Correct => {}
             }
         }
     }

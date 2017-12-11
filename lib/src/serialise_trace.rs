@@ -1,5 +1,6 @@
 use std::io;
 use std::io::Read;
+use std::u16;
 
 use byteorder::LittleEndian as LE;
 use byteorder::ReadBytesExt;
@@ -9,10 +10,10 @@ use itertools::Itertools;
 
 use errors::*;
 
-use Code;
 use Ref;
 use Trace;
 use u16_from;
+use usize_from;
 
 pub fn verify(traces: &[Trace]) -> Vec<u8> {
     let data = write(traces);
@@ -39,20 +40,25 @@ pub fn write(traces: &[Trace]) -> Vec<u8> {
             Trace::ActuallyLiteral => {
                 ret.write_u16::<LE>(0).expect("writing to vector");
                 traces.next();
-            },
+            }
             Trace::Actually(r) => {
                 ret.write_u16::<LE>(r.dist).expect("writing to vector");
                 ret.push((r.run() - 3) as u8);
                 traces.next();
-            },
+            }
             Trace::Correct => {
                 let mut corrects = traces.peeking_take_while(|x| Trace::Correct == **x).count();
-                while corrects > 32768 {
-                    ret.write_u16::<LE>(32768).expect("writing to a vector");
-                    corrects -= 32768;
+                let representation_offset = 32768;
+                let max_representable = u16::MAX - representation_offset;
+                while corrects > usize_from(max_representable) {
+                    ret.write_u16::<LE>(representation_offset + max_representable)
+                        .expect("writing to a vector");
+                    corrects -= usize_from(max_representable);
                 }
 
-                ret.write_u16::<LE>(32768 + u16_from(corrects))
+                assert_ne!(0, corrects);
+
+                ret.write_u16::<LE>(representation_offset + u16_from(corrects))
                     .expect("writing to a vector");
             }
         }
@@ -76,10 +82,7 @@ pub fn read<R: Read>(mut data: R) -> Result<Vec<Trace>> {
         } else if first <= 32768 {
             let dist = first;
             let run_minus_3 = data.read_u8()?;
-            ret.push(Trace::Actually(Ref::new(
-                dist,
-                u16::from(run_minus_3 + 3),
-            )));
+            ret.push(Trace::Actually(Ref::new(dist, u16::from(run_minus_3 + 3))));
         } else {
             let count = first - 32768;
             for _ in 0..count {
@@ -89,4 +92,33 @@ pub fn read<R: Read>(mut data: R) -> Result<Vec<Trace>> {
     }
 
     Ok(ret)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+    use super::Trace;
+
+    fn assert_round_trip(trace: &[Trace]) {
+        assert_eq!(
+            trace,
+            super::read(io::Cursor::new(super::write(trace)))
+                .unwrap()
+                .as_slice()
+        );
+    }
+
+    #[test]
+    fn long_trace() {
+        let mut v = vec![Trace::Correct; 32765];
+        assert_round_trip(&v);
+        v[1] = Trace::ActuallyLiteral;
+        assert_round_trip(&v);
+        v.push(Trace::ActuallyLiteral);
+        assert_round_trip(&v);
+        for _ in 0..10 {
+            v.insert(5, Trace::Correct);
+            assert_round_trip(&v);
+        }
+    }
 }

@@ -132,14 +132,22 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
     println!("   * trace: {} -> {}", name, serialise.len());
     let mut pos = 0usize;
     for (t, c) in trace.iter().zip(codes.iter()) {
+        let location_hint = String::from_utf8_lossy(
+            &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())]
+        );
+
         match *t {
             Trace::Correct => {}
-            Trace::Actual(correct) => print!(
-                "   {:4}. {:10?} guess: {:?} trace: {:?}\n",
+            Trace::ActuallyLiteral => println!(
+                "   {:4}. {:10?} guess: {:?} trace: literal",
                 pos,
-                String::from_utf8_lossy(
-                    &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())]
-                ),
+                location_hint,
+                technique.codes_at(pos),
+            ),
+            Trace::Actually(correct) => println!(
+                "   {:4}. {:10?} guess: {:?} trace: {:?}",
+                pos,
+                location_hint,
                 technique.codes_at(pos),
                 correct
             ),

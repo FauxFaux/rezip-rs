@@ -117,7 +117,8 @@ pub struct WindowSettings {
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Trace {
     Correct,
-    Actual(Code),
+    ActuallyLiteral,
+    Actually(Ref),
 }
 
 impl Code {
@@ -167,7 +168,8 @@ impl fmt::Debug for Trace {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Trace::Correct => write!(f, "✓"),
-            Trace::Actual(code) => write!(f, "c{:?}", code),
+            Trace::ActuallyLiteral => write!(f, "L"),
+            Trace::Actually(r) => write!(f, "{:?}", r),
         }
     }
 }

@@ -29,8 +29,11 @@ pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
         }
 
         match codes.next() {
-            Some(code) => {
-                ret.push(Trace::Actual(*code));
+            Some(&code) => {
+                ret.push(match code {
+                    Code::Literal(_) => Trace::ActuallyLiteral,
+                    Code::Reference(r) => Trace::Actually(r),
+                });
                 pos += usize_from(code.emitted_bytes());
             }
             None => panic!("the guesser guessed more than there actually are?"),
@@ -55,15 +58,19 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
             let hint = *trace.next().expect("not out of data");
             let orig = match hint {
                 Trace::Correct => guess,
-                Trace::Actual(other) => other,
+                Trace::Actually(r) => Code::Reference(r),
+                Trace::ActuallyLiteral => Code::Literal(technique.byte_at(pos)),
             };
 
             pos += usize_from(orig.emitted_bytes());
             ret.push(orig);
 
-            if let Trace::Actual(_) = hint {
-                // the guesser was wrong, and we moved in a way it doesn't understand; ignore it
-                break;
+            match hint {
+                Trace::ActuallyLiteral | Trace::Actually(_) => {
+                    // the guesser was wrong, and we moved in a way it doesn't understand; ignore it
+                    break
+                },
+                Trace::Correct => {},
             }
         }
     }

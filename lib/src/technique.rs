@@ -76,6 +76,10 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
     pub fn new(config: Config, all_refs: &'a AllRefs<'p, 'd>) -> Self {
         Technique { config, all_refs }
     }
+
+    pub fn byte_at(&self, pos: usize) -> u8 {
+        self.all_refs.data[pos]
+    }
 }
 
 impl<'a, 'p, 'd> DataLen for Technique<'a, 'p, 'd> {

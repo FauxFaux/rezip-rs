@@ -72,9 +72,13 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!();
     }
 
-    let refs_1 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 4);
-    let refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 6);
-    let all_refs = AllRefs::with_everything(old_dictionary, &decompressed);
+    let mut refs_1 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 4);
+    let mut refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 6);
+    let mut all_refs = AllRefs::with_everything(old_dictionary, &decompressed);
+
+    refs_1.apply_first_byte_bug_rule();
+    refs_3.apply_first_byte_bug_rule();
+    all_refs.apply_first_byte_bug_rule();
 
     if false {
         println!("refs_1:\n{:?}", refs_1);

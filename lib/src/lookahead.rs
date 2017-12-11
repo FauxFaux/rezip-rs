@@ -28,9 +28,6 @@ fn greedy<L: Looker>(looker: &L, pos: usize) -> Vec<Code> {
     ]
 }
 
-//cursor.all_candidates().and_then(|candidates| {
-//best(candidates.filter(move |r| usize_from(r.dist) != pos))
-//})
 fn gzip<L: Looker>(looker: &L, mut pos: usize) -> Vec<Code> {
     let mut ret = Vec::with_capacity(3);
 

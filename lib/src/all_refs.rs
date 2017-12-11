@@ -45,6 +45,14 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         }
     }
 
+    pub fn apply_first_byte_bug_rule(&mut self) {
+        if let Some(ref k) = self.key(0) {
+            if let Some(v) = self.map.get_mut(k) {
+                v.remove_item(&self.preroll.len());
+            }
+        }
+    }
+
     pub fn data_len(&self) -> usize {
         self.data.len()
     }

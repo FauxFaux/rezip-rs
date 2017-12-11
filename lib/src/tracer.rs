@@ -12,10 +12,14 @@ pub fn try_gzip(level: u8, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<u
 }
 
 fn try(config: Config, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<u8> {
-    let all_refs = match config.wams.insert_only_below_length {
+    let mut all_refs = match config.wams.insert_only_below_length {
         Some(limit) => AllRefs::limited_by(preroll, data, codes, limit),
         None => AllRefs::with_everything(preroll, data),
     };
+
+    if config.first_byte_bug {
+        all_refs.apply_first_byte_bug_rule();
+    }
 
     serialise_trace::verify(&trace::validate(codes, &Technique::new(config, &all_refs)))
 }

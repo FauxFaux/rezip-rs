@@ -9,9 +9,11 @@ use DataLen;
 use Guesser;
 use Looker;
 use Ref;
+use usize_from;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
+    pub first_byte_bug: bool,
     pub lookahead: Lookahead,
     pub picker: Picker,
     pub wams: WamsOptimisations,
@@ -29,6 +31,7 @@ impl Config {
             "gzip levels are between 1 and 9, inclusive"
         );
         Config {
+            first_byte_bug: true,
             lookahead: Lookahead::Greedy,
             picker: if level >= 4 {
                 Picker::DropFarThrees
@@ -40,31 +43,20 @@ impl Config {
     }
 
     pub fn gzip_16_fastest() -> Self {
-        Config {
-            lookahead: Lookahead::Greedy,
-            picker: Picker::DropFarThrees,
-            wams: wams::CONFIGURATIONS[0],
-        }
+        Self::gzip(1)
     }
 
     pub fn gzip_16_default() -> Self {
-        Config {
-            lookahead: Lookahead::Gzip,
-            picker: Picker::DropFarThrees,
-            wams: wams::CONFIGURATIONS[5],
-        }
+        Self::gzip(6)
     }
 
     pub fn gzip_16_best() -> Self {
-        Config {
-            lookahead: Lookahead::Gzip,
-            picker: Picker::DropFarThrees,
-            wams: wams::CONFIGURATIONS[8],
-        }
+        Self::gzip(9)
     }
 
     pub fn spicy() -> Self {
         Config {
+            first_byte_bug: false,
             lookahead: Lookahead::ThreeZip,
             picker: Picker::DropFarThrees,
             wams: wams::CONFIGURATIONS[8],

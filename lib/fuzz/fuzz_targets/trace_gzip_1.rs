@@ -38,5 +38,13 @@ fn run(data: &[u8]) {
 
     let slice = librezip::tracer::try_gzip(1, &[], &data, &codes);
 
-    assert_eq!(2, slice.len());
+    if 2 == slice.len() {
+        return;
+    }
+
+    println!("input: {:?}", data);
+    println!("slice: {:?}", slice);
+    println!("codes: {:?}", codes);
+
+    panic!()
 }

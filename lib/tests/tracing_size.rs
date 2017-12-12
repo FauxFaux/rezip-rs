@@ -89,3 +89,21 @@ fn four_ref_1_1() {
 fn four_ref_2_2() {
     assert_eq!(2, try_gzip(2, include_bytes!("data/four-ref-sixteen-2.gz")))
 }
+
+// ten-nine:
+// gzip -1 misses the backref further back, possibly due to chain length?
+// I would expect the dict to only contain "aaa" at 1[L] and 2[the first run],
+// which is significantly less than four.
+//   aaaaaaaaaabaaaaaaaaa
+//   01234567890123456789
+// 1 LLR[-1, 8]LR[-9, 8]L
+// 2 LLR[-1, 8]LR[-10, 9]
+#[test]
+fn ten_nine_1_1() {
+    assert_eq!(2, try_gzip(1, include_bytes!("data/ten-nine-sixteen-1.gz")))
+}
+
+#[test]
+fn ten_nine_2_2() {
+    assert_eq!(2, try_gzip(2, include_bytes!("data/ten-nine-sixteen-2.gz")))
+}

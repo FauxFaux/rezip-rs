@@ -1,5 +1,6 @@
 #![no_main]
 #[macro_use] extern crate libfuzzer_sys;
+extern crate hex;
 extern crate librezip;
 extern crate flate2;
 
@@ -42,9 +43,17 @@ fn run(data: &[u8]) {
         return;
     }
 
-    println!("input: {:?}", data);
+    println!("input: {}", hex::encode(data));
+    println!("compr: {}", hex::encode(&compressed));
     println!("slice: {:?}", slice);
     println!("codes: {:?}", codes);
+
+    {
+        if let Ok(mut f) = File::create(format!("{}.tailless-gz", hex::encode(&compressed))) {
+            f.write_all(b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x04\x03").unwrap();
+            f.write_all(&compressed).unwrap();
+        }
+    }
 
     panic!()
 }

@@ -80,7 +80,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     refs_3.apply_first_byte_bug_rule();
     all_refs.apply_first_byte_bug_rule();
 
-    if false {
+    if true {
         println!("refs_1:\n{:?}", refs_1);
         println!("refs_3:\n{:?}", refs_3);
         println!("refs_all:\n{:?}", all_refs);

@@ -1,12 +1,15 @@
 #![no_main]
 #[macro_use] extern crate libfuzzer_sys;
-extern crate hex;
 extern crate librezip;
+
 extern crate flate2;
+extern crate hex;
+extern crate tempfile;
 
 use std::fs::File;
 use std::io::Cursor;
 use std::io::Write;
+use std::process;
 
 use flate2::write::DeflateEncoder;
 
@@ -39,7 +42,13 @@ fn run(data: &[u8]) {
 
     let slice = librezip::tracer::try_gzip(1, &[], &data, &codes);
 
+
     if 2 == slice.len() {
+        return;
+    }
+
+    let gzip_file = exec_actual_gzip(data);
+    if compressed[..] != gzip_file[10..gzip_file.len()-8] {
         return;
     }
 
@@ -56,4 +65,15 @@ fn run(data: &[u8]) {
     }
 
     panic!()
+}
+
+fn exec_actual_gzip(input: &[u8]) -> Vec<u8> {
+    let mut tmp = tempfile::NamedTempFile::new().unwrap();
+    tmp.write_all(input).unwrap();
+    tmp.flush().unwrap();
+    process::Command::new("gzip")
+        .args(&["-n1c", tmp.path().to_str().unwrap()])
+        .output()
+        .unwrap()
+        .stdout
 }

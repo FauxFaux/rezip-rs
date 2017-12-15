@@ -10,7 +10,7 @@ use Code;
 use Ref;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
-struct Key {
+pub struct Key {
     b0: u8,
     b1: u8,
     b2: u8,
@@ -229,6 +229,20 @@ impl From<(u8, u8, u8)> for Key {
     }
 }
 
+impl Key {
+    pub fn sixteen_hash_16(&self) -> u16 {
+        let mut hash = 0u16;
+
+        hash ^= u16::from(self.b0);
+        hash <<= 6;
+        hash ^= u16::from(self.b1);
+        hash <<= 6;
+        hash ^= u16::from(self.b2);
+
+        hash
+    }
+}
+
 fn normal_char(c: u8) -> bool {
     c.is_ascii_alphanumeric() || c.is_ascii_graphic() || c.is_ascii_punctuation()
 }
@@ -348,6 +362,15 @@ mod tests {
                 4
             ))
         )
+    }
+
+
+    #[test]
+    fn hash_sixteen_16_collisions() {
+        assert_eq!(0xf3cf, Key::from((15, 15, 15)).sixteen_hash_16());
+        assert_eq!(0xf3cf, Key::from((79, 15, 15)).sixteen_hash_16());
+
+        assert_eq!(0b1100_1111_0011_1111, Key::from((0xff, 0xff, 0xff)).sixteen_hash_16());
     }
 
     fn k(from: &[u8]) -> Key {

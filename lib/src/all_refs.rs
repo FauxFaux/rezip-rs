@@ -93,12 +93,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                 .into_iter()
                 .rev()
                 .filter(move |&&off| {
-                    assert_eq!(
-                        self.data[off + 2],
-                        key.b2,
-                        "the hashing algorithm guarantees this byte is correct"
-                    );
-                    self.data[off] == key.b0 && self.data[off + 1] == key.b1
+                    self.data[off..off+3] == key.as_array()[..]
                 })
                 .map(move |off| {
                     let dist = u16_from(pos - off);
@@ -251,6 +246,10 @@ impl Key {
         hash ^= u16::from(self.b2);
 
         hash
+    }
+
+    fn as_array(&self) -> [u8; 3] {
+        [self.b0, self.b1, self.b2]
     }
 }
 

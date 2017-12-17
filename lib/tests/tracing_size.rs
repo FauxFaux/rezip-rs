@@ -126,3 +126,15 @@ fn ten_nine_2_2() {
 fn dumb_collision() {
     assert_eq!(2, try_gzip(1, include_bytes!("data/dumb-collision-1.gz")))
 }
+
+// colliding-back-miss
+// 'Ooo' collides with 'ooo', which causes some unspecified chaos,
+// changing the 'O' to nearly any other character causes the 'oooA'
+// second backreference to be correctly detected as a 10,4, instead
+// of the 4,3 shown here:
+// AoooAoooooOoooA
+// LLLLL4,3LLL4,3L
+#[test]
+fn colliding_back_miss() {
+    assert_eq!(2, try_gzip(1, include_bytes!("data/colliding-back-miss-sixteen-1.gz")))
+}

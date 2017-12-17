@@ -92,6 +92,14 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                 .unwrap_or(&[])
                 .into_iter()
                 .rev()
+                .filter(move |&&off| {
+                    assert_eq!(
+                        self.data[off + 2],
+                        key.b2,
+                        "the hashing algorithm guarantees this byte is correct"
+                    );
+                    self.data[off] == key.b0 && self.data[off + 1] == key.b1
+                })
                 .map(move |off| {
                     let dist = u16_from(pos - off);
                     let run = self.possible_run_length_at(data_pos, dist);

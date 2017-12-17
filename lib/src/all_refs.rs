@@ -16,7 +16,9 @@ pub struct Key {
     b2: u8,
 }
 
-type BackMap = HashMap<Key, Vec<usize>>;
+type SixteenHash = u16;
+
+type BackMap = HashMap<SixteenHash, Vec<usize>>;
 
 pub struct AllRefs<'p, 'd> {
     preroll: &'p [u8],
@@ -47,7 +49,8 @@ impl<'p, 'd> AllRefs<'p, 'd> {
 
     pub fn apply_first_byte_bug_rule(&mut self) {
         if let Some(ref k) = self.key(0) {
-            if let Some(v) = self.map.get_mut(k) {
+            // TODO: ???
+            if let Some(v) = self.map.get_mut(&k.sixteen_hash_16()) {
                 v.remove_item(&self.preroll.len());
             }
         }
@@ -82,7 +85,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
 
         Some(Box::new(
             self.map
-                .get(&key)
+                .get(&key.sixteen_hash_16())
                 .map(|v| {
                     sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
                 })
@@ -129,8 +132,8 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     }
 }
 
-fn sorted_back_map(map: &BackMap) -> Vec<(&Key, &Vec<usize>)> {
-    let mut values: Vec<(&Key, &Vec<usize>)> = map.iter().collect();
+fn sorted_back_map(map: &BackMap) -> Vec<(&SixteenHash, &Vec<usize>)> {
+    let mut values: Vec<(&SixteenHash, &Vec<usize>)> = map.iter().collect();
     values.sort_unstable_by_key(|&(_, poses)| poses);
     values
 }
@@ -163,7 +166,7 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     let mut map = BackMap::with_capacity(32 * 1024);
 
     for (pos, keys) in data.tuple_windows::<(u8, u8, u8)>().enumerate() {
-        map.entry(keys.into())
+        map.entry(Key::from(keys).sixteen_hash_16())
             .or_insert_with(|| Vec::new())
             .push(pos);
     }
@@ -211,7 +214,7 @@ fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) 
             continue;
         }
 
-        map.entry(keys.into())
+        map.entry(Key::from(keys).sixteen_hash_16())
             .or_insert_with(|| Vec::new())
             .push(pos);
     }
@@ -312,9 +315,9 @@ mod tests {
         use super::whole_map;
         assert_eq!(
             hashmap! {
-                k(b"abc") => vec![0, 3],
-                k(b"bca") => vec![1],
-                k(b"cab") => vec![2],
+                k(b"abc").sixteen_hash_16() => vec![0, 3],
+                k(b"bca").sixteen_hash_16() => vec![1],
+                k(b"cab").sixteen_hash_16() => vec![2],
             },
             whole_map(b"abcabc".iter().cloned())
         )
@@ -334,15 +337,15 @@ mod tests {
         // sorting just for better error messages
         assert_eq!(
             sorted_back_map(&hashmap! {
-                k(b"1ab") => vec![0],
-                k(b"abc") => vec![1],
-                k(b"bcd") => vec![2, 8],
-                k(b"cde") => vec![3, 14],
-                k(b"def") => vec![4, 15],
-                k(b"ef,") => vec![5],
-                k(b"f,b") => vec![6],
-                k(b",bc") => vec![7],
-                k(b"-cd") => vec![13],
+                k(b"1ab").sixteen_hash_16() => vec![0],
+                k(b"abc").sixteen_hash_16() => vec![1],
+                k(b"bcd").sixteen_hash_16() => vec![2, 8],
+                k(b"cde").sixteen_hash_16() => vec![3, 14],
+                k(b"def").sixteen_hash_16() => vec![4, 15],
+                k(b"ef,").sixteen_hash_16() => vec![5],
+                k(b"f,b").sixteen_hash_16() => vec![6],
+                k(b",bc").sixteen_hash_16() => vec![7],
+                k(b"-cd").sixteen_hash_16() => vec![13],
             }),
             sorted_back_map(&limited_map(
                 b"1abcdef,bcdef-cdef".iter().cloned(),

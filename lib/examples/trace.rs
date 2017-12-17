@@ -97,13 +97,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
     }
 
     if true {
-        try_trace(
-            &refs_3,
-            "gzip -3",
-            Config::gzip(3),
-            codes,
-            &decompressed,
-        );
+        try_trace(&refs_3, "gzip -3", Config::gzip(3), codes, &decompressed);
     }
 
     if false {
@@ -137,7 +131,7 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
     let mut pos = 0usize;
     for (t, c) in trace.iter().zip(codes.iter()) {
         let location_hint = String::from_utf8_lossy(
-            &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())]
+            &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())],
         );
 
         match *t {

@@ -37,12 +37,18 @@ fn try_gzip(level: u8, file: &[u8]) -> usize {
 // 3: -----[6,5]-[5,4]
 #[test]
 fn tiny_decay_1_1() {
-    assert_eq!(2, try_gzip(1, include_bytes!("data/tiny-decay-sixteen-1.gz")))
+    assert_eq!(
+        2,
+        try_gzip(1, include_bytes!("data/tiny-decay-sixteen-1.gz"))
+    )
 }
 
 #[test]
 fn tiny_decay_3_3() {
-    assert_eq!(2, try_gzip(3, include_bytes!("data/tiny-decay-sixteen-3.gz")))
+    assert_eq!(
+        2,
+        try_gzip(3, include_bytes!("data/tiny-decay-sixteen-3.gz"))
+    )
 }
 
 // decaying: S='defghijklm'; printf "0.abcdefg_hijklm,1.abc$S,2.bc$S,3.c$S,4.$S"
@@ -59,7 +65,10 @@ fn decaying_1_2() {
 
 #[test]
 fn decaying_1_3() {
-    assert_eq!(12, try_gzip(3, include_bytes!("data/decaying-sixteen-1.gz")))
+    assert_eq!(
+        12,
+        try_gzip(3, include_bytes!("data/decaying-sixteen-1.gz"))
+    )
 }
 
 #[test]
@@ -106,4 +115,14 @@ fn ten_nine_1_1() {
 #[test]
 fn ten_nine_2_2() {
     assert_eq!(2, try_gzip(2, include_bytes!("data/ten-nine-sixteen-2.gz")))
+}
+
+// dumb-collision
+// We had a bug where we would not check hash collisions for actual equality.
+// '1' and 'a' happen to collide.
+//   _1aaa
+// 1 LLLLL
+#[test]
+fn dumb_collision() {
+    assert_eq!(2, try_gzip(1, include_bytes!("data/dumb-collision-1.gz")))
 }

@@ -373,7 +373,10 @@ mod tests {
         assert_eq!(0xf3cf, Key::from((15, 15, 15)).sixteen_hash_16());
         assert_eq!(0xf3cf, Key::from((79, 15, 15)).sixteen_hash_16());
 
-        assert_eq!(0b1100_1111_0011_1111, Key::from((0xff, 0xff, 0xff)).sixteen_hash_16());
+        assert_eq!(
+            0b1100_1111_0011_1111,
+            Key::from((0xff, 0xff, 0xff)).sixteen_hash_16()
+        );
     }
 
     fn k(from: &[u8]) -> Key {

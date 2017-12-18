@@ -132,9 +132,18 @@ fn dumb_collision() {
 // changing the 'O' to nearly any other character causes the 'oooA'
 // second backreference to be correctly detected as a 10,4, instead
 // of the 4,3 shown here:
+// 012345678901234
 // AoooAoooooOoooA
 // LLLLL4,3LLL4,3L
+// _123411156112__
+// As there are no long runs, everything gets inserted into the dictionary? !(3 > 4).
+// Maximum dictionary depth: 4. Unclear when this rule is applied; before or after de-collisions.
+// According to the above understanding, it would work if you changed 4's 'A' to a non-colliding
+// character, but it doesn't, so clearly something else is missing.
 #[test]
 fn colliding_back_miss() {
-    assert_eq!(2, try_gzip(1, include_bytes!("data/colliding-back-miss-sixteen-1.gz")))
+    assert_eq!(
+        2,
+        try_gzip(1, include_bytes!("data/colliding-back-miss-sixteen-1.gz"))
+    )
 }

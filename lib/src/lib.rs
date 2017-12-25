@@ -21,6 +21,7 @@ extern crate sha2;
 use std::fmt;
 
 pub mod all_refs;
+mod bad_table;
 mod bestguess;
 mod bit;
 mod circles;
@@ -35,6 +36,7 @@ mod parse;
 mod picker;
 mod serialise;
 pub mod serialise_trace;
+pub mod sixteen;
 mod technique;
 pub mod trace;
 pub mod tracer;

@@ -131,7 +131,6 @@ mod tests {
         assert_eq!(vec![0, 0], decode_then_reencode_single_block(exp));
     }
 
-
     #[test]
     fn re_8_many_long_run() {
         const ENOUGH_TO_WRAP_AROUND: usize = 10 + (32 * 1024 / 258);

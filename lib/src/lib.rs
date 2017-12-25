@@ -87,7 +87,6 @@ pub trait Guesser: DataLen {
     fn codes_at(&self, pos: usize) -> Vec<Code>;
 }
 
-
 #[derive(Debug, Eq, PartialEq)]
 pub struct WindowSettings {
     window_size: u16,

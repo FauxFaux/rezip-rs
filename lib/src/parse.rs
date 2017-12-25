@@ -109,7 +109,6 @@ fn scan_huffman_data<R: Read>(
     Ok(ret)
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;

@@ -412,7 +412,6 @@ mod test {
         assert!(!reader.read_bit().unwrap());
     }
 
-
     #[test]
     fn vec_push() {
         let mut v = BitVec::new();

@@ -5,7 +5,6 @@ use std::io;
 use librezip::CircularBuffer;
 use librezip::Block;
 
-
 fn try_gzip(level: u8, file: &[u8]) -> usize {
     let mut reader = io::Cursor::new(file);
     librezip::gzip::discard_header(&mut reader).unwrap();

@@ -261,17 +261,13 @@ impl fmt::Debug for Key {
             write!(
                 f,
                 "\"{}{}{}\"",
-                self.b0 as char,
-                self.b1 as char,
-                self.b2 as char
+                self.b0 as char, self.b1 as char, self.b2 as char
             )
         } else {
             write!(
                 f,
                 "{:?}{:?}{:?}",
-                self.b0 as char,
-                self.b1 as char,
-                self.b2 as char
+                self.b0 as char, self.b1 as char, self.b2 as char
             )
         }
     }
@@ -371,7 +367,6 @@ mod tests {
             ))
         )
     }
-
 
     #[test]
     fn hash_sixteen_16_collisions() {

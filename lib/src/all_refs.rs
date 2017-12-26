@@ -106,7 +106,6 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                     .unwrap_or(&[])
                     .into_iter()
                     .rev()
-                    .filter(move |&&off| self.data[off..off + 3] == key.as_array()[..])
                     .map(move |off| {
                         let dist = u16_from(pos - off);
                         let run = self.possible_run_length_at(data_pos, dist);
@@ -118,6 +117,9 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                     .get(key)
                     .filter(move |off| (*off as usize) < pos)
                     .take(limit as usize)
+                    .filter(move |&off| {
+                        self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
+                    })
                     .map(move |off| {
                         let dist = u16_from(pos) - off;
                         let run = self.possible_run_length_at(data_pos, dist);

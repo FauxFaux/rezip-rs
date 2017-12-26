@@ -99,7 +99,7 @@ impl NicerTable {
 fn write(f: &mut fmt::Formatter, hash_to_pos: &[u16], pos_to_pos: &[u16]) -> fmt::Result {
     for (hash, pos) in hash_to_pos.iter().enumerate() {
         if 0 != *pos {
-            writeln!(f, "{:04x} -> {}", hash, pos)?;
+            writeln!(f, "{:016b} -> {}", hash, pos)?;
         }
     }
 
@@ -134,7 +134,7 @@ mod tests {
         let window: &[u8; 7] = b"oabcabc";
         let mut old = BadTable::default();
         old.reinit_hash_at(window, 0);
-        for i in 2..(window.len() - 2) {
+        for i in 0..(window.len() - 2) {
             old.insert_string(window, i as u16);
         }
 

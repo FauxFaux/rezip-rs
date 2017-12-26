@@ -72,21 +72,16 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!();
     }
 
-    let mut refs_1 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 4);
-    let mut refs_3 = AllRefs::limited_by(old_dictionary, &decompressed, codes, 6);
     let mut all_refs = AllRefs::with_everything(old_dictionary, &decompressed);
 
-    refs_1.apply_first_byte_bug_rule();
-    refs_3.apply_first_byte_bug_rule();
     all_refs.apply_first_byte_bug_rule();
 
     if true {
-        println!("refs_1:\n{:?}", refs_1);
-        println!("refs_3:\n{:?}", refs_3);
         println!("refs_all:\n{:?}", all_refs);
     }
 
-    if true {
+    #[cfg(never)]
+    {
         try_trace(
             &refs_1,
             "gzip --fast",
@@ -96,11 +91,12 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         );
     }
 
-    if true {
+    #[cfg(never)]
+    {
         try_trace(&refs_3, "gzip -3", Config::gzip(3), codes, &decompressed);
     }
 
-    if false {
+    if true {
         try_trace(
             &all_refs,
             "gzip [--default]",

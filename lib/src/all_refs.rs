@@ -35,18 +35,6 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         }
     }
 
-    // TODO: This requires prior-knowledge which isn't available during re-compression,
-    // TODO: so can't actually be used in the real world. It's here because I couldn't
-    // TODO: get the other way to work, so we should have a test implementation to
-    // TODO: compare against
-    pub fn limited_by(preroll: &'p [u8], data: &'d [u8], codes: &[Code], skip_over: u16) -> Self {
-        Self {
-            preroll,
-            data,
-            map: limited_map(preroll.iter().chain(data).cloned(), codes, skip_over),
-        }
-    }
-
     pub fn apply_first_byte_bug_rule(&mut self) {
         if let Some(ref k) = self.key(0) {
             // TODO: ???
@@ -175,54 +163,6 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     map
 }
 
-// TODO: see note on AllRefs::limited_by, the only caller of this method.
-fn limited_map<I: Iterator<Item = u8>>(data: I, codes: &[Code], skip_over: u16) -> BackMap {
-    let mut map = BackMap::with_capacity(32 * 1024);
-
-    // Argh.
-    // At each pos, we want to know if we're:
-    // * in a literal, so to add a ref
-    // * at the start of a code, so add a ref
-    // in the middle of a short-enough code, so add a ref
-    // in the middle of a longer ref, so not to do anything
-
-    // conceptually, this could be converting:
-    // L, L, R(.., 4), L, R(.., 3),
-    // with a cut-off of allowing the 3, into:
-    // t, t, t, f,f,f, t, t, t, t,
-    // i.e. ignoring everything but the first true in the R(.., 4),
-    // then zip-with that and skip based on !x.
-
-    let mut skip = 0u16;
-    let mut code_pos = 0usize;
-    let mut codes = codes.iter();
-
-    for (pos, keys) in data.tuple_windows::<(u8, u8, u8)>().enumerate() {
-        if pos > code_pos {
-            assert_eq!(pos, code_pos + 1);
-
-            let run_len = codes.next().map(|code| code.emitted_bytes()).unwrap_or(0);
-
-            if run_len > skip_over {
-                skip = run_len - 1;
-            }
-
-            code_pos += usize_from(run_len);
-        }
-
-        if skip > 0 {
-            skip -= 1;
-            continue;
-        }
-
-        map.entry(Key::from(keys).sixteen_hash_16())
-            .or_insert_with(|| Vec::new())
-            .push(pos);
-    }
-
-    map
-}
-
 impl From<(u8, u8, u8)> for Key {
     fn from(tuple: (u8, u8, u8)) -> Self {
         Key {
@@ -326,56 +266,12 @@ mod tests {
     }
 
     #[test]
-    fn limited() {
-        use super::limited_map;
-
-        // the central "bcdef" is detected as a run,
-        // but is long enough to trigger the map corruption,
-        // so entries (9...12) inclusive ('c' -> 'f') don't end
-        // up in the map. In `gzip -1`, this looks like the
-        // compression we see below, where the 4-length run is at
-        // dist 11, because it can't see the version at position 8.
-
-        // sorting just for better error messages
-        assert_eq!(
-            sorted_back_map(&hashmap! {
-                k(b"1ab").sixteen_hash_16() => vec![0],
-                k(b"abc").sixteen_hash_16() => vec![1],
-                k(b"bcd").sixteen_hash_16() => vec![2, 8],
-                k(b"cde").sixteen_hash_16() => vec![3, 14],
-                k(b"def").sixteen_hash_16() => vec![4, 15],
-                k(b"ef,").sixteen_hash_16() => vec![5],
-                k(b"f,b").sixteen_hash_16() => vec![6],
-                k(b",bc").sixteen_hash_16() => vec![7],
-                k(b"-cd").sixteen_hash_16() => vec![13],
-            }),
-            sorted_back_map(&limited_map(
-                b"1abcdef,bcdef-cdef".iter().cloned(),
-                &[
-                    L(b'1'),
-                    L(b'a'),
-                    L(b'b'),
-                    L(b'c'),
-                    L(b'd'),
-                    L(b'e'),
-                    L(b'f'),
-                    L(b','),
-                    r(6, 5),
-                    L(b'-'),
-                    r(11, 4)
-                ],
-                4
-            ))
-        )
-    }
-
-    #[test]
     fn hash_sixteen_16_collisions() {
-        assert_eq!(0xf3cf, Key::from((15, 15, 15)).sixteen_hash_16());
-        assert_eq!(0xf3cf, Key::from((79, 15, 15)).sixteen_hash_16());
+        assert_eq!(0x73cf, Key::from((15, 15, 15)).sixteen_hash_16());
+        assert_eq!(0x73cf, Key::from((79, 15, 15)).sixteen_hash_16());
 
         assert_eq!(
-            0b1100_1111_0011_1111,
+            0b0100_1111_0011_1111,
             Key::from((0xff, 0xff, 0xff)).sixteen_hash_16()
         );
     }

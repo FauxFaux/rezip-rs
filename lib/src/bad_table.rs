@@ -94,6 +94,21 @@ impl NicerTable {
 
         table
     }
+
+    pub fn get(&self, key: Key, limit: u16) -> Vec<u16> {
+        let mut ret = Vec::with_capacity(1 + usize_from(limit));
+        let mut pos = self.hash_to_pos[usize_from(key.sixteen_hash_16())];
+        ret.push(pos);
+        for _ in 0..limit {
+            pos = self.pos_to_pos[usize_from(pos)];
+            if 0 == pos {
+                break;
+            }
+            ret.push(pos);
+        }
+
+        ret
+    }
 }
 
 fn write(f: &mut fmt::Formatter, hash_to_pos: &[u16], pos_to_pos: &[u16]) -> fmt::Result {

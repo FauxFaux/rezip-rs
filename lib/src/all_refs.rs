@@ -56,7 +56,6 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         }
     }
 
-
     pub fn apply_first_byte_bug_rule(&mut self) {
         if let Some(ref k) = self.key(0) {
             // TODO: ???
@@ -66,7 +65,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                 },
                 Mappy::Sixteen(_) => {
                     // TODO: unimplemented
-                },
+                }
             }
         }
     }
@@ -114,9 +113,17 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                         Ref::new(dist, run)
                     }),
             )),
-            Mappy::Sixteen(SixteenDetails { table, limit }) => {
-                unimplemented!()
-            },
+            Mappy::Sixteen(SixteenDetails { ref table, limit }) => Some(Box::new(
+                table
+                    .get(key, limit)
+                    .into_iter()
+                    .filter(move |off| (*off as usize) < pos)
+                    .map(move |off| {
+                        let dist = u16_from(pos) - off;
+                        let run = self.possible_run_length_at(data_pos, dist);
+                        Ref::new(dist, run)
+                    }),
+            )),
         }
     }
 
@@ -248,11 +255,9 @@ impl fmt::Debug for Key {
 impl<'p, 'd> fmt::Debug for AllRefs<'p, 'd> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.map {
-            Mappy::Full(ref map) => {
-                for (key, val) in sorted_back_map(map) {
-                    writeln!(f, " - {:?}: {:?}", key, val)?;
-                }
-            }
+            Mappy::Full(ref map) => for (key, val) in sorted_back_map(map) {
+                writeln!(f, " - {:?}: {:?}", key, val)?;
+            },
             Mappy::Sixteen(_) => unimplemented!(),
         }
         Ok(())

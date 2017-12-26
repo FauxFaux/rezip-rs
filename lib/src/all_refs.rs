@@ -243,6 +243,7 @@ impl Key {
         hash <<= 6;
         hash ^= u16::from(self.b2);
 
+        hash &= 0x7fff;
         hash
     }
 

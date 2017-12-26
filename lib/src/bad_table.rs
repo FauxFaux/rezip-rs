@@ -1,3 +1,8 @@
+use std::fmt;
+
+use itertools::Itertools;
+
+use all_refs::Key;
 use usize_from;
 
 const HASH_SIZE: usize = 32 * 1024;
@@ -7,6 +12,7 @@ const HASH_AHEAD_LENGTH: u16 = 2;
 
 type Pos = u16;
 
+/// This is an efficient way to compute and store an ordered hashtable to a list of positions.
 pub struct BadTable {
     /// A lookup from the current `hash` to the last `pos` we saw that hash at.
     hash_to_pos: [Pos; HASH_SIZE],
@@ -56,5 +62,84 @@ impl Default for BadTable {
             hash_to_pos: [0; HASH_SIZE],
             hash: 0,
         }
+    }
+}
+
+pub struct NicerTable {
+    /// A lookup from the current `hash` to the last `pos` we saw that hash at.
+    hash_to_pos: [Pos; HASH_SIZE],
+
+    /// A lookup from a `pos`, to the last `pos` where something had the same hash.
+    pos_to_pos: [Pos; HASH_SIZE],
+}
+
+impl NicerTable {
+    pub fn from_window(data: &[u8]) -> NicerTable {
+        let mut table = NicerTable {
+            hash_to_pos: [0; HASH_SIZE],
+            pos_to_pos: [0; HASH_SIZE],
+        };
+
+        for (pos, keys) in data.into_iter()
+            .cloned()
+            .tuple_windows::<(u8, u8, u8)>()
+            .enumerate()
+        {
+            let hash = Key::from(keys).sixteen_hash_16();
+            let hash_entry = &mut table.hash_to_pos[hash as usize];
+            let prev_pos = *hash_entry;
+            table.pos_to_pos[pos] = prev_pos;
+            *hash_entry = pos as u16;
+        }
+
+        table
+    }
+}
+
+fn write(f: &mut fmt::Formatter, hash_to_pos: &[u16], pos_to_pos: &[u16]) -> fmt::Result {
+    for (hash, pos) in hash_to_pos.iter().enumerate() {
+        if 0 != *pos {
+            writeln!(f, "{:04x} -> {}", hash, pos)?;
+        }
+    }
+
+    for (pos, next) in pos_to_pos.iter().enumerate() {
+        if 0 != *next {
+            writeln!(f, "{} -> {}", pos, next)?;
+        }
+    }
+    Ok(())
+}
+
+impl fmt::Debug for BadTable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write(f, &self.hash_to_pos, &self.pos_to_pos)
+    }
+}
+
+impl fmt::Debug for NicerTable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write(f, &self.hash_to_pos, &self.pos_to_pos)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::NicerTable;
+    use super::BadTable;
+
+    #[test]
+    fn nicer() {
+        //                       0123456
+        let window: &[u8; 7] = b"oabcabc";
+        let mut old = BadTable::default();
+        old.reinit_hash_at(window, 0);
+        for i in 2..(window.len() - 2) {
+            old.insert_string(window, i as u16);
+        }
+
+
+        println!("{:?}", old);
+        println!("{:?}", NicerTable::from_window(window));
     }
 }

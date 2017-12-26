@@ -5,9 +5,11 @@ use std::iter;
 use itertools::Itertools;
 
 use bad_table::NicerTable;
+use obscure::obscure;
 use u16_from;
 use usize_from;
 use Code;
+use Obscure;
 use Ref;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -83,7 +85,11 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     }
 
     // None if we are out of possible keys, or Some(possibly empty list)
-    pub fn at<'m>(&'m self, data_pos: usize) -> Option<Box<Iterator<Item = Ref> + 'm>> {
+    pub fn at<'m>(
+        &'m self,
+        data_pos: usize,
+        obscura: &[Obscure],
+    ) -> Option<Box<Iterator<Item = Ref> + 'm>> {
         let key = match self.key(data_pos) {
             Some(key) => key,
             None => return None,
@@ -113,18 +119,23 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                     }),
             )),
             Mappy::Sixteen(SixteenDetails { ref table, limit }) => Some(Box::new(
-                table
-                    .get(key)
-                    .filter(move |off| (*off as usize) < pos)
-                    .take(limit as usize)
-                    .filter(move |&off| {
-                        self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
-                    })
-                    .map(move |off| {
-                        let dist = u16_from(pos) - off;
-                        let run = self.possible_run_length_at(data_pos, dist);
-                        Ref::new(dist, run)
+                obscure(
+                    table
+                        .get(key)
+                        .filter(move |off| (*off as usize) < pos)
+                        .take(limit as usize)
+                        .filter(move |&off| {
+                            self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
+                        }),
+                    obscura.iter().map(|&(k, v)| {
+                        assert_lt!(k, 65536);
+                        (k as u16, v)
                     }),
+                ).map(move |off| {
+                    let dist = u16_from(pos) - off;
+                    let run = self.possible_run_length_at(data_pos, dist);
+                    Ref::new(dist, run)
+                }),
             )),
         }
     }

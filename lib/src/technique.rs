@@ -125,7 +125,7 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
             }
         }
 
-        let candidates = self.all_refs.at(pos);
+        let candidates = self.all_refs.at(pos, obscura);
         (
             current_literal,
             candidates.and_then(|it| {

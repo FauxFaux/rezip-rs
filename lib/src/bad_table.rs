@@ -138,7 +138,6 @@ mod tests {
             old.insert_string(window, i as u16);
         }
 
-
         println!("{:?}", old);
         println!("{:?}", NicerTable::from_window(window));
     }

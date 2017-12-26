@@ -12,6 +12,9 @@ extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate more_asserts;
+
 #[cfg(test)]
 #[macro_use]
 extern crate maplit;
@@ -32,6 +35,7 @@ pub mod gzip;
 mod huffman;
 mod iters;
 mod lookahead;
+mod obscure;
 mod parse;
 mod picker;
 mod serialise;

@@ -4,6 +4,7 @@ use std::iter;
 
 use itertools::Itertools;
 
+use bad_table::NicerTable;
 use u16_from;
 use usize_from;
 use Code;
@@ -16,12 +17,17 @@ pub struct Key {
     b2: u8,
 }
 
+enum Mappy {
+    Full(BackMap),
+    Sixteen(NicerTable),
+}
+
 type BackMap = HashMap<Key, Vec<usize>>;
 
 pub struct AllRefs<'p, 'd> {
     preroll: &'p [u8],
     pub data: &'d [u8],
-    map: BackMap,
+    map: Mappy,
 }
 
 impl<'p, 'd> AllRefs<'p, 'd> {
@@ -29,15 +35,18 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         Self {
             preroll,
             data,
-            map: whole_map(preroll.iter().chain(data).cloned()),
+            map: Mappy::Full(whole_map(preroll.iter().chain(data).cloned())),
         }
     }
 
     pub fn apply_first_byte_bug_rule(&mut self) {
         if let Some(ref k) = self.key(0) {
             // TODO: ???
-            if let Some(v) = self.map.get_mut(&k) {
-                v.remove_item(&self.preroll.len());
+            match self.map {
+                Mappy::Full(ref mut map) => if let Some(v) = map.get_mut(&k) {
+                    v.remove_item(&self.preroll.len());
+                },
+                Mappy::Sixteen(_) => unimplemented!(),
             }
         }
     }
@@ -69,22 +78,24 @@ impl<'p, 'd> AllRefs<'p, 'd> {
             return Some(Box::new(iter::empty()));
         }
 
-        Some(Box::new(
-            self.map
-                .get(&key)
-                .map(|v| {
-                    sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
-                })
-                .unwrap_or(&[])
-                .into_iter()
-                .rev()
-                .filter(move |&&off| self.data[off..off + 3] == key.as_array()[..])
-                .map(move |off| {
-                    let dist = u16_from(pos - off);
-                    let run = self.possible_run_length_at(data_pos, dist);
-                    Ref::new(dist, run)
-                }),
-        ))
+        match self.map {
+            Mappy::Full(ref map) => Some(Box::new(
+                map.get(&key)
+                    .map(|v| {
+                        sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
+                    })
+                    .unwrap_or(&[])
+                    .into_iter()
+                    .rev()
+                    .filter(move |&&off| self.data[off..off + 3] == key.as_array()[..])
+                    .map(move |off| {
+                        let dist = u16_from(pos - off);
+                        let run = self.possible_run_length_at(data_pos, dist);
+                        Ref::new(dist, run)
+                    }),
+            )),
+            Mappy::Sixteen(_) => unimplemented!(),
+        }
     }
 
     fn get_at_dist(&self, data_pos: usize, dist: u16) -> u8 {
@@ -214,8 +225,13 @@ impl fmt::Debug for Key {
 
 impl<'p, 'd> fmt::Debug for AllRefs<'p, 'd> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (key, val) in sorted_back_map(&self.map) {
-            writeln!(f, " - {:?}: {:?}", key, val)?;
+        match self.map {
+            Mappy::Full(ref map) => {
+                for (key, val) in sorted_back_map(map) {
+                    writeln!(f, " - {:?}: {:?}", key, val)?;
+                }
+            }
+            Mappy::Sixteen(_) => unimplemented!(),
         }
         Ok(())
     }
@@ -255,9 +271,9 @@ mod tests {
         use super::whole_map;
         assert_eq!(
             hashmap! {
-                k(b"abc").sixteen_hash_16() => vec![0, 3],
-                k(b"bca").sixteen_hash_16() => vec![1],
-                k(b"cab").sixteen_hash_16() => vec![2],
+                k(b"abc") => vec![0, 3],
+                k(b"bca") => vec![1],
+                k(b"cab") => vec![2],
             },
             whole_map(b"abcabc".iter().cloned())
         )

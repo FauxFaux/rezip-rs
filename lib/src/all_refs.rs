@@ -115,9 +115,9 @@ impl<'p, 'd> AllRefs<'p, 'd> {
             )),
             Mappy::Sixteen(SixteenDetails { ref table, limit }) => Some(Box::new(
                 table
-                    .get(key, limit)
-                    .into_iter()
+                    .get(key)
                     .filter(move |off| (*off as usize) < pos)
+                    .take(limit as usize)
                     .map(move |off| {
                         let dist = u16_from(pos) - off;
                         let run = self.possible_run_length_at(data_pos, dist);

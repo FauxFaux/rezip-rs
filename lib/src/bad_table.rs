@@ -95,19 +95,36 @@ impl NicerTable {
         table
     }
 
-    pub fn get(&self, key: Key, limit: u16) -> Vec<u16> {
-        let mut ret = Vec::with_capacity(1 + usize_from(limit));
-        let mut pos = self.hash_to_pos[usize_from(key.sixteen_hash_16())];
-        ret.push(pos);
-        for _ in 0..limit {
-            pos = self.pos_to_pos[usize_from(pos)];
-            if 0 == pos {
-                break;
-            }
-            ret.push(pos);
+    pub fn get(&self, key: Key) -> Chain {
+        let pos = self.hash_to_pos[usize_from(key.sixteen_hash_16())];
+
+        Chain {
+            pos,
+            pos_to_pos: &self.pos_to_pos,
+        }
+    }
+}
+
+pub struct Chain<'a> {
+    pos: u16,
+    pos_to_pos: &'a [u16],
+}
+
+impl<'a> Iterator for Chain<'a> {
+    type Item = u16;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if 0 == self.pos {
+            return None;
         }
 
-        ret
+        self.pos = self.pos_to_pos[usize_from(self.pos)];
+
+        if 0 == self.pos {
+            None
+        } else {
+            Some(self.pos)
+        }
     }
 }
 

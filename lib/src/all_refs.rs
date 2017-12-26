@@ -16,9 +16,7 @@ pub struct Key {
     b2: u8,
 }
 
-type SixteenHash = u16;
-
-type BackMap = HashMap<SixteenHash, Vec<usize>>;
+type BackMap = HashMap<Key, Vec<usize>>;
 
 pub struct AllRefs<'p, 'd> {
     preroll: &'p [u8],
@@ -38,7 +36,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     pub fn apply_first_byte_bug_rule(&mut self) {
         if let Some(ref k) = self.key(0) {
             // TODO: ???
-            if let Some(v) = self.map.get_mut(&k.sixteen_hash_16()) {
+            if let Some(v) = self.map.get_mut(&k) {
                 v.remove_item(&self.preroll.len());
             }
         }
@@ -73,7 +71,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
 
         Some(Box::new(
             self.map
-                .get(&key.sixteen_hash_16())
+                .get(&key)
                 .map(|v| {
                     sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
                 })
@@ -121,8 +119,8 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     }
 }
 
-fn sorted_back_map(map: &BackMap) -> Vec<(&SixteenHash, &Vec<usize>)> {
-    let mut values: Vec<(&SixteenHash, &Vec<usize>)> = map.iter().collect();
+fn sorted_back_map(map: &BackMap) -> Vec<(&Key, &Vec<usize>)> {
+    let mut values: Vec<(&Key, &Vec<usize>)> = map.iter().collect();
     values.sort_unstable_by_key(|&(_, poses)| poses);
     values
 }
@@ -155,7 +153,7 @@ fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
     let mut map = BackMap::with_capacity(32 * 1024);
 
     for (pos, keys) in data.tuple_windows::<(u8, u8, u8)>().enumerate() {
-        map.entry(Key::from(keys).sixteen_hash_16())
+        map.entry(Key::from(keys))
             .or_insert_with(|| Vec::new())
             .push(pos);
     }

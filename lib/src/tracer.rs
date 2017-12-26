@@ -13,7 +13,7 @@ pub fn try_gzip(level: u8, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<u
 
 fn try(config: Config, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<u8> {
     let mut all_refs = match config.wams.insert_only_below_length {
-        Some(limit) => unimplemented!(),
+        Some(limit) => AllRefs::with_sixteen(preroll, data, limit),
         None => AllRefs::with_everything(preroll, data),
     };
 

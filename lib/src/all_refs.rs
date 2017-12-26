@@ -17,9 +17,14 @@ pub struct Key {
     b2: u8,
 }
 
+struct SixteenDetails {
+    limit: u16,
+    table: NicerTable,
+}
+
 enum Mappy {
     Full(BackMap),
-    Sixteen(NicerTable),
+    Sixteen(SixteenDetails),
 }
 
 type BackMap = HashMap<Key, Vec<usize>>;
@@ -39,6 +44,19 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         }
     }
 
+    pub fn with_sixteen(preroll: &'p [u8], data: &'d [u8], limit: u16) -> Self {
+        assert_eq!(&[0u8; 0], preroll, "not implemented");
+        AllRefs {
+            preroll,
+            data,
+            map: Mappy::Sixteen(SixteenDetails {
+                table: NicerTable::from_window(data),
+                limit,
+            }),
+        }
+    }
+
+
     pub fn apply_first_byte_bug_rule(&mut self) {
         if let Some(ref k) = self.key(0) {
             // TODO: ???
@@ -46,7 +64,9 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                 Mappy::Full(ref mut map) => if let Some(v) = map.get_mut(&k) {
                     v.remove_item(&self.preroll.len());
                 },
-                Mappy::Sixteen(_) => unimplemented!(),
+                Mappy::Sixteen(_) => {
+                    // TODO: unimplemented
+                },
             }
         }
     }
@@ -94,7 +114,9 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                         Ref::new(dist, run)
                     }),
             )),
-            Mappy::Sixteen(_) => unimplemented!(),
+            Mappy::Sixteen(SixteenDetails { table, limit }) => {
+                unimplemented!()
+            },
         }
     }
 

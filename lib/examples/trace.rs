@@ -136,13 +136,13 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
                 "   {:4}. {:10?} guess: {:?} trace: literal",
                 pos,
                 location_hint,
-                technique.codes_at(pos),
+                technique.codes_at(pos, unimplemented!()),
             ),
             Trace::Actually(correct) => println!(
                 "   {:4}. {:10?} guess: {:?} trace: {:?}",
                 pos,
                 location_hint,
-                technique.codes_at(pos),
+                technique.codes_at(pos, unimplemented!()),
                 correct
             ),
         }

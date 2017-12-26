@@ -8,6 +8,7 @@ use Code;
 use DataLen;
 use Guesser;
 use Looker;
+use Obscure;
 use Ref;
 use usize_from;
 
@@ -72,6 +73,28 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
     pub fn byte_at(&self, pos: usize) -> u8 {
         self.all_refs.data[pos]
     }
+
+    pub fn obscurity(&self, codes: &[Code]) -> Vec<Obscure> {
+        let limit = match self.config.wams.insert_only_below_length {
+            Some(limit) => limit,
+            None => return Vec::new(),
+        };
+
+        let mut ret = Vec::new();
+
+        let mut pos = 0usize;
+        for code in codes {
+            if let Code::Reference(r) = *code {
+                if r.run() < limit {
+                    ret.push(((pos - r.dist as usize) as u32, r.run()));
+                }
+            }
+
+            pos += usize_from(code.emitted_bytes());
+        }
+
+        ret
+    }
 }
 
 impl<'a, 'p, 'd> DataLen for Technique<'a, 'p, 'd> {
@@ -80,8 +103,13 @@ impl<'a, 'p, 'd> DataLen for Technique<'a, 'p, 'd> {
     }
 }
 
-impl<'a, 'p, 'd> Looker for Technique<'a, 'p, 'd> {
-    fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>) {
+impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
+    fn best_candidate_better_than(
+        &self,
+        pos: usize,
+        other: Option<u16>,
+        obscura: &[Obscure],
+    ) -> (u8, Option<Ref>) {
         let current_literal = self.all_refs.data[pos];
         let mut limit = self.config.wams.limit_count_of_distances;
 
@@ -109,8 +137,32 @@ impl<'a, 'p, 'd> Looker for Technique<'a, 'p, 'd> {
     }
 }
 
+struct OutOfNames<'t, 'a: 't, 'p: 'a + 't, 'd: 'a + 't, 'o> {
+    technique: &'t Technique<'a, 'p, 'd>,
+    obscura: &'o [Obscure],
+}
+
+impl<'t, 'a, 'p, 'd, 'o> DataLen for OutOfNames<'t, 'a, 'p, 'd, 'o> {
+    fn data_len(&self) -> usize {
+        self.technique.data_len()
+    }
+}
+
+impl<'t, 'a, 'p, 'd, 'o> Looker for OutOfNames<'t, 'a, 'p, 'd, 'o> {
+    fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>) {
+        self.technique
+            .best_candidate_better_than(pos, other, self.obscura)
+    }
+}
+
 impl<'a, 'p, 'd> Guesser for Technique<'a, 'p, 'd> {
-    fn codes_at(&self, pos: usize) -> Vec<Code> {
-        self.config.lookahead.lookahead(self, pos)
+    fn codes_at(&self, pos: usize, obscura: &[Obscure]) -> Vec<Code> {
+        self.config.lookahead.lookahead(
+            &OutOfNames {
+                technique: self,
+                obscura,
+            },
+            pos,
+        )
     }
 }

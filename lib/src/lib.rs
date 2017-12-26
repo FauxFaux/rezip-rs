@@ -77,6 +77,8 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
+type Obscure = (u32, u16);
+
 pub trait DataLen {
     fn data_len(&self) -> usize;
 }
@@ -90,7 +92,7 @@ pub trait Looker: DataLen {
 }
 
 pub trait Guesser: DataLen {
-    fn codes_at(&self, pos: usize) -> Vec<Code>;
+    fn codes_at(&self, pos: usize, obscura: &[Obscure]) -> Vec<Code>;
 }
 
 #[derive(Debug, Eq, PartialEq)]

@@ -12,10 +12,12 @@ pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
 
     let mut pos = 0;
 
+    let obscura = technique.obscurity(codes);
+
     let mut codes = codes.into_iter().peekable();
 
     while pos < technique.data_len() {
-        let guesses = technique.codes_at(pos);
+        let guesses = technique.codes_at(pos, &obscura);
         assert!(!guesses.is_empty());
 
         let matches = shared_prefix(&guesses, &mut codes);
@@ -51,7 +53,8 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
     let mut trace = trace.into_iter().peekable();
 
     while pos < technique.data_len() {
-        let guesses = technique.codes_at(pos);
+        // TODO: &[]
+        let guesses = technique.codes_at(pos, &[]);
         assert!(!guesses.is_empty());
 
         for guess in guesses {

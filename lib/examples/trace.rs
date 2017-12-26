@@ -125,6 +125,7 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
     let serialise = serialise_trace::verify(&trace);
     println!("   * trace: {} -> {}", name, serialise.len());
     let mut pos = 0usize;
+    let obscura = technique.obscurity(codes);
     for (t, c) in trace.iter().zip(codes.iter()) {
         let location_hint = String::from_utf8_lossy(
             &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())],
@@ -136,13 +137,13 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
                 "   {:4}. {:10?} guess: {:?} trace: literal",
                 pos,
                 location_hint,
-                technique.codes_at(pos, unimplemented!()),
+                technique.codes_at(pos, &obscura),
             ),
             Trace::Actually(correct) => println!(
                 "   {:4}. {:10?} guess: {:?} trace: {:?}",
                 pos,
                 location_hint,
-                technique.codes_at(pos, unimplemented!()),
+                technique.codes_at(pos, &obscura),
                 correct
             ),
         }

@@ -93,7 +93,7 @@ pub trait Looker: DataLen {
 }
 
 pub trait Guesser: DataLen {
-    fn codes_at(&self, pos: usize) -> Vec<Code>;
+    fn codes(&self) -> Vec<Code>;
 }
 
 #[derive(Debug, Eq, PartialEq)]

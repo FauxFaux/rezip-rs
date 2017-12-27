@@ -10,20 +10,17 @@ use usize_from;
 pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
     let mut ret = Vec::with_capacity(codes.len());
 
-    let mut pos = 0;
-
     let mut codes = codes.into_iter().peekable();
-    let mut guesser = technique.guesser();
+    let mut scanner = technique.scanner();
 
-    while pos < guesser.data_len() {
-        let guesses = guesser.codes_at(pos);
+    while scanner.more_data() {
+        let guesses = scanner.codes();
         assert!(!guesses.is_empty());
 
         let matches = shared_prefix(&guesses, &mut codes);
         for matched in matches {
             ret.push(Trace::Correct);
-            guesser.add_obscurer(pos, *matched);
-            pos += usize_from(matched.emitted_bytes());
+            scanner.feedback(*matched);
         }
 
         if matches.len() == guesses.len() {
@@ -36,8 +33,7 @@ pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
                     Code::Literal(_) => Trace::ActuallyLiteral,
                     Code::Reference(r) => Trace::Actually(r),
                 });
-                guesser.add_obscurer(pos, code);
-                pos += usize_from(code.emitted_bytes());
+                scanner.feedback(code);
             }
             None => panic!("the guesser guessed more than there actually are?"),
         }
@@ -52,10 +48,10 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
     let mut pos = 0;
 
     let mut trace = trace.into_iter().peekable();
-    let mut guesser = technique.guesser();
+    let mut scanner = technique.scanner();
 
-    while pos < guesser.data_len() {
-        let guesses = guesser.codes_at(pos);
+    while scanner.more_data() {
+        let guesses = scanner.codes();
         assert!(!guesses.is_empty());
 
         for guess in guesses {
@@ -66,8 +62,7 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
                 Trace::ActuallyLiteral => Code::Literal(technique.byte_at(pos)),
             };
 
-            guesser.add_obscurer(pos, orig);
-            pos += usize_from(orig.emitted_bytes());
+            scanner.feedback(orig);
             ret.push(orig);
 
             match hint {

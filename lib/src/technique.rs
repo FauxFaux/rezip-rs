@@ -12,6 +12,7 @@ use Guesser;
 use Looker;
 use Obscure;
 use Ref;
+use usize_from;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -78,22 +79,32 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
 }
 
 impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
-    pub fn guesser(&self) -> OutOfNames {
-        OutOfNames {
+    pub fn scanner(&self) -> Scanner {
+        Scanner {
             technique: self,
             obscured: Vec::new(),
+            // TODO: preroll.len()?
+            pos: 0,
         }
     }
 }
 
 #[derive(Debug)]
-pub struct OutOfNames<'t, 'a: 't, 'p: 'a + 't, 'd: 'a + 't> {
+pub struct Scanner<'t, 'a: 't, 'p: 'a + 't, 'd: 'a + 't> {
     technique: &'t Technique<'a, 'p, 'd>,
     obscured: Vec<Obscure>,
+    pub pos: usize,
 }
 
-impl<'t, 'a, 'p, 'd> OutOfNames<'t, 'a, 'p, 'd> {
-    pub fn add_obscurer(&mut self, pos: usize, code: Code) {
+impl<'t, 'a, 'p, 'd> Scanner<'t, 'a, 'p, 'd> {
+    pub fn more_data(&self) -> bool {
+        self.pos < self.data_len()
+    }
+
+    pub fn feedback(&mut self,code: Code) {
+        let old_pos = self.pos;
+        self.pos += usize_from(code.emitted_bytes());
+
         let limit = match self.technique.config.wams.insert_only_below_length {
             Some(limit) => limit,
             None => return,
@@ -108,17 +119,17 @@ impl<'t, 'a, 'p, 'd> OutOfNames<'t, 'a, 'p, 'd> {
             return;
         }
 
-        self.obscured.push((pos, r.run()))
+        self.obscured.push((old_pos, r.run()))
     }
 }
 
-impl<'t, 'a, 'p, 'd, 'o> DataLen for OutOfNames<'t, 'a, 'p, 'd> {
+impl<'t, 'a, 'p, 'd, 'o> DataLen for Scanner<'t, 'a, 'p, 'd> {
     fn data_len(&self) -> usize {
         self.technique.all_refs.data_len()
     }
 }
 
-impl<'t, 'a, 'p, 'd, 'o> Looker for OutOfNames<'t, 'a, 'p, 'd> {
+impl<'t, 'a, 'p, 'd, 'o> Looker for Scanner<'t, 'a, 'p, 'd> {
     fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>) {
         let current_literal = self.technique.all_refs.data[pos];
         let mut limit = self.technique.config.wams.limit_count_of_distances;
@@ -148,8 +159,8 @@ impl<'t, 'a, 'p, 'd, 'o> Looker for OutOfNames<'t, 'a, 'p, 'd> {
     }
 }
 
-impl<'t, 'a, 'p, 'd> Guesser for OutOfNames<'t, 'a, 'p, 'd> {
-    fn codes_at(&self, pos: usize) -> Vec<Code> {
-        self.technique.config.lookahead.lookahead(self, pos)
+impl<'t, 'a, 'p, 'd> Guesser for Scanner<'t, 'a, 'p, 'd> {
+    fn codes(&self) -> Vec<Code> {
+        self.technique.config.lookahead.lookahead(self, self.pos)
     }
 }

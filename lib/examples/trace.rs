@@ -126,36 +126,34 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
     let trace = trace::validate(codes, &technique);
     let serialise = serialise_trace::verify(&trace);
     println!("   * trace: {} -> {}", name, serialise.len());
-    let mut pos = 0usize;
-    let mut guesser = technique.guesser();
+    let mut scanner = technique.scanner();
 
     for (t, c) in trace.iter().zip(codes.iter()) {
         let location_hint = String::from_utf8_lossy(
-            &decompressed[pos.saturating_sub(5)..(pos + 5).min(decompressed.len())],
+            &decompressed[scanner.pos.saturating_sub(5)..(scanner.pos + 5).min(decompressed.len())],
         );
 
         match *t {
             Trace::Correct => {}
             Trace::ActuallyLiteral => println!(
                 "   {:4}. {:10?} guess: {:?} trace: literal",
-                pos,
+                scanner.pos,
                 location_hint,
-                guesser.codes_at(pos),
+                scanner.codes(),
             ),
             Trace::Actually(correct) => println!(
                 "   {:4}. {:10?} guess: {:?} trace: {:?}",
-                pos,
+                scanner.pos,
                 location_hint,
-                guesser.codes_at(pos),
+                scanner.codes(),
                 correct
             ),
         }
 
-        guesser.add_obscurer(pos, *c);
-        pos += c.emitted_bytes() as usize;
+        scanner.feedback(*c);
     }
 
-    println!("   * guesser: {:?}", guesser);
+    println!("   * guesser: {:?}", scanner);
 
     println!();
 }

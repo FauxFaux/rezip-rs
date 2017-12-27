@@ -70,17 +70,12 @@ impl<'p, 'd> AllRefs<'p, 'd> {
 
         Some(Box::new(
             obscure(
-                self.map.get(key).filter(move |off| (*off as usize) < pos),
-                obscura.iter().map(|&(k, v)| {
-                    assert_lt!(k, 65536);
-                    (k as u16, v)
-                }),
+                self.map.get(key).filter(move |off| *off < pos),
+                obscura.iter().cloned(),
             ).take(self.limit as usize)
-                .filter(move |&off| {
-                    self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
-                })
+                .filter(move |&off| self.data[off..off + 3] == key.as_array()[..])
                 .map(move |off| {
-                    let dist = u16_from(pos) - off;
+                    let dist = u16_from(pos - off);
                     let run = self.possible_run_length_at(data_pos, dist);
                     Ref::new(dist, run)
                 }),

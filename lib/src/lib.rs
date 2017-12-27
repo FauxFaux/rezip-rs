@@ -76,7 +76,7 @@ pub enum Block {
     DynamicHuffman { trees: BitVec, codes: Vec<Code> },
 }
 
-type Obscure = (u32, u16);
+type Obscure = (usize, u16);
 
 pub trait DataLen {
     fn data_len(&self) -> usize;

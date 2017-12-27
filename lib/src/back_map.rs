@@ -8,22 +8,20 @@ use usize_from;
 const HASH_SIZE: usize = 32 * 1024;
 const HASH_MASK: usize = ((1 << 15) - 1);
 
-type Pos = u16;
-
 /// This is an efficient way to compute and store a hashtable to an ordered list of positions.
 pub struct BackMap {
     /// A lookup from the current `hash` to the last `pos` we saw that hash at.
-    hash_to_pos: [Pos; HASH_SIZE],
+    hash_to_pos: [usize; HASH_SIZE],
 
     /// A lookup from a `pos`, to the last `pos` where something had the same hash.
-    pos_to_pos: [Pos; HASH_SIZE],
+    pos_to_pos: Box<[usize]>,
 }
 
 impl BackMap {
     pub fn from_window(data: &[u8]) -> BackMap {
         let mut table = BackMap {
             hash_to_pos: [0; HASH_SIZE],
-            pos_to_pos: [0; HASH_SIZE],
+            pos_to_pos: vec![0; data.len()].into_boxed_slice(),
         };
 
         for (pos, keys) in data.into_iter()
@@ -35,7 +33,7 @@ impl BackMap {
             let hash_entry = &mut table.hash_to_pos[hash as usize];
             let prev_pos = *hash_entry;
             table.pos_to_pos[pos] = prev_pos;
-            *hash_entry = pos as u16;
+            *hash_entry = pos;
         }
 
         table
@@ -52,12 +50,12 @@ impl BackMap {
 }
 
 pub struct Chain<'a> {
-    next: Option<u16>,
-    pos_to_pos: &'a [u16],
+    next: Option<usize>,
+    pos_to_pos: &'a [usize],
 }
 
 impl<'a> Iterator for Chain<'a> {
-    type Item = u16;
+    type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
         let current = match self.next {
@@ -65,7 +63,7 @@ impl<'a> Iterator for Chain<'a> {
             None => return None,
         };
 
-        match self.pos_to_pos[usize_from(current)] {
+        match self.pos_to_pos[current] {
             0 => self.next = None,
             next => self.next = Some(next),
         };
@@ -85,7 +83,7 @@ impl fmt::Debug for BackMap {
             let mut current = pos;
             vals.push(current);
             loop {
-                current = self.pos_to_pos[usize_from(current)];
+                current = self.pos_to_pos[current];
                 if 0 == current {
                     break;
                 }

@@ -1,4 +1,4 @@
-type Int = u16;
+type Int = usize;
 type Len = u16;
 type Pair = (Int, Len);
 

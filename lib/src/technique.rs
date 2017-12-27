@@ -86,7 +86,7 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
         for code in codes {
             if let Code::Reference(r) = *code {
                 if r.run() > limit {
-                    ret.push((pos as u32, r.run()));
+                    ret.push((pos, r.run()));
                 }
             }
 

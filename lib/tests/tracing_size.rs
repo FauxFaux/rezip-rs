@@ -154,3 +154,11 @@ fn colliding_back_miss() {
         try_gzip(1, include_bytes!("data/colliding-back-miss-sixteen-1.gz"))
     )
 }
+
+#[test]
+fn woo_goo() {
+    assert_eq!(
+        2,
+        try_gzip(1, include_bytes!("data/woo-goo-1.gz"))
+    )
+}

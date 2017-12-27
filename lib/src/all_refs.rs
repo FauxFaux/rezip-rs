@@ -4,7 +4,7 @@ use std::iter;
 
 use itertools::Itertools;
 
-use bad_table::NicerTable;
+use back_map::BackMap;
 use obscure::obscure;
 use u16_from;
 use usize_from;
@@ -19,56 +19,21 @@ pub struct Key {
     b2: u8,
 }
 
-struct SixteenDetails {
-    limit: u16,
-    table: NicerTable,
-}
-
-enum Mappy {
-    Full(BackMap),
-    Sixteen(SixteenDetails),
-}
-
-type BackMap = HashMap<Key, Vec<usize>>;
-
 pub struct AllRefs<'p, 'd> {
     preroll: &'p [u8],
     pub data: &'d [u8],
-    map: Mappy,
+    map: BackMap,
+    limit: u16,
 }
 
 impl<'p, 'd> AllRefs<'p, 'd> {
-    pub fn with_everything(preroll: &'p [u8], data: &'d [u8]) -> Self {
-        Self {
-            preroll,
-            data,
-            map: Mappy::Full(whole_map(preroll.iter().chain(data).cloned())),
-        }
-    }
-
     pub fn with_sixteen(preroll: &'p [u8], data: &'d [u8], limit: u16) -> Self {
         assert_eq!(&[0u8; 0], preroll, "not implemented");
         AllRefs {
             preroll,
             data,
-            map: Mappy::Sixteen(SixteenDetails {
-                table: NicerTable::from_window(data),
-                limit,
-            }),
-        }
-    }
-
-    pub fn apply_first_byte_bug_rule(&mut self) {
-        if let Some(ref k) = self.key(0) {
-            // TODO: ???
-            match self.map {
-                Mappy::Full(ref mut map) => if let Some(v) = map.get_mut(&k) {
-                    v.remove_item(&self.preroll.len());
-                },
-                Mappy::Sixteen(_) => {
-                    // TODO: unimplemented
-                }
-            }
+            limit,
+            map: BackMap::from_window(data),
         }
     }
 
@@ -103,39 +68,23 @@ impl<'p, 'd> AllRefs<'p, 'd> {
             return Some(Box::new(iter::empty()));
         }
 
-        match self.map {
-            Mappy::Full(ref map) => Some(Box::new(
-                map.get(&key)
-                    .map(|v| {
-                        sub_range_inclusive(pos.saturating_sub(32 * 1024), pos.saturating_sub(1), v)
-                    })
-                    .unwrap_or(&[])
-                    .into_iter()
-                    .rev()
-                    .map(move |off| {
-                        let dist = u16_from(pos - off);
-                        let run = self.possible_run_length_at(data_pos, dist);
-                        Ref::new(dist, run)
-                    }),
-            )),
-            Mappy::Sixteen(SixteenDetails { ref table, limit }) => Some(Box::new(
-                obscure(
-                    table.get(key).filter(move |off| (*off as usize) < pos),
-                    obscura.iter().map(|&(k, v)| {
-                        assert_lt!(k, 65536);
-                        (k as u16, v)
-                    }),
-                ).take(limit as usize)
-                    .filter(move |&off| {
-                        self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
-                    })
-                    .map(move |off| {
-                        let dist = u16_from(pos) - off;
-                        let run = self.possible_run_length_at(data_pos, dist);
-                        Ref::new(dist, run)
-                    }),
-            )),
-        }
+        Some(Box::new(
+            obscure(
+                self.map.get(key).filter(move |off| (*off as usize) < pos),
+                obscura.iter().map(|&(k, v)| {
+                    assert_lt!(k, 65536);
+                    (k as u16, v)
+                }),
+            ).take(self.limit as usize)
+                .filter(move |&off| {
+                    self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
+                })
+                .map(move |off| {
+                    let dist = u16_from(pos) - off;
+                    let run = self.possible_run_length_at(data_pos, dist);
+                    Ref::new(dist, run)
+                }),
+        ))
     }
 
     fn get_at_dist(&self, data_pos: usize, dist: u16) -> u8 {
@@ -170,12 +119,6 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     }
 }
 
-fn sorted_back_map(map: &BackMap) -> Vec<(&Key, &Vec<usize>)> {
-    let mut values: Vec<(&Key, &Vec<usize>)> = map.iter().collect();
-    values.sort_unstable_by_key(|&(_, poses)| poses);
-    values
-}
-
 fn key_from_bytes(from: &[u8]) -> Key {
     Key {
         b0: from[0],
@@ -198,18 +141,6 @@ fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
     };
 
     &range[start_idx..]
-}
-
-fn whole_map<I: Iterator<Item = u8>>(data: I) -> BackMap {
-    let mut map = BackMap::with_capacity(32 * 1024);
-
-    for (pos, keys) in data.tuple_windows::<(u8, u8, u8)>().enumerate() {
-        map.entry(Key::from(keys))
-            .or_insert_with(|| Vec::new())
-            .push(pos);
-    }
-
-    map
 }
 
 impl From<(u8, u8, u8)> for Key {
@@ -265,21 +196,12 @@ impl fmt::Debug for Key {
 
 impl<'p, 'd> fmt::Debug for AllRefs<'p, 'd> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.map {
-            Mappy::Full(ref map) => for (key, val) in sorted_back_map(map) {
-                writeln!(f, " - {:?}: {:?}", key, val)?;
-            },
-            Mappy::Sixteen(SixteenDetails { ref table, .. }) => {
-                writeln!(f, "{:?}", table)?;
-            }
-        }
-        Ok(())
+        writeln!(f, "{:?}", self.map)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::sorted_back_map;
     use super::Key;
 
     use Code;
@@ -304,19 +226,6 @@ mod tests {
         assert_eq!(&[0usize; 0], s(7, 8, &[4, 5, 6]));
         assert_eq!(&[0usize; 0], s(7, 8, &[9, 10]));
         assert_eq!(&[0usize; 0], s(7, 8, &[]));
-    }
-
-    #[test]
-    fn whole() {
-        use super::whole_map;
-        assert_eq!(
-            hashmap! {
-                k(b"abc") => vec![0, 3],
-                k(b"bca") => vec![1],
-                k(b"cab") => vec![2],
-            },
-            whole_map(b"abcabc".iter().cloned())
-        )
     }
 
     #[test]

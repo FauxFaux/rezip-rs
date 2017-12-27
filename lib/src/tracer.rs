@@ -1,3 +1,5 @@
+use std::u16;
+
 use all_refs::AllRefs;
 use technique::Config;
 use technique::Technique;
@@ -12,13 +14,11 @@ pub fn try_gzip(level: u8, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<u
 }
 
 fn try(config: Config, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<u8> {
-    let mut all_refs = match config.wams.insert_only_below_length {
-        Some(limit) => AllRefs::with_sixteen(preroll, data, limit),
-        None => AllRefs::with_everything(preroll, data),
-    };
+    let limit = config.wams.insert_only_below_length.unwrap_or(u16::MAX);
+    let all_refs = AllRefs::with_sixteen(preroll, data, limit);
 
     if config.first_byte_bug {
-        all_refs.apply_first_byte_bug_rule();
+        // TODO: ???
     }
 
     serialise_trace::verify(&trace::validate(codes, &Technique::new(config, &all_refs)))

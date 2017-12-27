@@ -7,12 +7,11 @@ use usize_from;
 
 const HASH_SIZE: usize = 32 * 1024;
 const HASH_MASK: usize = ((1 << 15) - 1);
-const HASH_SHIFT_MAGIC: u16 = 6;
-const HASH_AHEAD_LENGTH: u16 = 2;
 
 type Pos = u16;
 
-pub struct NicerTable {
+/// This is an efficient way to compute and store a hashtable to an ordered list of positions.
+pub struct BackMap {
     /// A lookup from the current `hash` to the last `pos` we saw that hash at.
     hash_to_pos: [Pos; HASH_SIZE],
 
@@ -20,9 +19,9 @@ pub struct NicerTable {
     pos_to_pos: [Pos; HASH_SIZE],
 }
 
-impl NicerTable {
-    pub fn from_window(data: &[u8]) -> NicerTable {
-        let mut table = NicerTable {
+impl BackMap {
+    pub fn from_window(data: &[u8]) -> BackMap {
+        let mut table = BackMap {
             hash_to_pos: [0; HASH_SIZE],
             pos_to_pos: [0; HASH_SIZE],
         };
@@ -75,7 +74,7 @@ impl<'a> Iterator for Chain<'a> {
     }
 }
 
-impl fmt::Debug for NicerTable {
+impl fmt::Debug for BackMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (hash, &pos) in self.hash_to_pos
             .iter()
@@ -97,25 +96,5 @@ impl fmt::Debug for NicerTable {
             writeln!(f, " - {:04x}: {:?}", hash, vals)?;
         }
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::NicerTable;
-    use super::BadTable;
-
-    #[test]
-    fn nicer() {
-        //                       0123456
-        let window: &[u8; 7] = b"oabcabc";
-        let mut old = BadTable::default();
-        old.reinit_hash_at(window, 0);
-        for i in 0..(window.len() - 2) {
-            old.insert_string(window, i as u16);
-        }
-
-        println!("{:?}", old);
-        println!("{:?}", NicerTable::from_window(window));
     }
 }

@@ -24,7 +24,7 @@ extern crate sha2;
 use std::fmt;
 
 pub mod all_refs;
-mod bad_table;
+mod back_map;
 mod bestguess;
 mod bit;
 mod circles;

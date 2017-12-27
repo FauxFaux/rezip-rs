@@ -1,3 +1,5 @@
+use std::u16;
+
 use all_refs::AllRefs;
 use lookahead::Lookahead;
 use picker::Picker;
@@ -20,6 +22,7 @@ pub struct Config {
     pub wams: WamsOptimisations,
 }
 
+#[derive(Debug)]
 pub struct Technique<'a, 'p: 'a, 'd: 'a> {
     config: Config,
     all_refs: &'a AllRefs<'p, 'd>,
@@ -73,28 +76,6 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
     pub fn byte_at(&self, pos: usize) -> u8 {
         self.all_refs.data[pos]
     }
-
-    pub fn obscurity(&self, codes: &[Code]) -> Vec<Obscure> {
-        let limit = match self.config.wams.insert_only_below_length {
-            Some(limit) => limit,
-            None => return Vec::new(),
-        };
-
-        let mut ret = Vec::new();
-
-        let mut pos = 0usize;
-        for code in codes {
-            if let Code::Reference(r) = *code {
-                if r.run() > limit {
-                    ret.push((pos, r.run()));
-                }
-            }
-
-            pos += usize_from(code.emitted_bytes());
-        }
-
-        ret
-    }
 }
 
 impl<'a, 'p, 'd> DataLen for Technique<'a, 'p, 'd> {
@@ -135,34 +116,58 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
             }),
         )
     }
+
+    pub fn guesser(&self) -> OutOfNames {
+        OutOfNames {
+            technique: self,
+            obscured: Vec::new(),
+            limit: self.config
+                .wams
+                .insert_only_below_length
+                .unwrap_or(u16::MAX),
+        }
+    }
 }
 
-struct OutOfNames<'t, 'a: 't, 'p: 'a + 't, 'd: 'a + 't, 'o> {
+#[derive(Debug)]
+pub struct OutOfNames<'t, 'a: 't, 'p: 'a + 't, 'd: 'a + 't> {
     technique: &'t Technique<'a, 'p, 'd>,
-    obscura: &'o [Obscure],
+    obscured: Vec<Obscure>,
+    limit: u16,
 }
 
-impl<'t, 'a, 'p, 'd, 'o> DataLen for OutOfNames<'t, 'a, 'p, 'd, 'o> {
+impl<'t, 'a, 'p, 'd> OutOfNames<'t, 'a, 'p, 'd> {
+    pub fn add_obscurer(&mut self, pos: usize, code: Code) {
+        let r = match code {
+            Code::Reference(r) => r,
+            Code::Literal(_) => return,
+        };
+
+        if r.run() <= self.limit {
+            return;
+        }
+
+        println!("obscuring {}+{}: {}", pos, r.run(), self.limit);
+
+        self.obscured.push((pos, r.run()))
+    }
+}
+
+impl<'t, 'a, 'p, 'd, 'o> DataLen for OutOfNames<'t, 'a, 'p, 'd> {
     fn data_len(&self) -> usize {
         self.technique.data_len()
     }
 }
 
-impl<'t, 'a, 'p, 'd, 'o> Looker for OutOfNames<'t, 'a, 'p, 'd, 'o> {
+impl<'t, 'a, 'p, 'd, 'o> Looker for OutOfNames<'t, 'a, 'p, 'd> {
     fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>) {
         self.technique
-            .best_candidate_better_than(pos, other, self.obscura)
+            .best_candidate_better_than(pos, other, &self.obscured)
     }
 }
 
-impl<'a, 'p, 'd> Guesser for Technique<'a, 'p, 'd> {
-    fn codes_at(&self, pos: usize, obscura: &[Obscure]) -> Vec<Code> {
-        self.config.lookahead.lookahead(
-            &OutOfNames {
-                technique: self,
-                obscura,
-            },
-            pos,
-        )
+impl<'t, 'a, 'p, 'd> Guesser for OutOfNames<'t, 'a, 'p, 'd> {
+    fn codes_at(&self, pos: usize) -> Vec<Code> {
+        self.technique.config.lookahead.lookahead(self, pos)
     }
 }

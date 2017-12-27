@@ -23,7 +23,9 @@ impl BackMap {
             pos_to_pos: vec![0; preroll.len() + data.len()].into_boxed_slice(),
         };
 
-        for (pos, keys) in preroll.into_iter().chain(data.into_iter())
+        for (pos, keys) in preroll
+            .into_iter()
+            .chain(data.into_iter())
             .cloned()
             .tuple_windows::<(u8, u8, u8)>()
             .enumerate()

@@ -12,17 +12,17 @@ pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
 
     let mut pos = 0;
 
-    let obscura = technique.obscurity(codes);
-
     let mut codes = codes.into_iter().peekable();
+    let mut guesser = technique.guesser();
 
     while pos < technique.data_len() {
-        let guesses = technique.codes_at(pos, &obscura);
+        let guesses = guesser.codes_at(pos);
         assert!(!guesses.is_empty());
 
         let matches = shared_prefix(&guesses, &mut codes);
         for matched in matches {
             ret.push(Trace::Correct);
+            guesser.add_obscurer(pos, *matched);
             pos += usize_from(matched.emitted_bytes());
         }
 
@@ -36,6 +36,7 @@ pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
                     Code::Literal(_) => Trace::ActuallyLiteral,
                     Code::Reference(r) => Trace::Actually(r),
                 });
+                guesser.add_obscurer(pos, code);
                 pos += usize_from(code.emitted_bytes());
             }
             None => panic!("the guesser guessed more than there actually are?"),
@@ -51,10 +52,10 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
     let mut pos = 0;
 
     let mut trace = trace.into_iter().peekable();
+    let mut guesser = technique.guesser();
 
     while pos < technique.data_len() {
-        // TODO: incrementally build obscurity
-        let guesses = technique.codes_at(pos, &technique.obscurity(&ret));
+        let guesses = guesser.codes_at(pos);
         assert!(!guesses.is_empty());
 
         for guess in guesses {
@@ -65,6 +66,7 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
                 Trace::ActuallyLiteral => Code::Literal(technique.byte_at(pos)),
             };
 
+            guesser.add_obscurer(pos, orig);
             pos += usize_from(orig.emitted_bytes());
             ret.push(orig);
 

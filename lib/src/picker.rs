@@ -17,7 +17,7 @@ impl Picker {
 }
 
 fn longest<I: Iterator<Item = Ref>>(candidates: I, cap: u16) -> Option<Ref> {
-    iters::capped_max_by(candidates, cap, |r| r.run())
+    iters::capped_max_by(candidates, &cap, |r| r.run())
 }
 
 fn drop_far_threes<I: Iterator<Item = Ref>>(candidates: I, cap: u16) -> Option<Ref> {

@@ -30,7 +30,7 @@ lazy_static! {
 }
 
 pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<CodeTree>)> {
-    let num_lit_len_codes = u16::from(reader.read_part(5)?) + 257;
+    let num_lit_len_codes = reader.read_part(5)? + 257;
     let num_distance_codes = reader.read_part(5)? + 1;
 
     let num_code_len_codes = reader.read_part(4)? + 4;
@@ -150,13 +150,12 @@ pub fn encode_run_length(length: u16) -> u16 {
 /// This does not seem like a great API.
 pub fn extra_run_length(length: u16) -> Option<(u8, u16)> {
     match length {
-        3...10 => None,
+        3...10 | 258 => None,
         11...18 => Some((1, (length - 11) % 2)),
         19...34 => Some((2, (length - 19) % 4)),
         35...66 => Some((3, (length - 35) % 8)),
         67...130 => Some((4, (length - 67) % 16)),
         131...257 => Some((5, (length - 131) % 32)),
-        258 => None,
         _ => panic!("insane run length"),
     }
 }

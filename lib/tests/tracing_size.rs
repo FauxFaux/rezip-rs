@@ -12,7 +12,7 @@ fn try_gzip(level: u8, file: &[u8]) -> usize {
     let mut dictionary = CircularBuffer::new();
     let mut sum = 0;
 
-    for block in librezip::parse_deflate(&mut reader).into_iter() {
+    for block in librezip::parse_deflate(&mut reader) {
         let codes = match block.unwrap() {
             Block::Uncompressed(_) => unimplemented!(),
             Block::DynamicHuffman { codes, .. } | Block::FixedHuffman(codes) => codes,

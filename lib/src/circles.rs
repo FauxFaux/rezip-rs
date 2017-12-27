@@ -3,6 +3,7 @@ use std::io::Write;
 use errors::*;
 use usize_from;
 
+#[derive(Default)]
 pub struct CircularBuffer {
     data: Vec<u8>,
     idx: usize,

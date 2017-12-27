@@ -30,12 +30,7 @@ pub fn write(traces: &[Trace]) -> Vec<u8> {
     let mut ret = Vec::with_capacity(traces.len());
     let mut traces = traces.into_iter().peekable();
 
-    loop {
-        let trace = match traces.peek() {
-            Some(trace) => **trace,
-            None => break,
-        };
-
+    while let Some(&&trace) = traces.peek() {
         match trace {
             Trace::ActuallyLiteral => {
                 ret.write_u16::<LE>(0).expect("writing to vector");
@@ -48,7 +43,7 @@ pub fn write(traces: &[Trace]) -> Vec<u8> {
             }
             Trace::Correct => {
                 let mut corrects = traces.peeking_take_while(|x| Trace::Correct == **x).count();
-                let representation_offset = 32768;
+                let representation_offset = 32_768;
                 let max_representable = u16::MAX - representation_offset;
                 while corrects > usize_from(max_representable) {
                     ret.write_u16::<LE>(representation_offset + max_representable)
@@ -79,12 +74,12 @@ pub fn read<R: Read>(mut data: R) -> Result<Vec<Trace>> {
 
         if 0 == first {
             ret.push(Trace::ActuallyLiteral);
-        } else if first <= 32768 {
+        } else if first <= 32_768 {
             let dist = first;
             let run_minus_3 = data.read_u8()?;
             ret.push(Trace::Actually(Ref::new(dist, u16::from(run_minus_3) + 3)));
         } else {
-            let count = first - 32768;
+            let count = first - 32_768;
             for _ in 0..count {
                 ret.push(Trace::Correct);
             }
@@ -110,7 +105,7 @@ mod tests {
 
     #[test]
     fn long_trace() {
-        let mut v = vec![Trace::Correct; 32765];
+        let mut v = vec![Trace::Correct; 32_765];
         assert_round_trip(&v);
         v[1] = Trace::ActuallyLiteral;
         assert_round_trip(&v);

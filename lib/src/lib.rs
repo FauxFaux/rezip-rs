@@ -146,7 +146,7 @@ impl Ref {
         assert!(run <= 258);
 
         assert!(dist >= 1);
-        assert!(dist <= 32768);
+        assert!(dist <= 32_768);
 
         let run_minus_3 = (run - 3) as u8;
         Ref { dist, run_minus_3 }

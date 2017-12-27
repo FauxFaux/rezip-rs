@@ -27,7 +27,7 @@ fn contains(haystack: &[Obscure], needle: Int) -> bool {
         }
     }
 
-    return false;
+    false
 }
 
 #[cfg(test)]

@@ -46,16 +46,8 @@ impl Config {
         }
     }
 
-    pub fn gzip_16_fastest() -> Self {
-        Self::gzip(1)
-    }
-
     pub fn gzip_16_default() -> Self {
         Self::gzip(6)
-    }
-
-    pub fn gzip_16_best() -> Self {
-        Self::gzip(9)
     }
 
     pub fn spicy() -> Self {

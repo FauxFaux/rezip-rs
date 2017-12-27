@@ -112,7 +112,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         try_trace(
             &all_refs,
             "gzip --best",
-            Config::gzip_16_best(),
+            Config::gzip(9),
             codes,
             &decompressed,
         );

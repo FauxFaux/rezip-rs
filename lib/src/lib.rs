@@ -40,7 +40,6 @@ mod parse;
 mod picker;
 mod serialise;
 pub mod serialise_trace;
-pub mod sixteen;
 mod technique;
 pub mod trace;
 pub mod tracer;

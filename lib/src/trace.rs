@@ -53,8 +53,8 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
     let mut trace = trace.into_iter().peekable();
 
     while pos < technique.data_len() {
-        // TODO: &[]
-        let guesses = technique.codes_at(pos, &[]);
+        // TODO: incrementally build obscurity
+        let guesses = technique.codes_at(pos, &technique.obscurity(&ret));
         assert!(!guesses.is_empty());
 
         for guess in guesses {

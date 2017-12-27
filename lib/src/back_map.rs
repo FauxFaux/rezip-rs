@@ -6,7 +6,6 @@ use all_refs::Key;
 use usize_from;
 
 const HASH_SIZE: usize = 32 * 1024;
-const HASH_MASK: usize = ((1 << 15) - 1);
 
 /// This is an efficient way to compute and store a hashtable to an ordered list of positions.
 pub struct BackMap {

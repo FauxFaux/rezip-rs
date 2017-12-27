@@ -6,7 +6,6 @@ use technique::Technique;
 use serialise_trace;
 use trace;
 
-use decompressed_codes;
 use Code;
 
 pub fn try_gzip(level: u8, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<u8> {

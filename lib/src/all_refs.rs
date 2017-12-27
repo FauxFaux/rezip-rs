@@ -1,14 +1,10 @@
-use std::collections::HashMap;
 use std::fmt;
 use std::iter;
-
-use itertools::Itertools;
 
 use back_map::BackMap;
 use obscure::obscure;
 use u16_from;
 use usize_from;
-use Code;
 use Obscure;
 use Ref;
 
@@ -70,7 +66,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
 
         Some(Box::new(
             obscure(
-                self.map.get(key).filter(move |off| *off < pos),
+                self.map.get(key).filter(move |&off| off < pos),
                 obscura.iter().cloned(),
             ).take(self.limit as usize)
                 .filter(move |&off| self.data[off..off + 3] == key.as_array()[..])
@@ -120,22 +116,6 @@ fn key_from_bytes(from: &[u8]) -> Key {
         b1: from[1],
         b2: from[2],
     }
-}
-
-fn sub_range_inclusive(start: usize, end: usize, range: &[usize]) -> &[usize] {
-    let end_idx = match range.binary_search(&end) {
-        Ok(e) => e + 1,
-        Err(e) => e,
-    };
-
-    let range = &range[..end_idx];
-
-    let start_idx = match range.binary_search(&start) {
-        Ok(e) => e,
-        Err(e) => e,
-    };
-
-    &range[start_idx..]
 }
 
 impl From<(u8, u8, u8)> for Key {
@@ -205,22 +185,6 @@ mod tests {
     use Code::Literal as L;
     fn r(dist: u16, run: u16) -> Code {
         Code::Reference(Ref::new(dist, run))
-    }
-
-    #[test]
-    fn sub_range() {
-        use super::sub_range_inclusive as s;
-        assert_eq!(&[5, 6], s(5, 6, &[4, 5, 6, 7]));
-        assert_eq!(&[5, 6], s(5, 6, &[5, 6, 7]));
-        assert_eq!(&[5, 6], s(5, 6, &[4, 5, 6]));
-
-        assert_eq!(&[5, 6], s(4, 7, &[2, 3, 5, 6, 8, 9]));
-        assert_eq!(&[5, 6], s(4, 7, &[5, 6, 8, 9]));
-        assert_eq!(&[5, 6], s(4, 7, &[2, 3, 5, 6]));
-
-        assert_eq!(&[0usize; 0], s(7, 8, &[4, 5, 6]));
-        assert_eq!(&[0usize; 0], s(7, 8, &[9, 10]));
-        assert_eq!(&[0usize; 0], s(7, 8, &[]));
     }
 
     #[test]

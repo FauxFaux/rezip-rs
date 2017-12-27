@@ -30,7 +30,8 @@ mod bit;
 mod circles;
 mod code_tree;
 mod errors;
-mod filter;
+// TODO: unused
+pub mod filter;
 pub mod gzip;
 mod huffman;
 mod iters;
@@ -38,7 +39,8 @@ mod lookahead;
 mod obscure;
 mod parse;
 mod picker;
-mod serialise;
+// TODO: unused
+pub mod serialise;
 pub mod serialise_trace;
 mod technique;
 pub mod trace;

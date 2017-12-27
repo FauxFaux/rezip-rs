@@ -155,6 +155,29 @@ fn colliding_back_miss() {
     )
 }
 
+
+// lots of collisions here, but gzip looks back further than we think it should
+//  input: woooooOooogooooo
+//    idx: 0123456789012345
+//   coll: _XXX__XX__XXXX--
+//  gz -1: LL1, 4L4,3L9, 4L
+//          ^_^___`   |
+//           ^________`
+//  trace thinks this ^ reference should be to idx 7, only 3 bytes long,
+// but gzip can see further back. To get from idx 11 to idx 2, you have
+// to skip:
+//  * 10: not an actual match (goo)
+//  *  7: valid
+//  *  6: not an actual match (Ooo)
+//  *  3: valid
+//  *  2: found it!
+//  *  1: this would be even better, but we can't see it
+// .. but we're only allowed four inspections. Does it pre-filter for not actual matches,
+// or are we hashing wrong? Or are we off-by-one?
+//
+// Or is the [1, 4] run not getting inserted into the dictionary,
+// so the actual search goes 10, 7, 6, 2? No, as idx 3, definitely occluded by the match,
+// is found before we hit the other bug.
 #[test]
 fn woo_goo() {
     assert_eq!(

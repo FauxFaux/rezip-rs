@@ -17,13 +17,13 @@ pub struct BackMap {
 }
 
 impl BackMap {
-    pub fn from_window(data: &[u8]) -> BackMap {
+    pub fn from_window(preroll: &[u8], data: &[u8]) -> BackMap {
         let mut table = BackMap {
             hash_to_pos: [0; HASH_SIZE],
-            pos_to_pos: vec![0; data.len()].into_boxed_slice(),
+            pos_to_pos: vec![0; preroll.len() + data.len()].into_boxed_slice(),
         };
 
-        for (pos, keys) in data.into_iter()
+        for (pos, keys) in preroll.into_iter().chain(data.into_iter())
             .cloned()
             .tuple_windows::<(u8, u8, u8)>()
             .enumerate()

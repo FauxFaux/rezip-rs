@@ -29,7 +29,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
             preroll,
             data,
             limit,
-            map: BackMap::from_window(data),
+            map: BackMap::from_window(preroll, data),
         }
     }
 

@@ -322,7 +322,10 @@ mod tests {
     #[test]
     fn hash_sixteen_16_collisions() {
         assert_eq!(0b0000_1100_0010_0001, k(&[3, 1, 1]).sixteen_hash_16());
-        assert_eq!(k(&[b'O', b'o', b'o']).sixteen_hash_16(), k(&[b'o', b'o', b'o']).sixteen_hash_16());
+        assert_eq!(
+            k(&[b'O', b'o', b'o']).sixteen_hash_16(),
+            k(&[b'o', b'o', b'o']).sixteen_hash_16()
+        );
     }
 
     fn k(from: &[u8]) -> Key {

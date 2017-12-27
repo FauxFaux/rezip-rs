@@ -155,7 +155,6 @@ fn colliding_back_miss() {
     )
 }
 
-
 // lots of collisions here, but gzip looks back further than we think it should
 //  input: woooooOooogooooo
 //    idx: 0123456789012345
@@ -180,8 +179,5 @@ fn colliding_back_miss() {
 // is found before we hit the other bug.
 #[test]
 fn woo_goo() {
-    assert_eq!(
-        2,
-        try_gzip(1, include_bytes!("data/woo-goo-1.gz"))
-    )
+    assert_eq!(2, try_gzip(1, include_bytes!("data/woo-goo-1.gz")))
 }

@@ -82,17 +82,17 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!("refs_all:\n{:?}", all_refs);
     }
 
-    if true {
+    if false {
         try_trace(
             &refs_1,
             "gzip --fast",
-            Config::gzip_16_fastest(),
+            Config::gzip(1),
             codes,
             &decompressed,
         );
     }
 
-    if false {
+    if true {
         try_trace(&refs_3, "gzip -3", Config::gzip(3), codes, &decompressed);
     }
 
@@ -127,7 +127,7 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
     let mut pos = 0usize;
     let obscura = technique.obscurity(codes);
 
-    println!("obscura: {:?}; max: {:?}", obscura, config.wams.insert_only_below_length);
+    println!("   * obscura: {:?}; max: {:?}", obscura, config.wams.insert_only_below_length);
 
     for (t, c) in trace.iter().zip(codes.iter()) {
         let location_hint = String::from_utf8_lossy(

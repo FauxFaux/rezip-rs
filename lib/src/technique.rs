@@ -85,7 +85,7 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
         let mut pos = 0usize;
         for code in codes {
             if let Code::Reference(r) = *code {
-                if r.run() >= limit {
+                if r.run() > limit {
                     ret.push((pos as u32, r.run()));
                 }
             }

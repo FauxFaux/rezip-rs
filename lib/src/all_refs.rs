@@ -123,7 +123,6 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                     table
                         .get(key)
                         .filter(move |off| (*off as usize) < pos)
-                        .take(limit as usize)
                         .filter(move |&off| {
                             self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
                         }),
@@ -131,11 +130,12 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                         assert_lt!(k, 65536);
                         (k as u16, v)
                     }),
-                ).map(move |off| {
-                    let dist = u16_from(pos) - off;
-                    let run = self.possible_run_length_at(data_pos, dist);
-                    Ref::new(dist, run)
-                }),
+                ).take(limit as usize)
+                    .map(move |off| {
+                        let dist = u16_from(pos) - off;
+                        let run = self.possible_run_length_at(data_pos, dist);
+                        Ref::new(dist, run)
+                    }),
             )),
         }
     }
@@ -273,7 +273,7 @@ impl<'p, 'd> fmt::Debug for AllRefs<'p, 'd> {
             },
             Mappy::Sixteen(SixteenDetails { ref table, .. }) => {
                 writeln!(f, "{:?}", table)?;
-            },
+            }
         }
         Ok(())
     }

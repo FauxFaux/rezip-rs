@@ -129,7 +129,7 @@ fn try_trace(all_refs: &AllRefs, name: &str, config: Config, codes: &[Code], dec
     let mut pos = 0usize;
     let obscura = technique.obscurity(codes);
 
-    println!("   * obscura: {:?}; max: {:?}", obscura, config.wams.insert_only_below_length);
+    println!("   * obscura: {:?}", obscura);
 
     for (t, c) in trace.iter().zip(codes.iter()) {
         let location_hint = String::from_utf8_lossy(

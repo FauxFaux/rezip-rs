@@ -12,14 +12,16 @@ where
 
     //let from: Vec<Int> = from.collect();
     //assert_reverse_sorted(&from);
-    //let from = from.into_iter()
+    //let from = from.into_iter();
 
     Box::new(from.filter(move |item| !contains(&by, *item)))
 }
 
 fn contains(haystack: &[Pair], needle: Int) -> bool {
     for &(start, len) in haystack {
-        if needle >= start && needle <= (start + len as Int) {
+        if needle > start && needle < (start + len as Int) {
+            #[cfg(feature = "tracing")]
+            println!("S{},{} obscures {}", start, len, needle);
             return true;
         }
     }

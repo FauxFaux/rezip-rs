@@ -52,6 +52,14 @@ fn tiny_decay_3_3() {
 
 // decaying: S='defghijklm'; printf "0.abcdefg_hijklm,1.abc$S,2.bc$S,3.c$S,4.$S"
 // decaying: 0.abcdefg_hijklm,1.abcdefghijklm,2.bcdefghijklm,3.cdefghijklm,4.defghijklm
+//           01234567890123456789012345678901234567890123456789012345678901234567890123
+//           0         1         2         3         4         5         6         7
+//           LLLLLLLLLLLLLLLLL1[ 17,8 ][16, 7]2.[32,6][15, 7]3.[46,5[14, 7]4.59,4[13,6]
+//                               1      10        2    26        3   41       4   54
+//                     ^----------------`              |             |            |
+//                                     ^---------------`             |            |
+//                                                    ^--------------`            |
+//                                                                  ^-------------`
 #[test]
 fn decaying_1_1() {
     assert_eq!(2, try_gzip(1, include_bytes!("data/decaying-sixteen-1.gz")))

@@ -42,7 +42,6 @@ fn run(data: &[u8]) {
 
     let slice = librezip::tracer::try_gzip(1, &[], &data, &codes);
 
-
     if 2 == slice.len() {
         return;
     }
@@ -56,13 +55,6 @@ fn run(data: &[u8]) {
     println!("compr: {}", hex::encode(&compressed));
     println!("slice: {:?}", slice);
     println!("codes: {:?}", codes);
-
-    {
-        if let Ok(mut f) = File::create(format!("{}.tailless-gz", hex::encode(&compressed))) {
-            f.write_all(b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x04\x03").unwrap();
-            f.write_all(&compressed).unwrap();
-        }
-    }
 
     panic!()
 }

@@ -99,14 +99,14 @@ impl NicerTable {
         let pos = self.hash_to_pos[usize_from(key.sixteen_hash_16())];
 
         Chain {
-            pos,
+            next: Some(pos),
             pos_to_pos: &self.pos_to_pos,
         }
     }
 }
 
 pub struct Chain<'a> {
-    pos: u16,
+    next: Option<u16>,
     pos_to_pos: &'a [u16],
 }
 
@@ -114,17 +114,17 @@ impl<'a> Iterator for Chain<'a> {
     type Item = u16;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if 0 == self.pos {
-            return None;
-        }
+        let current = match self.next {
+            Some(val) => val,
+            None => return None,
+        };
 
-        self.pos = self.pos_to_pos[usize_from(self.pos)];
+        match self.pos_to_pos[usize_from(current)] {
+            0 => self.next = None,
+            next => self.next = Some(next),
+        };
 
-        if 0 == self.pos {
-            None
-        } else {
-            Some(self.pos)
-        }
+        Some(current)
     }
 }
 

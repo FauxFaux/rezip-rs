@@ -271,7 +271,9 @@ impl<'p, 'd> fmt::Debug for AllRefs<'p, 'd> {
             Mappy::Full(ref map) => for (key, val) in sorted_back_map(map) {
                 writeln!(f, " - {:?}: {:?}", key, val)?;
             },
-            Mappy::Sixteen(_) => unimplemented!(),
+            Mappy::Sixteen(SixteenDetails { ref table, .. }) => {
+                writeln!(f, "{:?}", table)?;
+            },
         }
         Ok(())
     }

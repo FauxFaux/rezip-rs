@@ -129,16 +129,20 @@ impl<'a> Iterator for Chain<'a> {
 }
 
 fn write(f: &mut fmt::Formatter, hash_to_pos: &[u16], pos_to_pos: &[u16]) -> fmt::Result {
-    for (hash, pos) in hash_to_pos.iter().enumerate() {
-        if 0 != *pos {
-            writeln!(f, "{:016b} -> {}", hash, pos)?;
-        }
-    }
+    for (hash, &pos) in hash_to_pos.iter().enumerate().filter(|&(_, &pos)| 0 != pos) {
+        let mut vals = Vec::new();
+        let mut current = pos;
+        vals.push(current);
+        loop {
+            current = pos_to_pos[usize_from(current)];
+            if 0 == current {
+                break;
+            }
 
-    for (pos, next) in pos_to_pos.iter().enumerate() {
-        if 0 != *next {
-            writeln!(f, "{} -> {}", pos, next)?;
+            vals.push(current);
         }
+        vals.reverse();
+        writeln!(f, " - {:04x}: {:?}", hash, vals)?;
     }
     Ok(())
 }

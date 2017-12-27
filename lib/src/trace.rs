@@ -15,7 +15,7 @@ pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
     let mut codes = codes.into_iter().peekable();
     let mut guesser = technique.guesser();
 
-    while pos < technique.data_len() {
+    while pos < guesser.data_len() {
         let guesses = guesser.codes_at(pos);
         assert!(!guesses.is_empty());
 
@@ -54,7 +54,7 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
     let mut trace = trace.into_iter().peekable();
     let mut guesser = technique.guesser();
 
-    while pos < technique.data_len() {
+    while pos < guesser.data_len() {
         let guesses = guesser.codes_at(pos);
         assert!(!guesses.is_empty());
 

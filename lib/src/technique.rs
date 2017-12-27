@@ -12,7 +12,6 @@ use Guesser;
 use Looker;
 use Obscure;
 use Ref;
-use usize_from;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -78,24 +77,54 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
     }
 }
 
-impl<'a, 'p, 'd> DataLen for Technique<'a, 'p, 'd> {
-    fn data_len(&self) -> usize {
-        self.all_refs.data_len()
+impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
+    pub fn guesser(&self) -> OutOfNames {
+        OutOfNames {
+            technique: self,
+            obscured: Vec::new(),
+        }
     }
 }
 
-impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
-    fn best_candidate_better_than(
-        &self,
-        pos: usize,
-        other: Option<u16>,
-        obscura: &[Obscure],
-    ) -> (u8, Option<Ref>) {
-        let current_literal = self.all_refs.data[pos];
-        let mut limit = self.config.wams.limit_count_of_distances;
+#[derive(Debug)]
+pub struct OutOfNames<'t, 'a: 't, 'p: 'a + 't, 'd: 'a + 't> {
+    technique: &'t Technique<'a, 'p, 'd>,
+    obscured: Vec<Obscure>,
+}
+
+impl<'t, 'a, 'p, 'd> OutOfNames<'t, 'a, 'p, 'd> {
+    pub fn add_obscurer(&mut self, pos: usize, code: Code) {
+        let limit = match self.technique.config.wams.insert_only_below_length {
+            Some(limit) => limit,
+            None => return,
+        };
+
+        let r = match code {
+            Code::Reference(r) => r,
+            Code::Literal(_) => return,
+        };
+
+        if r.run() <= limit {
+            return;
+        }
+
+        self.obscured.push((pos, r.run()))
+    }
+}
+
+impl<'t, 'a, 'p, 'd, 'o> DataLen for OutOfNames<'t, 'a, 'p, 'd> {
+    fn data_len(&self) -> usize {
+        self.technique.all_refs.data_len()
+    }
+}
+
+impl<'t, 'a, 'p, 'd, 'o> Looker for OutOfNames<'t, 'a, 'p, 'd> {
+    fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>) {
+        let current_literal = self.technique.all_refs.data[pos];
+        let mut limit = self.technique.config.wams.limit_count_of_distances;
 
         if let Some(run) = other {
-            if let Some(lookahead) = self.config.wams.lookahead {
+            if let Some(lookahead) = self.technique.config.wams.lookahead {
                 if lookahead.abort_above_length > run {
                     return (current_literal, None);
                 }
@@ -106,63 +135,16 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
             }
         }
 
-        let candidates = self.all_refs.at(pos, obscura);
+        let candidates = self.technique.all_refs.at(pos, &self.obscured);
         (
             current_literal,
             candidates.and_then(|it| {
-                self.config
-                    .picker
-                    .picker(it.take(limit), self.config.wams.quit_search_above_length)
+                self.technique.config.picker.picker(
+                    it.take(limit),
+                    self.technique.config.wams.quit_search_above_length,
+                )
             }),
         )
-    }
-
-    pub fn guesser(&self) -> OutOfNames {
-        OutOfNames {
-            technique: self,
-            obscured: Vec::new(),
-            limit: self.config
-                .wams
-                .insert_only_below_length
-                .unwrap_or(u16::MAX),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct OutOfNames<'t, 'a: 't, 'p: 'a + 't, 'd: 'a + 't> {
-    technique: &'t Technique<'a, 'p, 'd>,
-    obscured: Vec<Obscure>,
-    limit: u16,
-}
-
-impl<'t, 'a, 'p, 'd> OutOfNames<'t, 'a, 'p, 'd> {
-    pub fn add_obscurer(&mut self, pos: usize, code: Code) {
-        let r = match code {
-            Code::Reference(r) => r,
-            Code::Literal(_) => return,
-        };
-
-        if r.run() <= self.limit {
-            return;
-        }
-
-        println!("obscuring {}+{}: {}", pos, r.run(), self.limit);
-
-        self.obscured.push((pos, r.run()))
-    }
-}
-
-impl<'t, 'a, 'p, 'd, 'o> DataLen for OutOfNames<'t, 'a, 'p, 'd> {
-    fn data_len(&self) -> usize {
-        self.technique.data_len()
-    }
-}
-
-impl<'t, 'a, 'p, 'd, 'o> Looker for OutOfNames<'t, 'a, 'p, 'd> {
-    fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>) {
-        self.technique
-            .best_candidate_better_than(pos, other, &self.obscured)
     }
 }
 

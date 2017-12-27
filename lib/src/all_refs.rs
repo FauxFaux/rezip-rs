@@ -120,17 +120,15 @@ impl<'p, 'd> AllRefs<'p, 'd> {
             )),
             Mappy::Sixteen(SixteenDetails { ref table, limit }) => Some(Box::new(
                 obscure(
-                    table
-                        .get(key)
-                        .filter(move |off| (*off as usize) < pos)
-                        .filter(move |&off| {
-                            self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
-                        }),
+                    table.get(key).filter(move |off| (*off as usize) < pos),
                     obscura.iter().map(|&(k, v)| {
                         assert_lt!(k, 65536);
                         (k as u16, v)
                     }),
                 ).take(limit as usize)
+                    .filter(move |&off| {
+                        self.data[usize_from(off)..usize_from(off) + 3] == key.as_array()[..]
+                    })
                     .map(move |off| {
                         let dist = u16_from(pos) - off;
                         let run = self.possible_run_length_at(data_pos, dist);

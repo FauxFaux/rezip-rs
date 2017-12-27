@@ -227,9 +227,9 @@ impl Key {
         let mut hash = 0u16;
 
         hash ^= u16::from(self.b0);
-        hash <<= 6;
+        hash <<= 5;
         hash ^= u16::from(self.b1);
-        hash <<= 6;
+        hash <<= 5;
         hash ^= u16::from(self.b2);
 
         hash &= 0x7fff;
@@ -321,13 +321,8 @@ mod tests {
 
     #[test]
     fn hash_sixteen_16_collisions() {
-        assert_eq!(0x73cf, Key::from((15, 15, 15)).sixteen_hash_16());
-        assert_eq!(0x73cf, Key::from((79, 15, 15)).sixteen_hash_16());
-
-        assert_eq!(
-            0b0100_1111_0011_1111,
-            Key::from((0xff, 0xff, 0xff)).sixteen_hash_16()
-        );
+        assert_eq!(0b0000_1100_0010_0001, k(&[3, 1, 1]).sixteen_hash_16());
+        assert_eq!(k(&[b'O', b'o', b'o']).sixteen_hash_16(), k(&[b'o', b'o', b'o']).sixteen_hash_16());
     }
 
     fn k(from: &[u8]) -> Key {

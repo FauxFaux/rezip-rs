@@ -45,8 +45,6 @@ pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
 pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
     let mut ret = Vec::with_capacity(trace.len());
 
-    let mut pos = 0;
-
     let mut trace = trace.into_iter().peekable();
     let mut scanner = technique.scanner();
 
@@ -59,7 +57,7 @@ pub fn restore(trace: &[Trace], technique: &Technique) -> Vec<Code> {
             let orig = match hint {
                 Trace::Correct => guess,
                 Trace::Actually(r) => Code::Reference(r),
-                Trace::ActuallyLiteral => Code::Literal(technique.byte_at(pos)),
+                Trace::ActuallyLiteral => Code::Literal(technique.byte_at(scanner.pos)),
             };
 
             scanner.feedback(orig);

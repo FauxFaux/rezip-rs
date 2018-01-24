@@ -93,7 +93,7 @@ impl<'t, 'a, 'p, 'd> Scanner<'t, 'a, 'p, 'd> {
         self.pos < self.data_len()
     }
 
-    pub fn feedback(&mut self,code: Code) {
+    pub fn feedback(&mut self, code: Code) {
         let old_pos = self.pos;
         self.pos += usize_from(code.emitted_bytes());
 

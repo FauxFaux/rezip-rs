@@ -1,9 +1,9 @@
 extern crate clap;
+extern crate crc;
 
 #[macro_use]
 extern crate error_chain;
 extern crate flate2;
-extern crate hash_roll;
 extern crate librezip;
 
 mod cat;

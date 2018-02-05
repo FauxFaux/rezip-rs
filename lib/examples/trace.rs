@@ -78,13 +78,13 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
 
     // TODO: all_refs.apply_first_byte_bug_rule();
 
-    if true {
+    if false {
         println!("refs_1:\n{:?}", refs_1);
         println!("refs_3:\n{:?}", refs_3);
         println!("refs_all:\n{:?}", all_refs);
     }
 
-    if true {
+    if false {
         try_trace(
             &refs_1,
             "gzip --fast",
@@ -94,11 +94,13 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         );
     }
 
-    if true {
+    if false {
         try_trace(&refs_3, "gzip -3", Config::gzip(3), codes, &decompressed);
     }
 
-    if false {
+    if true {
+        // TODO: gzip --default doesn't actually use all-refs, but it's close enough for our purpose
+        // TODO: I HOPE.
         try_trace(
             &all_refs,
             "gzip [--default]",

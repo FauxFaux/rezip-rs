@@ -40,7 +40,7 @@ fn run(data: &[u8]) {
         Block::Uncompressed(_) => return,
     };
 
-    let slice = librezip::tracer::try_gzip(1, &[], &data, &codes);
+    let slice = librezip::tracer::try_gzip(6, &[], &data, &codes);
 
     if 2 == slice.len() {
         return;
@@ -64,7 +64,7 @@ fn exec_actual_gzip(input: &[u8]) -> Vec<u8> {
     tmp.write_all(input).unwrap();
     tmp.flush().unwrap();
     process::Command::new("gzip")
-        .args(&["-n1c", tmp.path().to_str().unwrap()])
+        .args(&["-n6c", tmp.path().to_str().unwrap()])
         .output()
         .unwrap()
         .stdout

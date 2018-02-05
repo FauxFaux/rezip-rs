@@ -79,7 +79,9 @@ impl<R: Read> BitReader<R> {
         );
 
         let mut buf = vec![0u8; len as usize];
-        self.inner.read_exact(&mut buf)?;
+        self.inner
+            .read_exact(&mut buf)
+            .chain_err(|| format!("reading a length-prefixed {} bytes", len))?;
 
         Ok(buf)
     }

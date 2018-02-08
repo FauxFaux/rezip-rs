@@ -1,4 +1,11 @@
+extern crate rand;
+
+use std::io;
 use std::io::Write;
+
+use rand::IsaacRng;
+use rand::Rng;
+use rand::SeedableRng;
 
 fn main() {
     let chars: Box<[u8]> = (32..128)
@@ -6,22 +13,19 @@ fn main() {
         .collect::<Vec<u8>>()
         .into_boxed_slice();
 
-    let stdout = ::std::io::stdout();
+    let stdout = io::stdout();
     let mut stdout = stdout.lock();
 
-    let len = chars.len() as u64;
+    let mut rng = IsaacRng::from_seed(&[0]);
 
-    for i in 0u64.. {
+    loop {
         let mut buf = [0u8; 8];
-        let mut j = i;
-        let mut k = 0;
-        while 0 != j {
-            buf[k] = chars[(j % len) as usize];
-            k += 1;
-            j /= len;
-        }
-        buf[k] = b'\n';
+        buf[buf.len() - 1] = b'\n';
 
-        stdout.write_all(&buf[..k + 1]).unwrap();
+        for k in 0..buf.len() - 1 {
+            buf[k] = *rng.choose(&chars).unwrap();
+        }
+
+        stdout.write_all(&buf).unwrap();
     }
 }

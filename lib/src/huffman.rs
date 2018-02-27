@@ -214,18 +214,16 @@ pub fn encode_distance(distance: u16) -> Option<(u8, u8, u16)> {
 }
 
 pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16> {
-    ensure!(sym <= 31, "invalid distance symbol");
-
     if sym <= 3 {
-        return Ok(sym as u16 + 1);
-    }
-
-    if sym <= 29 {
+        Ok(sym as u16 + 1)
+    } else if sym <= 29 {
         let num_extra_bits = (sym / 2 - 1) as u8;
-        return Ok((((sym % 2 + 2) as u16) << num_extra_bits) + 1 + reader.read_part(num_extra_bits)?);
+        Ok((((sym % 2 + 2) as u16) << num_extra_bits) + 1 + reader.read_part(num_extra_bits)?)
+    } else if sym <= 31 {
+        Err("reserved distance symbol".into())
+    } else {
+        Err("invalid distance symbol".into())
     }
-
-    bail!("reserved distance symbol")
 }
 
 #[test]

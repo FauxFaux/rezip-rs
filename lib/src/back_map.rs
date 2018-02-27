@@ -1,9 +1,10 @@
 use std::fmt;
 
+use cast::usize;
+
 use itertools::Itertools;
 
 use all_refs::Key;
-use usize_from;
 
 const HASH_SIZE: usize = 32 * 1024;
 
@@ -41,7 +42,7 @@ impl BackMap {
     }
 
     pub fn get(&self, key: Key) -> Chain {
-        let pos = self.hash_to_pos[usize_from(key.sixteen_hash_16())];
+        let pos = self.hash_to_pos[usize(key.sixteen_hash_16())];
 
         Chain {
             next: Some(pos),

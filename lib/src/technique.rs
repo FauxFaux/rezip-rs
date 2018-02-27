@@ -1,5 +1,7 @@
 use std::u16;
 
+use cast::usize;
+
 use all_refs::AllRefs;
 use lookahead::Lookahead;
 use picker::Picker;
@@ -12,7 +14,6 @@ use Guesser;
 use Looker;
 use Obscure;
 use Ref;
-use usize_from;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -95,7 +96,7 @@ impl<'t, 'a, 'p, 'd> Scanner<'t, 'a, 'p, 'd> {
 
     pub fn feedback(&mut self, code: Code) {
         let old_pos = self.pos;
-        self.pos += usize_from(code.emitted_bytes());
+        self.pos += usize(code.emitted_bytes());
 
         let limit = match self.technique.config.wams.insert_only_below_length {
             Some(limit) => limit,

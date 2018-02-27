@@ -6,14 +6,14 @@ use byteorder::LittleEndian as LE;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 
+use cast::u16;
+use cast::usize;
 use itertools::Itertools;
 
 use errors::*;
 
 use Ref;
 use Trace;
-use u16_from;
-use usize_from;
 
 pub fn verify(traces: &[Trace]) -> Vec<u8> {
     let data = write(traces);
@@ -45,15 +45,15 @@ pub fn write(traces: &[Trace]) -> Vec<u8> {
                 let mut corrects = traces.peeking_take_while(|x| Trace::Correct == **x).count();
                 let representation_offset = 32_768;
                 let max_representable = u16::MAX - representation_offset;
-                while corrects > usize_from(max_representable) {
+                while corrects > usize(max_representable) {
                     ret.write_u16::<LE>(representation_offset + max_representable)
                         .expect("writing to a vector");
-                    corrects -= usize_from(max_representable);
+                    corrects -= usize(max_representable);
                 }
 
                 assert_ne!(0, corrects);
 
-                ret.write_u16::<LE>(representation_offset + u16_from(corrects))
+                ret.write_u16::<LE>(representation_offset + u16(corrects).unwrap())
                     .expect("writing to a vector");
             }
         }

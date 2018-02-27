@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use cast::usize;
+
 use bit::BitVec;
 use bit::BitWriter;
 use circles::CircularBuffer;
@@ -8,7 +10,6 @@ use errors::*;
 use huffman;
 use Block;
 use Code;
-use usize_from;
 
 pub fn decompressed_block<W: Write>(
     mut into: W,
@@ -112,7 +113,7 @@ impl Lengths {
             Code::Reference(r) => {
                 let run = r.run();
                 let run_symbol = huffman::encode_run_length(run);
-                let run_symbol_len = match self.length[usize_from(run_symbol)] {
+                let run_symbol_len = match self.length[usize(run_symbol)] {
                     Some(len) => len,
                     None => return None,
                 };

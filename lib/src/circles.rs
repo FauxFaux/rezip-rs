@@ -1,7 +1,8 @@
 use std::io::Write;
 
+use cast::usize;
+
 use errors::*;
-use usize_from;
 
 #[derive(Default)]
 pub struct CircularBuffer {
@@ -20,7 +21,7 @@ impl CircularBuffer {
 
         CircularBuffer {
             idx: 0,
-            data: vec![0; usize_from(cap)],
+            data: vec![0; usize(cap)],
             valid_cap: 0,
         }
     }
@@ -97,7 +98,7 @@ impl CircularBuffer {
     pub fn vec(&self) -> Vec<u8> {
         // TODO: optimise
 
-        let mut ret = Vec::with_capacity(usize_from(self.valid_cap));
+        let mut ret = Vec::with_capacity(usize(self.valid_cap));
         for pos in (1..1 + self.valid_cap).rev() {
             ret.push(self.get_at_dist(pos));
         }

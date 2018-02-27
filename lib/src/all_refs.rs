@@ -1,10 +1,11 @@
 use std::fmt;
 use std::iter;
 
+use cast::u16;
+use cast::usize;
+
 use back_map::BackMap;
 use obscure::obscure;
-use u16_from;
-use usize_from;
 use Obscure;
 use Ref;
 
@@ -71,7 +72,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
             ).take(self.limit as usize)
                 .filter(move |&off| self.data[off..off + 3] == key.as_array()[..])
                 .map(move |off| {
-                    let dist = u16_from(pos - off);
+                    let dist = u16(pos - off).expect("offset is <=(?) 2^15");
                     let run = self.possible_run_length_at(data_pos, dist);
                     Ref::new(dist, run)
                 }),
@@ -81,7 +82,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     fn get_at_dist(&self, data_pos: usize, dist: u16) -> u8 {
         debug_assert!(dist > 0);
         let pos = data_pos;
-        let dist = usize_from(dist);
+        let dist = usize(dist);
 
         if dist <= pos {
             self.data[pos - dist]

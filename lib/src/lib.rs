@@ -3,6 +3,7 @@
 #![feature(vec_remove_item)]
 
 extern crate byteorder;
+extern crate cast;
 
 #[macro_use]
 extern crate error_chain;
@@ -187,17 +188,6 @@ impl fmt::Debug for Ref {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "R[{}, {}]", self.dist, self.run())
     }
-}
-
-#[inline]
-fn u16_from(val: usize) -> u16 {
-    assert!(val <= (std::u16::MAX as usize));
-    val as u16
-}
-
-#[inline]
-fn usize_from(val: u16) -> usize {
-    val as usize
 }
 
 #[cfg(test)]

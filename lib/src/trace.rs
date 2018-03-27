@@ -1,9 +1,9 @@
 use std::iter;
 
-use technique::Technique;
 use Code;
 use Guesser;
 use Trace;
+use technique::Technique;
 
 pub fn trace(codes: &[Code], technique: &Technique) -> Vec<Trace> {
     let mut ret = Vec::with_capacity(codes.len());

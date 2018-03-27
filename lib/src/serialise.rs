@@ -2,14 +2,14 @@ use std::io::Write;
 
 use cast::usize;
 
+use Block;
+use Code;
 use bit::BitVec;
 use bit::BitWriter;
 use circles::CircularBuffer;
 use code_tree::CodeTree;
 use errors::*;
 use huffman;
-use Block;
-use Code;
 
 pub fn decompressed_block<W: Write>(
     mut into: W,
@@ -201,9 +201,9 @@ fn encode_distance<W: Write>(
 
 #[cfg(test)]
 mod tests {
-    use std::io::Cursor;
-    use parse;
     use super::*;
+    use parse;
+    use std::io::Cursor;
 
     #[test]
     fn decompress() {

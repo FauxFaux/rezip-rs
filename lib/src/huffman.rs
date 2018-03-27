@@ -24,7 +24,6 @@ lazy_static! {
 
         CodeTree::new(&lens).expect("static data is valid")
     };
-
     pub static ref FIXED_DISTANCE_TREE: CodeTree =
         CodeTree::new(&[5u8; 32]).expect("static data is valid");
 }

@@ -50,13 +50,12 @@ mod wams;
 
 use bit::BitVec;
 
-pub use errors::*;
 pub use circles::CircularBuffer;
+pub use errors::*;
 pub use parse::parse_deflate;
 pub use serialise::compressed_block;
 pub use serialise::decompressed_block;
 pub use serialise::decompressed_codes;
-
 pub use technique::Config;
 pub use technique::Technique;
 
@@ -192,11 +191,11 @@ impl fmt::Debug for Ref {
 
 #[cfg(test)]
 mod tests {
+    use bit::BitWriter;
+    use circles::CircularBuffer;
     use std::io::Cursor;
     use std::io::Read;
     use std::io::Write;
-    use bit::BitWriter;
-    use circles::CircularBuffer;
     use ::*;
 
     #[test]

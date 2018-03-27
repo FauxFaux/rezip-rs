@@ -1,10 +1,10 @@
 #[cfg(old_tests)]
 mod tests {
-    use circles::CircularBuffer;
-    use serialise;
     use Code;
     use Code::Literal as L;
     use Ref;
+    use circles::CircularBuffer;
+    use serialise;
 
     fn r(dist: u16, run: u16) -> Code {
         Code::Reference(Ref::new(dist, run))

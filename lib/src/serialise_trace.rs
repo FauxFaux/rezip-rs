@@ -6,14 +6,12 @@ use byteorder::LittleEndian as LE;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 
-use cast::u16;
-use cast::usize;
-use itertools::Itertools;
-
-use errors::*;
-
 use Ref;
 use Trace;
+use cast::u16;
+use cast::usize;
+use errors::*;
+use itertools::Itertools;
 
 pub fn verify(traces: &[Trace]) -> Vec<u8> {
     let data = write(traces);
@@ -91,8 +89,8 @@ pub fn read<R: Read>(mut data: R) -> Result<Vec<Trace>> {
 
 #[cfg(test)]
 mod tests {
-    use std::io;
     use super::Trace;
+    use std::io;
 
     fn assert_round_trip(trace: &[Trace]) {
         assert_eq!(

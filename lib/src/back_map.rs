@@ -1,7 +1,6 @@
 use std::fmt;
 
 use cast::usize;
-
 use itertools::Itertools;
 
 use all_refs::Key;

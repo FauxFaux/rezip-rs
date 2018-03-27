@@ -1,12 +1,11 @@
 use std::u16;
 
+use Code;
 use all_refs::AllRefs;
+use serialise_trace;
 use technique::Config;
 use technique::Technique;
-use serialise_trace;
 use trace;
-
-use Code;
 
 pub fn try_gzip(level: u8, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<u8> {
     try(Config::gzip(level), preroll, data, codes)

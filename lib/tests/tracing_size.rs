@@ -2,8 +2,8 @@ extern crate librezip;
 
 use std::io;
 
-use librezip::CircularBuffer;
 use librezip::Block;
+use librezip::CircularBuffer;
 
 fn try_gzip(level: u8, file: &[u8]) -> usize {
     let mut reader = io::Cursor::new(file);

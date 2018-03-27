@@ -1,5 +1,5 @@
-use iters;
 use Ref;
+use iters;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Picker {

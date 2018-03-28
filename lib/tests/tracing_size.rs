@@ -181,3 +181,13 @@ fn colliding_back_miss() {
 fn woo_goo() {
     assert_eq!(2, try_gzip(1, include_bytes!("data/woo-goo-1.gz")))
 }
+
+// First 37,848 bytes of hard.rs; which results in running 7 records (11 bytes?)
+// past the end of a block
+#[test]
+fn blockandabit() {
+    assert_eq!(
+        2,
+        try_gzip(1, include_bytes!("data/blockandabit-sixteen-1.gz"))
+    )
+}

@@ -191,3 +191,11 @@ fn blockandabit() {
         try_gzip(1, include_bytes!("data/blockandabit-sixteen-1.gz"))
     )
 }
+
+#[test]
+fn blockandabit_newlines() {
+    assert_eq!(
+        2,
+        try_gzip(1, include_bytes!("data/blockandabitnewlines-sixteen-1.gz"))
+    )
+}

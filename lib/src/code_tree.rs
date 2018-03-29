@@ -38,7 +38,7 @@ impl CodeTree {
                         .iter()
                         .enumerate()
                         .filter(|&(_, val)| i == *val)
-                        .map(|(pos, _)| Node::Leaf(pos as u16)),
+                        .map(|(pos, _)| Node::Leaf(u16(pos).unwrap())),
                 );
             }
 

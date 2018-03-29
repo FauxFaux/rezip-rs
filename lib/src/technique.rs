@@ -42,7 +42,7 @@ impl Config {
             } else {
                 Picker::Longest
             },
-            wams: wams::CONFIGURATIONS[usize::from(level - 1)],
+            wams: wams::CONFIGURATIONS[usize(level - 1)],
         }
     }
 
@@ -75,8 +75,7 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
         Scanner {
             technique: self,
             obscured: Vec::new(),
-            // TODO: preroll.len()?
-            pos: 0,
+            pos: self.all_refs.preroll.len(),
         }
     }
 }
@@ -85,6 +84,7 @@ impl<'a, 'p, 'd> Technique<'a, 'p, 'd> {
 pub struct Scanner<'t, 'a: 't, 'p: 'a + 't, 'd: 'a + 't> {
     technique: &'t Technique<'a, 'p, 'd>,
     obscured: Vec<Obscure>,
+    /// The distance through all known data which we have processed, including the preroll.
     pub pos: usize,
 }
 
@@ -123,7 +123,7 @@ impl<'t, 'a, 'p, 'd, 'o> DataLen for Scanner<'t, 'a, 'p, 'd> {
 
 impl<'t, 'a, 'p, 'd, 'o> Looker for Scanner<'t, 'a, 'p, 'd> {
     fn best_candidate_better_than(&self, pos: usize, other: Option<u16>) -> (u8, Option<Ref>) {
-        let current_literal = self.technique.all_refs.data[pos];
+        let current_literal = self.technique.all_refs.get(pos);
         let mut limit = self.technique.config.wams.limit_count_of_distances;
 
         if let Some(run) = other {

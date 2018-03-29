@@ -1,7 +1,6 @@
 use std;
 use std::io::Read;
 
-use cast::u16;
 use cast::usize;
 
 use bit::BitReader;

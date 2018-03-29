@@ -17,7 +17,7 @@ pub struct Key {
 }
 
 pub struct AllRefs<'p, 'd> {
-    preroll: &'p [u8],
+    pub preroll: &'p [u8],
     pub data: &'d [u8],
     map: BackMap,
     limit: u16,
@@ -25,7 +25,6 @@ pub struct AllRefs<'p, 'd> {
 
 impl<'p, 'd> AllRefs<'p, 'd> {
     pub fn with_sixteen(preroll: &'p [u8], data: &'d [u8], limit: u16) -> Self {
-        assert_eq!(&[0u8; 0], preroll, "not implemented");
         AllRefs {
             preroll,
             data,
@@ -35,29 +34,31 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     }
 
     pub fn data_len(&self) -> usize {
-        self.data.len()
+        self.preroll.len() + self.data.len()
     }
 
     fn key(&self, data_pos: usize) -> Option<Key> {
-        if data_pos + 2 < self.data.len() {
-            Some(key_from_bytes(&self.data[data_pos..]))
+        if data_pos + 2 < self.data_len() {
+            Some(Key {
+                b0: self.get(data_pos),
+                b1: self.get(data_pos + 1),
+                b2: self.get(data_pos + 2),
+            })
         } else {
             None
         }
     }
 
-    // None if we are out of possible keys, or Some(possibly empty list)
+    /// None if we are out of possible keys, or Some(possibly empty list)
     pub fn at<'m>(
         &'m self,
-        data_pos: usize,
+        pos: usize,
         obscura: &[Obscure],
     ) -> Option<Box<Iterator<Item = Ref> + 'm>> {
-        let key = match self.key(data_pos) {
+        let key = match self.key(pos) {
             Some(key) => key,
             None => return None,
         };
-
-        let pos = self.preroll.len() + data_pos;
 
         // we can only find ourselves, which is invalid, and not handled by (inclusive) range code
         // Maybe I should fix the inclusive range code? Or pretend this is an optimisation.
@@ -70,25 +71,29 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                 self.map.get(key).filter(move |&off| off < pos),
                 obscura.iter().cloned(),
             ).take(usize(self.limit))
-                .filter(move |&off| self.data[off..off + 3] == key.as_array()[..])
+                .filter(move |&off| pos - off <= 32_768)
+                .filter(move |&off| {
+                    self.get(off) == key.b0 && self.get(off + 1) == key.b1
+                        && self.get(off + 2) == key.b2
+                })
                 .map(move |off| {
-                    let dist = u16(pos - off).expect("offset is <=(?) 2^15");
-                    let run = self.possible_run_length_at(data_pos, dist);
+                    let dist = u16(pos - off).unwrap();
+                    let run = self.possible_run_length_at(pos, dist);
                     Ref::new(dist, run)
                 }),
         ))
     }
 
-    fn get_at_dist(&self, data_pos: usize, dist: u16) -> u8 {
-        debug_assert!(dist > 0);
-        let pos = data_pos;
-        let dist = usize(dist);
-
-        if dist <= pos {
-            self.data[pos - dist]
+    pub fn get(&self, pos: usize) -> u8 {
+        if pos < self.preroll.len() {
+            self.preroll[pos]
         } else {
-            self.preroll[self.preroll.len() - (dist - pos)]
+            self.data[pos - self.preroll.len()]
         }
+    }
+
+    fn get_at_dist(&self, data_pos: usize, dist: u16) -> u8 {
+        self.get(data_pos - usize(dist))
     }
 
     fn possible_run_length_at(&self, data_pos: usize, dist: u16) -> u16 {

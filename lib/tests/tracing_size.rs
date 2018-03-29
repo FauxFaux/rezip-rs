@@ -185,7 +185,7 @@ fn woo_goo() {
 // First 37,848 bytes of hard.rs; which results in running 7 records (11 bytes?)
 // past the end of a block
 #[test]
-fn blockandabit() {
+fn blockandabit_hard() {
     assert_eq!(
         2,
         try_gzip(1, include_bytes!("data/blockandabit-sixteen-1.gz"))

@@ -96,14 +96,14 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         self.get(data_pos - usize(dist))
     }
 
-    fn possible_run_length_at(&self, data_pos: usize, dist: u16) -> u16 {
-        let upcoming_data = &self.data[data_pos..];
-        let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
-        let upcoming_data_len = u16(upcoming_data.len()).unwrap();
-        assert_le!(upcoming_data_len, 258);
+    fn possible_run_length_at(&self, pos: usize, dist: u16) -> u16 {
+        let upcoming_data_len = u16(258.min(self.data_len() - pos)).unwrap();
+        let upcoming_data: Vec<u8> = (0..upcoming_data_len)
+            .map(|i| self.get(pos + usize(i)))
+            .collect();
 
         for cur in 3..dist.min(upcoming_data_len) {
-            if upcoming_data[usize(cur)] != self.get_at_dist(data_pos, dist - cur) {
+            if upcoming_data[usize(cur)] != self.get_at_dist(pos, dist - cur) {
                 return cur;
             }
         }

@@ -1,6 +1,8 @@
 use std;
 use std::fmt;
 
+use cast::u16;
+use cast::usize;
 use itertools::Itertools;
 
 use bit::BitSource;
@@ -17,7 +19,7 @@ impl CodeTree {
         ensure!(canonical_code_lengths.len() >= 2, "too few lengths");
 
         ensure!(
-            canonical_code_lengths.len() <= std::u32::MAX as usize,
+            canonical_code_lengths.len() <= usize(std::u32::MAX),
             "too many lengths"
         );
 
@@ -117,8 +119,8 @@ fn fmt(into: &mut fmt::Formatter, prefix: &str, node: &Node) -> fmt::Result {
 fn store_code(into: &mut Vec<Option<BitVec>>, prefix: BitVec, node: &Node) {
     match *node {
         Node::Leaf(sym) => {
-            assert!(into[sym as usize].is_none(), "duplicate code in tree");
-            into[sym as usize] = Some(prefix);
+            assert!(into[usize(sym)].is_none(), "duplicate code in tree");
+            into[usize(sym)] = Some(prefix);
         }
         Node::Internal(ref left, ref right) => {
             store_code(into, plus_bit(&prefix, false), left);

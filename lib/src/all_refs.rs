@@ -69,7 +69,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
             obscure(
                 self.map.get(key).filter(move |&off| off < pos),
                 obscura.iter().cloned(),
-            ).take(self.limit as usize)
+            ).take(usize(self.limit))
                 .filter(move |&off| self.data[off..off + 3] == key.as_array()[..])
                 .map(move |off| {
                     let dist = u16(pos - off).expect("offset is <=(?) 2^15");
@@ -94,20 +94,22 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     fn possible_run_length_at(&self, data_pos: usize, dist: u16) -> u16 {
         let upcoming_data = &self.data[data_pos..];
         let upcoming_data = &upcoming_data[..258.min(upcoming_data.len())];
+        let upcoming_data_len = u16(upcoming_data.len()).unwrap();
+        assert_le!(upcoming_data_len, 258);
 
-        for cur in 3..dist.min(upcoming_data.len() as u16) {
-            if upcoming_data[cur as usize] != self.get_at_dist(data_pos, dist - cur) {
+        for cur in 3..dist.min(upcoming_data_len) {
+            if upcoming_data[usize(cur)] != self.get_at_dist(data_pos, dist - cur) {
                 return cur;
             }
         }
 
-        for cur in dist..(upcoming_data.len() as u16) {
-            if upcoming_data[(cur % dist) as usize] != upcoming_data[cur as usize] {
+        for cur in dist..upcoming_data_len {
+            if upcoming_data[usize(cur % dist)] != upcoming_data[usize(cur)] {
                 return cur;
             }
         }
 
-        upcoming_data.len() as u16
+        upcoming_data_len
     }
 }
 

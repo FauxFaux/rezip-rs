@@ -142,11 +142,11 @@ impl Code {
 impl Ref {
     #[inline]
     fn new(dist: u16, run: u16) -> Self {
-        assert!(run >= 3);
-        assert!(run <= 258);
+        assert_ge!(run, 3);
+        assert_le!(run, 258);
 
-        assert!(dist >= 1);
-        assert!(dist <= 32_768);
+        assert_ge!(dist, 1);
+        assert_le!(dist, 32_768);
 
         let run_minus_3 = (run - 3) as u8;
         Ref { dist, run_minus_3 }

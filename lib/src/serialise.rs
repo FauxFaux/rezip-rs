@@ -146,9 +146,7 @@ fn compressed_codes<W: Write>(
     for code in codes {
         match *code {
             Literal(byte) => {
-                into.write_vec(length_tree[byte as usize]
-                    .as_ref()
-                    .ok_or("invalid literal")?)?;
+                into.write_vec(length_tree[usize(byte)].as_ref().ok_or("invalid literal")?)?;
             }
             Reference(r) => {
                 encode_run(into, &length_tree, r.run())?;
@@ -189,7 +187,7 @@ fn encode_distance<W: Write>(
     if let Some((code, bits, val)) = huffman::encode_distance(dist) {
         let distance_tree = tree.as_ref().ok_or("reference but not distance tree")?;
 
-        into.write_vec(distance_tree[code as usize].as_ref().unwrap())?;
+        into.write_vec(distance_tree[usize(code)].as_ref().unwrap())?;
 
         if bits > 0 {
             into.write_bits_val(bits, val)?;

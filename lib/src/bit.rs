@@ -4,6 +4,10 @@ use std::io::Read;
 use std::io::Write;
 use std::ops::BitOrAssign;
 
+use cast::u16;
+use cast::u8;
+use cast::usize;
+
 use errors::*;
 
 pub struct BitReader<R> {
@@ -78,7 +82,7 @@ impl<R: Read> BitReader<R> {
             "uncompressed block length validation failed"
         );
 
-        let mut buf = vec![0u8; len as usize];
+        let mut buf = vec![0u8; usize(len)];
         self.inner
             .read_exact(&mut buf)
             .chain_err(|| format!("reading a length-prefixed {} bytes", len))?;
@@ -146,19 +150,17 @@ impl<W: Write> BitWriter<W> {
 
     pub fn write_length_prefixed(&mut self, data: &[u8]) -> Result<()> {
         self.align()?;
-        ensure!(
-            data.len() <= std::u16::MAX as usize,
-            "data too long to store"
-        );
+        ensure!(data.len() <= usize(std::u16::MAX), "data too long to store");
 
-        self.write_aligned_u16(data.len() as u16)?;
-        self.write_aligned_u16((data.len() ^ 0xFFFF) as u16)?;
+        self.write_aligned_u16(u16(data.len()).unwrap())?;
+        self.write_aligned_u16(u16(data.len()).unwrap() ^ 0xFFFF)?;
         self.inner.write_all(data)?;
         Ok(())
     }
 
     pub fn write_aligned_u16(&mut self, val: u16) -> Result<()> {
-        self.inner.write_all(&[(val >> 8) as u8, val as u8])?;
+        self.inner
+            .write_all(&[u8(val >> 8).unwrap(), u8(val & 0xFF).unwrap()])?;
         Ok(())
     }
 

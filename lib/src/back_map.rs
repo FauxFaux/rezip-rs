@@ -31,7 +31,7 @@ impl BackMap {
             .enumerate()
         {
             let hash = Key::from(keys).sixteen_hash_16();
-            let hash_entry = &mut table.hash_to_pos[hash as usize];
+            let hash_entry = &mut table.hash_to_pos[usize(hash)];
             let prev_pos = *hash_entry;
             table.pos_to_pos[pos] = prev_pos;
             *hash_entry = pos;

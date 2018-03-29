@@ -192,6 +192,7 @@ fn blockandabit_hard() {
     )
 }
 
+#[ignore]
 #[test]
 fn blockandabit_newlines() {
     assert_eq!(

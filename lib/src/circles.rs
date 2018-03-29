@@ -30,7 +30,7 @@ impl CircularBuffer {
         self.data[self.idx] = val;
         self.idx = (self.idx + 1) % self.data.len();
 
-        if (self.valid_cap as usize) < self.data.len() {
+        if (usize(self.valid_cap)) < self.data.len() {
             self.valid_cap += 1;
         }
     }
@@ -55,7 +55,7 @@ impl CircularBuffer {
         );
 
         let mut read_from = (self.idx
-            .wrapping_sub(dist as usize)
+            .wrapping_sub(usize(dist))
             .wrapping_add(self.data.len())) % self.data.len();
 
         for _ in 0..len {
@@ -74,7 +74,7 @@ impl CircularBuffer {
             dist > 0,
             "distances are one-indexed; the most recent inserted value is 1"
         );
-        debug_assert!(self.valid_cap as usize <= self.data.len());
+        debug_assert!(usize(self.valid_cap) <= self.data.len());
         debug_assert!(dist <= self.valid_cap);
 
         let target = self.idx as isize - (dist as isize);

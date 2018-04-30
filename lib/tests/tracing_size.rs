@@ -1,6 +1,9 @@
+extern crate itertools;
 extern crate librezip;
 
 use std::io;
+
+use itertools::Itertools;
 
 use librezip::Block;
 use librezip::CircularBuffer;
@@ -32,7 +35,13 @@ fn run_gzip(level: u8, file: &[u8]) -> Vec<Vec<Trace>> {
 fn try_gzip(level: u8, file: &[u8]) {
     let parts = run_gzip(level, file);
     for (id, part) in parts.iter().enumerate() {
-        assert_eq!(&vec![Trace::Correct; part.len()], part, "part {}: must be fully complete", id);
+        if !part.iter().all(|&x| Trace::Correct == x) {
+            panic!(
+                "part {}: must be fully complete: {}",
+                id,
+                part.iter().map(|x| format!("{:?}", x)).join("")
+            );
+        }
     }
 }
 

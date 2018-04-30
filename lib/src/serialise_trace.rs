@@ -6,12 +6,12 @@ use byteorder::LittleEndian as LE;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 
-use Ref;
-use Trace;
 use cast::u16;
 use cast::usize;
 use errors::*;
 use itertools::Itertools;
+use Ref;
+use Trace;
 
 pub fn verify(traces: &[Trace]) -> Vec<u8> {
     let data = write(traces);

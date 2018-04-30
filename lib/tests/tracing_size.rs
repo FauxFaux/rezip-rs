@@ -4,13 +4,14 @@ use std::io;
 
 use librezip::Block;
 use librezip::CircularBuffer;
+use librezip::Trace;
 
-fn try_gzip(level: u8, file: &[u8]) -> usize {
+fn run_gzip(level: u8, file: &[u8]) -> Vec<Vec<Trace>> {
     let mut reader = io::Cursor::new(file);
     librezip::gzip::discard_header(&mut reader).unwrap();
 
     let mut dictionary = CircularBuffer::new();
-    let mut sum = 0;
+    let mut parts = Vec::new();
 
     for block in librezip::parse_deflate(&mut reader) {
         let codes = match block.unwrap() {
@@ -22,10 +23,17 @@ fn try_gzip(level: u8, file: &[u8]) -> usize {
         let mut data: Vec<u8> = Vec::with_capacity(codes.len());
         librezip::decompressed_codes(&mut data, &mut dictionary, &codes).unwrap();
 
-        sum += librezip::tracer::try_gzip(level, preroll, &data, &codes).len();
+        parts.push(librezip::tracer::try_gzip(level, preroll, &data, &codes));
     }
 
-    sum
+    parts
+}
+
+fn try_gzip(level: u8, file: &[u8]) {
+    let parts = run_gzip(level, file);
+    for (id, part) in parts.iter().enumerate() {
+        assert_eq!(&vec![Trace::Correct; part.len()], part, "part {}: must be fully complete", id);
+    }
 }
 
 // tiny-decay:
@@ -36,18 +44,12 @@ fn try_gzip(level: u8, file: &[u8]) -> usize {
 // 3: -----[6,5]-[5,4]
 #[test]
 fn tiny_decay_1_1() {
-    assert_eq!(
-        2,
-        try_gzip(1, include_bytes!("data/tiny-decay-sixteen-1.gz"))
-    )
+    try_gzip(1, include_bytes!("data/tiny-decay-sixteen-1.gz"))
 }
 
 #[test]
 fn tiny_decay_3_3() {
-    assert_eq!(
-        2,
-        try_gzip(3, include_bytes!("data/tiny-decay-sixteen-3.gz"))
-    )
+    try_gzip(3, include_bytes!("data/tiny-decay-sixteen-3.gz"))
 }
 
 // decaying: S='defghijklm'; printf "0.abcdefg_hijklm,1.abc$S,2.bc$S,3.c$S,4.$S"
@@ -62,30 +64,30 @@ fn tiny_decay_3_3() {
 //                                                                  ^-------------`
 #[test]
 fn decaying_1_1() {
-    assert_eq!(2, try_gzip(1, include_bytes!("data/decaying-sixteen-1.gz")))
+    try_gzip(1, include_bytes!("data/decaying-sixteen-1.gz"))
 }
 
 #[test]
 fn decaying_1_2() {
-    assert_eq!(7, try_gzip(2, include_bytes!("data/decaying-sixteen-1.gz")))
+    //    assert_eq!(7,
+    try_gzip(2, include_bytes!("data/decaying-sixteen-1.gz"))
 }
 
 #[test]
 fn decaying_1_3() {
-    assert_eq!(
-        12,
-        try_gzip(3, include_bytes!("data/decaying-sixteen-1.gz"))
-    )
+    //    assert_eq!(
+    //        12,
+    try_gzip(3, include_bytes!("data/decaying-sixteen-1.gz"))
 }
 
 #[test]
 fn decaying_2_2() {
-    assert_eq!(2, try_gzip(2, include_bytes!("data/decaying-sixteen-2.gz")))
+    try_gzip(2, include_bytes!("data/decaying-sixteen-2.gz"))
 }
 
 #[test]
 fn decaying_3_3() {
-    assert_eq!(2, try_gzip(3, include_bytes!("data/decaying-sixteen-3.gz")))
+    try_gzip(3, include_bytes!("data/decaying-sixteen-3.gz"))
 }
 
 // four-ref:
@@ -98,12 +100,12 @@ fn decaying_3_3() {
 // 2: ------------------[20,4]
 #[test]
 fn four_ref_1_1() {
-    assert_eq!(2, try_gzip(1, include_bytes!("data/four-ref-sixteen-1.gz")))
+    try_gzip(1, include_bytes!("data/four-ref-sixteen-1.gz"))
 }
 
 #[test]
 fn four_ref_2_2() {
-    assert_eq!(2, try_gzip(2, include_bytes!("data/four-ref-sixteen-2.gz")))
+    try_gzip(2, include_bytes!("data/four-ref-sixteen-2.gz"))
 }
 
 // ten-nine:
@@ -116,12 +118,12 @@ fn four_ref_2_2() {
 // 2 LLR[-1, 8]LR[-10, 9]
 #[test]
 fn ten_nine_1_1() {
-    assert_eq!(2, try_gzip(1, include_bytes!("data/ten-nine-sixteen-1.gz")))
+    try_gzip(1, include_bytes!("data/ten-nine-sixteen-1.gz"))
 }
 
 #[test]
 fn ten_nine_2_2() {
-    assert_eq!(2, try_gzip(2, include_bytes!("data/ten-nine-sixteen-2.gz")))
+    try_gzip(2, include_bytes!("data/ten-nine-sixteen-2.gz"))
 }
 
 // dumb-collision
@@ -131,7 +133,7 @@ fn ten_nine_2_2() {
 // 1 LLLLL
 #[test]
 fn dumb_collision() {
-    assert_eq!(2, try_gzip(1, include_bytes!("data/dumb-collision-1.gz")))
+    try_gzip(1, include_bytes!("data/dumb-collision-1.gz"))
 }
 
 // colliding-back-miss
@@ -149,10 +151,7 @@ fn dumb_collision() {
 // character, but it doesn't, so clearly something else is missing.
 #[test]
 fn colliding_back_miss() {
-    assert_eq!(
-        2,
-        try_gzip(1, include_bytes!("data/colliding-back-miss-sixteen-1.gz"))
-    )
+    try_gzip(1, include_bytes!("data/colliding-back-miss-sixteen-1.gz"))
 }
 
 // lots of collisions here, but gzip looks back further than we think it should
@@ -179,24 +178,18 @@ fn colliding_back_miss() {
 // is found before we hit the other bug.
 #[test]
 fn woo_goo() {
-    assert_eq!(2, try_gzip(1, include_bytes!("data/woo-goo-1.gz")))
+    try_gzip(1, include_bytes!("data/woo-goo-1.gz"))
 }
 
 // First 37,848 bytes of hard.rs; which results in running 7 records (11 bytes?)
 // past the end of a block
 #[test]
 fn blockandabit_hard() {
-    assert_eq!(
-        2,
-        try_gzip(1, include_bytes!("data/blockandabit-sixteen-1.gz"))
-    )
+    try_gzip(1, include_bytes!("data/blockandabit-sixteen-1.gz"))
 }
 
 #[ignore]
 #[test]
 fn blockandabit_newlines() {
-    assert_eq!(
-        2,
-        try_gzip(1, include_bytes!("data/blockandabitnewlines-sixteen-1.gz"))
-    )
+    try_gzip(1, include_bytes!("data/blockandabitnewlines-sixteen-1.gz"))
 }

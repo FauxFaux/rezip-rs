@@ -123,9 +123,11 @@ mod tests {
         use super::Code::Literal;
 
         assert_eq!(
-            vec![
-                Block::FixedHuffman(vec![Literal(108), Literal(111), Literal(108)]),
-            ],
+            vec![Block::FixedHuffman(vec![
+                Literal(108),
+                Literal(111),
+                Literal(108),
+            ])],
             parse_deflate(Cursor::new(&include_bytes!("../tests/data/lol.gz")[10..]))
                 .map(|val| val.unwrap())
                 .collect::<Vec<Block>>()

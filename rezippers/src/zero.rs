@@ -2,8 +2,8 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 
-use byteorder::LE;
 use byteorder::WriteBytesExt;
+use byteorder::LE;
 use crc;
 use crc::Hasher32;
 use flate2;

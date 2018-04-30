@@ -196,7 +196,7 @@ mod tests {
     use std::io::Cursor;
     use std::io::Read;
     use std::io::Write;
-    use ::*;
+    use *;
 
     #[test]
     fn seq_20_round_trip() {

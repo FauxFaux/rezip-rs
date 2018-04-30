@@ -32,8 +32,8 @@ fn contains(haystack: &[Obscure], needle: Int) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::Int;
     use super::obscure;
+    use super::Int;
 
     #[test]
     fn obscured() {

@@ -2,14 +2,14 @@ use std::io::Write;
 
 use cast::usize;
 
-use Block;
-use Code;
 use bit::BitVec;
 use bit::BitWriter;
 use circles::CircularBuffer;
 use code_tree::CodeTree;
 use errors::*;
 use huffman;
+use Block;
+use Code;
 
 pub fn decompressed_block<W: Write>(
     mut into: W,

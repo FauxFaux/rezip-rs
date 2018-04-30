@@ -6,6 +6,9 @@ use std::env;
 use std::fs;
 use std::io;
 
+use librezip::all_refs::AllRefs;
+use librezip::serialise_trace;
+use librezip::trace;
 use librezip::Block;
 use librezip::CircularBuffer;
 use librezip::Code;
@@ -13,9 +16,6 @@ use librezip::Config;
 use librezip::Guesser;
 use librezip::Result;
 use librezip::Trace;
-use librezip::all_refs::AllRefs;
-use librezip::serialise_trace;
-use librezip::trace;
 
 quick_main!(run);
 

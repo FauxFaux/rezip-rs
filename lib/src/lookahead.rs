@@ -20,12 +20,10 @@ impl Lookahead {
 }
 
 fn greedy<L: Looker>(looker: &L, pos: usize) -> Vec<Code> {
-    vec![
-        match looker.best_candidate(pos) {
-            (_, Some(r)) => Code::Reference(r),
-            (b, None) => Code::Literal(b),
-        },
-    ]
+    vec![match looker.best_candidate(pos) {
+        (_, Some(r)) => Code::Reference(r),
+        (b, None) => Code::Literal(b),
+    }]
 }
 
 fn gzip<L: Looker>(looker: &L, mut pos: usize) -> Vec<Code> {

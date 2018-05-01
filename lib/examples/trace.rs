@@ -82,7 +82,7 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!("refs_all:\n{:?}", all_refs);
     }
 
-    if false {
+    if true {
         try_trace(
             &refs_1,
             "gzip --fast",

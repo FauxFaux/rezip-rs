@@ -29,3 +29,7 @@ members = ["."]
 [[bin]]
 name = "trace_gzip_1"
 path = "fuzz_targets/trace_gzip_1.rs"
+
+[[bin]]
+name = "exec_gzip"
+path = "fuzz_targets/exec_gzip.rs"

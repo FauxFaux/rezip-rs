@@ -26,9 +26,8 @@ fn run(data: &[u8]) {
         return;
     }
 
-    let mut encoder = DeflateEncoder::new(Vec::with_capacity(data.len()), flate2::Compression::fast());
-    encoder.write(&data).expect("writing");
-    let compressed = encoder.finish().unwrap();
+    let gzip_file = exec_actual_gzip(data);
+    let compressed = &gzip_file[10..gzip_file.len()-8];
 
     let block = match librezip::parse_deflate(Cursor::new(&compressed)).next() {
         Some(Ok(block)) => block,
@@ -45,12 +44,6 @@ fn run(data: &[u8]) {
 
     if slice.iter().all(|&t| Trace::Correct == t) {
         println!("success");
-        return;
-    }
-
-    let gzip_file = exec_actual_gzip(data);
-    if compressed[..] != gzip_file[10..gzip_file.len()-8] {
-        println!("gzip did something different");
         return;
     }
 

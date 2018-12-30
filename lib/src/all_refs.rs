@@ -70,17 +70,19 @@ impl<'p, 'd> AllRefs<'p, 'd> {
             obscure(
                 self.map.get(key).filter(move |&off| off < pos),
                 obscura.iter().cloned(),
-            ).take(usize(self.limit))
-                .filter(move |&off| pos - off <= 32_768)
-                .filter(move |&off| {
-                    self.get(off) == key.b0 && self.get(off + 1) == key.b1
-                        && self.get(off + 2) == key.b2
-                })
-                .map(move |off| {
-                    let dist = u16(pos - off).unwrap();
-                    let run = self.possible_run_length_at(pos, dist);
-                    Ref::new(dist, run)
-                }),
+            )
+            .take(usize(self.limit))
+            .filter(move |&off| pos - off <= 32_768)
+            .filter(move |&off| {
+                self.get(off) == key.b0
+                    && self.get(off + 1) == key.b1
+                    && self.get(off + 2) == key.b2
+            })
+            .map(move |off| {
+                let dist = u16(pos - off).unwrap();
+                let run = self.possible_run_length_at(pos, dist);
+                Ref::new(dist, run)
+            }),
         ))
     }
 

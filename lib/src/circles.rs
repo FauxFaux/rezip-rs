@@ -54,9 +54,11 @@ impl CircularBuffer {
             self.valid_cap
         );
 
-        let mut read_from = (self.idx
+        let mut read_from = (self
+            .idx
             .wrapping_sub(usize(dist))
-            .wrapping_add(self.data.len())) % self.data.len();
+            .wrapping_add(self.data.len()))
+            % self.data.len();
 
         for _ in 0..len {
             let b = self.data[read_from];

@@ -52,7 +52,8 @@ fn read_block<R: Read>(reader: &mut BitReader<R>) -> Result<Block> {
             reader,
             &huffman::FIXED_LENGTH_TREE,
             Some(&huffman::FIXED_DISTANCE_TREE),
-        ).map(Block::FixedHuffman),
+        )
+        .map(Block::FixedHuffman),
         2 => {
             // scope-based borrow sigh
             let ((length, distance), trees) = {

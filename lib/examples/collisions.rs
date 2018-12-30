@@ -26,7 +26,8 @@ fn main() {
         if 1 == set.len() {
             continue;
         }
-        let mut parts: Vec<String> = set.into_iter()
+        let mut parts: Vec<String> = set
+            .into_iter()
             .map(|(a, b, c)| format!("{}{}{}", a as char, b as char, c as char))
             .collect();
         if 2 == parts.len() && parts[0][1..] == parts[1][1..] {

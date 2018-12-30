@@ -75,7 +75,8 @@ impl<'a> Iterator for Chain<'a> {
 
 impl fmt::Debug for BackMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for (hash, &pos) in self.hash_to_pos
+        for (hash, &pos) in self
+            .hash_to_pos
             .iter()
             .enumerate()
             .filter(|&(_, &pos)| 0 != pos)

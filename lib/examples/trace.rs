@@ -1,10 +1,11 @@
-#[macro_use]
-extern crate error_chain;
 extern crate librezip;
 
 use std::env;
 use std::fs;
 use std::io;
+
+use failure::err_msg;
+use failure::Error;
 
 use librezip::all_refs::AllRefs;
 use librezip::serialise_trace;
@@ -14,13 +15,12 @@ use librezip::CircularBuffer;
 use librezip::Code;
 use librezip::Config;
 use librezip::Guesser;
-use librezip::Result;
 use librezip::Trace;
 
-quick_main!(run);
-
-fn run() -> Result<()> {
-    let input = env::args().nth(1).ok_or("first argument: input-path.gz")?;
+fn main() -> Result<(), Error> {
+    let input = env::args()
+        .nth(1)
+        .ok_or_else(|| err_msg("first argument: input-path.gz"))?;
     let mut reader = io::BufReader::new(fs::File::open(input)?);
     librezip::gzip::discard_header(&mut reader)?;
 
@@ -50,7 +50,7 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
+fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<(), Error> {
     let old_dictionary = &dictionary.vec();
 
     let mut decompressed: Vec<u8> = Vec::with_capacity(codes.len());

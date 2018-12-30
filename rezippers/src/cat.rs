@@ -1,12 +1,12 @@
 use std::io;
 use std::io::Read;
 
+use failure::Error;
+use failure::ResultExt;
 use librezip;
 use librezip::CircularBuffer;
 
-use crate::errors::*;
-
-pub fn run<R: Read>(mut reader: R) -> Result<()> {
+pub fn run<R: Read>(mut reader: R) -> Result<(), Error> {
     librezip::gzip::discard_header(&mut reader)?;
 
     let stdout = io::stdout();

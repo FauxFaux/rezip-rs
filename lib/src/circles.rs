@@ -1,8 +1,9 @@
 use std::io::Write;
 
 use cast::usize;
-
-use crate::errors::*;
+use failure::ensure;
+use failure::Error;
+use failure::ResultExt;
 
 #[derive(Default)]
 pub struct CircularBuffer {
@@ -44,7 +45,7 @@ impl CircularBuffer {
     }
 
     // This updates self, whereas run_from and friends do not.
-    pub fn copy<W: Write>(&mut self, dist: u16, len: u16, mut into: W) -> Result<()> {
+    pub fn copy<W: Write>(&mut self, dist: u16, len: u16, mut into: W) -> Result<(), Error> {
         // TODO: optimise
 
         ensure!(

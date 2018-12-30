@@ -6,9 +6,9 @@ edition = "2018"
 
 [dependencies]
 byteorder = "1"
-error-chain = "0.12"
 clap = "2"
 crc = "1"
+failure = "0.1"
 
 
 [dependencies.flate2]

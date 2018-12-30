@@ -1,11 +1,13 @@
 use std::io::Read;
 
+use failure::bail;
+use failure::ensure;
+use failure::Error;
+
 use crate::bit::BitCollector;
 use crate::bit::BitReader;
 use crate::code_tree::CodeTree;
-use crate::errors::*;
 use crate::huffman;
-
 use crate::Block;
 use crate::Code;
 use crate::Ref;
@@ -23,7 +25,7 @@ pub struct BlockIter<R: Read> {
 }
 
 impl<R: Read> Iterator for BlockIter<R> {
-    type Item = Result<Block>;
+    type Item = Result<Block, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.end {
@@ -42,7 +44,7 @@ impl<R: Read> Iterator for BlockIter<R> {
     }
 }
 
-fn read_block<R: Read>(reader: &mut BitReader<R>) -> Result<Block> {
+fn read_block<R: Read>(reader: &mut BitReader<R>) -> Result<Block, Error> {
     match reader.read_part(2)? {
         0 => {
             reader.align()?;
@@ -73,7 +75,7 @@ fn scan_huffman_data<R: Read>(
     reader: &mut BitReader<R>,
     length: &CodeTree,
     distance: Option<&CodeTree>,
-) -> Result<Vec<Code>> {
+) -> Result<Vec<Code>, Error> {
     let mut ret = Vec::new();
 
     loop {

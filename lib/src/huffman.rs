@@ -2,11 +2,14 @@ use std;
 use std::io::Read;
 
 use cast::usize;
+use failure::bail;
+use failure::ensure;
+use failure::err_msg;
+use failure::Error;
 
 use crate::bit::BitReader;
 use crate::bit::BitSource;
 use crate::code_tree::CodeTree;
-use crate::errors::*;
 
 lazy_static! {
     pub static ref FIXED_LENGTH_TREE: CodeTree = {
@@ -30,7 +33,7 @@ lazy_static! {
         CodeTree::new(&[5u8; 32]).expect("static data is valid");
 }
 
-pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<CodeTree>)> {
+pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<CodeTree>), Error> {
     let num_lit_len_codes = reader.read_part(5)? + 257;
     let num_distance_codes = reader.read_part(5)? + 1;
 
@@ -162,7 +165,7 @@ pub fn extra_run_length(length: u16) -> Option<(u8, u16)> {
 }
 
 /// Returns a run length between 3 and 258 inclusive, all other values are invalid.
-pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16> {
+pub fn decode_run_length<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16, Error> {
     ensure!(sym >= 257 && sym <= 287, "decompressor bug");
 
     if sym <= 264 {
@@ -214,16 +217,16 @@ pub fn encode_distance(distance: u16) -> Option<(u8, u8, u16)> {
     }
 }
 
-pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16> {
+pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u16, Error> {
     if sym <= 3 {
         Ok(sym as u16 + 1)
     } else if sym <= 29 {
         let num_extra_bits = (sym / 2 - 1) as u8;
         Ok((((sym % 2 + 2) as u16) << num_extra_bits) + 1 + reader.read_part(num_extra_bits)?)
     } else if sym <= 31 {
-        Err("reserved distance symbol".into())
+        Err(err_msg("reserved distance symbol"))
     } else {
-        Err("invalid distance symbol".into())
+        Err(err_msg("invalid distance symbol"))
     }
 }
 

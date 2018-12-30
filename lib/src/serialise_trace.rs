@@ -5,13 +5,15 @@ use std::u16;
 use byteorder::LittleEndian as LE;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-
-use crate::errors::*;
-use crate::Ref;
-use crate::Trace;
 use cast::u16;
 use cast::usize;
+use failure::bail;
+use failure::Error;
+use failure::ResultExt;
 use itertools::Itertools;
+
+use crate::Ref;
+use crate::Trace;
 
 pub fn verify(traces: &[Trace]) -> Vec<u8> {
     let data = write(traces);
@@ -60,7 +62,7 @@ pub fn write(traces: &[Trace]) -> Vec<u8> {
     ret
 }
 
-pub fn read<R: Read>(mut data: R) -> Result<Vec<Trace>> {
+pub fn read<R: Read>(mut data: R) -> Result<Vec<Trace>, Error> {
     let mut ret = Vec::new();
 
     loop {

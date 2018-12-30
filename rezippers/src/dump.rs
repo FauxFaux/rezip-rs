@@ -1,12 +1,13 @@
 use std::io::Read;
 
+use failure::Error;
+use failure::ResultExt;
+
 use librezip;
 use librezip::Block;
 use librezip::Code;
 
-use crate::errors::*;
-
-pub fn run<R: Read>(mut reader: R) -> Result<()> {
+pub fn run<R: Read>(mut reader: R) -> Result<(), Error> {
     librezip::gzip::discard_header(&mut reader)?;
     for (id, block) in librezip::parse_deflate(&mut reader).into_iter().enumerate() {
         let block = block?;

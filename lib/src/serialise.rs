@@ -1,12 +1,14 @@
 use std::io::Write;
 
 use cast::usize;
+use failure::err_msg;
+use failure::Error;
+use failure::ResultExt;
 
 use crate::bit::BitVec;
 use crate::bit::BitWriter;
 use crate::circles::CircularBuffer;
 use crate::code_tree::CodeTree;
-use crate::errors::*;
 use crate::huffman;
 use crate::Block;
 use crate::Code;
@@ -15,14 +17,15 @@ pub fn decompressed_block<W: Write>(
     mut into: W,
     dictionary: &mut CircularBuffer,
     block: &Block,
-) -> Result<()> {
+) -> Result<(), Error> {
     use self::Block::*;
 
     match *block {
         Uncompressed(ref data) => {
             dictionary.extend(data);
             into.write_all(data)
-                .chain_err(|| "storing uncompressed block")
+                .with_context(|_| err_msg("storing uncompressed block"))?;
+            Ok(())
         }
         FixedHuffman(ref codes) | DynamicHuffman { ref codes, .. } => {
             decompressed_codes(into, dictionary, codes)
@@ -34,7 +37,7 @@ pub fn decompressed_codes<W: Write>(
     mut into: W,
     dictionary: &mut CircularBuffer,
     codes: &[Code],
-) -> Result<()> {
+) -> Result<(), Error> {
     use self::Code::*;
 
     for code in codes {
@@ -52,7 +55,7 @@ pub fn decompressed_codes<W: Write>(
     Ok(())
 }
 
-pub fn compressed_block<W: Write>(into: &mut BitWriter<W>, block: &Block) -> Result<()> {
+pub fn compressed_block<W: Write>(into: &mut BitWriter<W>, block: &Block) -> Result<(), Error> {
     use self::Block::*;
 
     match *block {
@@ -135,7 +138,7 @@ fn compressed_codes<W: Write>(
     length_tree: &CodeTree,
     distance_tree: Option<&CodeTree>,
     codes: &[Code],
-) -> Result<()> {
+) -> Result<(), Error> {
     let length_tree = length_tree.invert();
     let distance_tree = distance_tree.map(|tree| tree.invert());
 
@@ -146,7 +149,11 @@ fn compressed_codes<W: Write>(
     for code in codes {
         match *code {
             Literal(byte) => {
-                into.write_vec(length_tree[usize(byte)].as_ref().ok_or("invalid literal")?)?;
+                into.write_vec(
+                    length_tree[usize(byte)]
+                        .as_ref()
+                        .ok_or_else(|| err_msg("invalid literal"))?,
+                )?;
             }
             Reference(r) => {
                 encode_run(into, &length_tree, r.run())?;
@@ -165,7 +172,7 @@ fn encode_run<W: Write>(
     into: &mut BitWriter<W>,
     length_tree: &[Option<BitVec>],
     run: u16,
-) -> Result<()> {
+) -> Result<(), Error> {
     into.write_vec(
         length_tree[huffman::encode_run_length(run) as usize]
             .as_ref()
@@ -183,9 +190,11 @@ fn encode_distance<W: Write>(
     into: &mut BitWriter<W>,
     tree: Option<&Vec<Option<BitVec>>>,
     dist: u16,
-) -> Result<()> {
+) -> Result<(), Error> {
     if let Some((code, bits, val)) = huffman::encode_distance(dist) {
-        let distance_tree = tree.as_ref().ok_or("reference but not distance tree")?;
+        let distance_tree = tree
+            .as_ref()
+            .ok_or_else(|| err_msg("reference but not distance tree"))?;
 
         into.write_vec(distance_tree[usize(code)].as_ref().unwrap())?;
 

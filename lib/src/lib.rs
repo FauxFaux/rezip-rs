@@ -4,9 +4,6 @@
 extern crate byteorder;
 extern crate cast;
 
-#[macro_use]
-extern crate error_chain;
-
 extern crate itertools;
 
 #[macro_use]
@@ -29,7 +26,6 @@ mod bestguess;
 mod bit;
 mod circles;
 mod code_tree;
-mod errors;
 // TODO: unused
 pub mod filter;
 pub mod gzip;
@@ -50,7 +46,6 @@ mod wams;
 use crate::bit::BitVec;
 
 pub use crate::circles::CircularBuffer;
-pub use crate::errors::*;
 pub use crate::parse::parse_deflate;
 pub use crate::serialise::compressed_block;
 pub use crate::serialise::decompressed_block;

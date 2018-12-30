@@ -2,14 +2,11 @@ extern crate byteorder;
 extern crate clap;
 extern crate crc;
 
-#[macro_use]
-extern crate error_chain;
 extern crate flate2;
 extern crate librezip;
 
 mod cat;
 mod dump;
-mod errors;
 mod zero;
 
 use std::fs;
@@ -18,12 +15,10 @@ use std::io::Read;
 
 use clap::App;
 use clap::Arg;
+use failure::Error;
+use failure::ResultExt;
 
-use crate::errors::*;
-
-quick_main!(run);
-
-fn run() -> Result<()> {
+fn main() -> Result<(), Error> {
     let matches = App::new("rezippers")
         .setting(clap::AppSettings::SubcommandRequiredElseHelp)
         .subcommand(
@@ -47,7 +42,7 @@ fn run() -> Result<()> {
     }
 }
 
-fn open_file(matches: &clap::ArgMatches) -> Result<Box<Read>> {
+fn open_file(matches: &clap::ArgMatches) -> Result<Box<Read>, Error> {
     Ok(match matches.value_of_os("file") {
         Some(path) => Box::new(io::BufReader::new(fs::File::open(path)?)) as Box<Read>,
         None => Box::new(io::stdin()) as Box<Read>,

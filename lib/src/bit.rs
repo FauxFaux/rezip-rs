@@ -7,8 +7,10 @@ use std::ops::BitOrAssign;
 use cast::u16;
 use cast::u8;
 use cast::usize;
-
-use crate::errors::*;
+use failure::ensure;
+use failure::format_err;
+use failure::Error;
+use failure::ResultExt;
 
 pub struct BitReader<R> {
     inner: R,
@@ -37,7 +39,7 @@ impl<R: Read> BitReader<R> {
         (8 - self.remaining_bits) % 8
     }
 
-    pub fn read_bit(&mut self) -> Result<bool> {
+    pub fn read_bit(&mut self) -> Result<bool, Error> {
         if 0 == self.remaining_bits {
             let mut buf = [0u8; 1];
             self.inner.read_exact(&mut buf)?;
@@ -57,7 +59,7 @@ impl<R: Read> BitReader<R> {
         Ok(bit)
     }
 
-    pub fn align(&mut self) -> Result<()> {
+    pub fn align(&mut self) -> Result<(), Error> {
         assert!(self.track.is_none());
 
         while 0 != self.position() {
@@ -66,11 +68,11 @@ impl<R: Read> BitReader<R> {
         Ok(())
     }
 
-    pub fn read_part(&mut self, bits: u8) -> Result<u16> {
+    pub fn read_part(&mut self, bits: u8) -> Result<u16, Error> {
         BitSource::read_part(self, bits)
     }
 
-    pub fn read_length_prefixed(&mut self) -> Result<Vec<u8>> {
+    pub fn read_length_prefixed(&mut self) -> Result<Vec<u8>, Error> {
         assert_eq!(0, self.position());
         assert!(self.track.is_none());
 
@@ -85,12 +87,12 @@ impl<R: Read> BitReader<R> {
         let mut buf = vec![0u8; usize(len)];
         self.inner
             .read_exact(&mut buf)
-            .chain_err(|| format!("reading a length-prefixed {} bytes", len))?;
+            .with_context(|_| format_err!("reading a length-prefixed {} bytes", len))?;
 
         Ok(buf)
     }
 
-    fn read_aligned_u16(&mut self) -> Result<u16> {
+    fn read_aligned_u16(&mut self) -> Result<u16, Error> {
         assert_eq!(0, self.position());
         assert!(self.track.is_none());
 
@@ -117,7 +119,7 @@ impl<W: Write> BitWriter<W> {
         }
     }
 
-    pub fn write_bit(&mut self, bit: bool) -> Result<()> {
+    pub fn write_bit(&mut self, bit: bool) -> Result<(), Error> {
         self.current.push(bit);
         if self.current.len() >= 8 {
             assert_eq!(8, self.current.len());
@@ -127,28 +129,28 @@ impl<W: Write> BitWriter<W> {
         Ok(())
     }
 
-    pub fn write_bits_val(&mut self, bits: u8, val: u16) -> Result<()> {
+    pub fn write_bits_val(&mut self, bits: u8, val: u16) -> Result<(), Error> {
         for i in 0..bits {
             self.write_bit((val & (1 << i)) != 0)?;
         }
         Ok(())
     }
 
-    pub fn align(&mut self) -> Result<()> {
+    pub fn align(&mut self) -> Result<(), Error> {
         while !self.current.is_empty() {
             self.write_bit(false)?;
         }
         Ok(())
     }
 
-    pub fn write_vec(&mut self, vec: &BitVec) -> Result<()> {
+    pub fn write_vec(&mut self, vec: &BitVec) -> Result<(), Error> {
         for bit in vec.iter() {
             self.write_bit(bit)?;
         }
         Ok(())
     }
 
-    pub fn write_length_prefixed(&mut self, data: &[u8]) -> Result<()> {
+    pub fn write_length_prefixed(&mut self, data: &[u8]) -> Result<(), Error> {
         self.align()?;
         ensure!(data.len() <= usize(std::u16::MAX), "data too long to store");
 
@@ -158,7 +160,7 @@ impl<W: Write> BitWriter<W> {
         Ok(())
     }
 
-    pub fn write_aligned_u16(&mut self, val: u16) -> Result<()> {
+    pub fn write_aligned_u16(&mut self, val: u16) -> Result<(), Error> {
         self.inner
             .write_all(&[u8(val >> 8).unwrap(), u8(val & 0xFF).unwrap()])?;
         Ok(())
@@ -330,9 +332,9 @@ impl fmt::Debug for BitVec {
 }
 
 pub trait BitSource {
-    fn read_bit(&mut self) -> Result<bool>;
+    fn read_bit(&mut self) -> Result<bool, Error>;
 
-    fn read_part(&mut self, bits: u8) -> Result<u16> {
+    fn read_part(&mut self, bits: u8) -> Result<u16, Error> {
         assert!(bits <= 16);
 
         let mut res = 0u16;
@@ -347,13 +349,13 @@ pub trait BitSource {
 }
 
 impl<R: Read> BitSource for BitReader<R> {
-    fn read_bit(&mut self) -> Result<bool> {
+    fn read_bit(&mut self) -> Result<bool, Error> {
         self.read_bit()
     }
 }
 
 impl<'a> BitSource for StackIterator<'a> {
-    fn read_bit(&mut self) -> Result<bool> {
+    fn read_bit(&mut self) -> Result<bool, Error> {
         Ok(self.next().expect("TODO: EOF"))
     }
 }
@@ -377,7 +379,7 @@ impl<'a, B: BitSource> BitCollector<'a, B> {
 }
 
 impl<'a, B: BitSource> BitSource for BitCollector<'a, B> {
-    fn read_bit(&mut self) -> Result<bool> {
+    fn read_bit(&mut self) -> Result<bool, Error> {
         let bit = self.inner.read_bit()?;
         self.data.push(bit);
         Ok(bit)

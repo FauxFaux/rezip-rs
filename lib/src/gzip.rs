@@ -1,8 +1,10 @@
 use std::io::Read;
 
-use crate::errors::*;
+use failure::ensure;
+use failure::Error;
+use failure::ResultExt;
 
-pub fn discard_header<R: Read>(mut from: R) -> Result<Vec<u8>> {
+pub fn discard_header<R: Read>(mut from: R) -> Result<Vec<u8>, Error> {
     let mut whole_thing = Vec::new();
 
     let mut header = [0u8; 10];
@@ -54,7 +56,7 @@ fn has_bit(val: u8, bit: u8) -> bool {
     (val & (1 << bit)) == (1 << bit)
 }
 
-fn read_null_terminated<R: Read>(mut from: R, into: &mut Vec<u8>) -> Result<()> {
+fn read_null_terminated<R: Read>(mut from: R, into: &mut Vec<u8>) -> Result<(), Error> {
     loop {
         let mut buf = [0u8; 1];
         from.read_exact(&mut buf)?;

@@ -3,11 +3,12 @@ use std::fmt;
 
 use cast::u16;
 use cast::usize;
+use failure::ensure;
+use failure::Error;
 use itertools::Itertools;
 
 use crate::bit::BitSource;
 use crate::bit::BitVec;
-use crate::errors::*;
 
 pub struct CodeTree {
     left: Node,
@@ -15,7 +16,7 @@ pub struct CodeTree {
 }
 
 impl CodeTree {
-    pub fn new(canonical_code_lengths: &[u8]) -> Result<Self> {
+    pub fn new(canonical_code_lengths: &[u8]) -> Result<Self, Error> {
         ensure!(canonical_code_lengths.len() >= 2, "too few lengths");
 
         ensure!(
@@ -64,7 +65,7 @@ impl CodeTree {
         }
     }
 
-    pub fn decode_symbol<B: BitSource>(&self, reader: &mut B) -> Result<u16> {
+    pub fn decode_symbol<B: BitSource>(&self, reader: &mut B) -> Result<u16, Error> {
         decode_symbol_impl(reader, &self.left, &self.right)
     }
 
@@ -78,7 +79,11 @@ impl CodeTree {
     }
 }
 
-fn decode_symbol_impl<B: BitSource>(reader: &mut B, left: &Node, right: &Node) -> Result<u16> {
+fn decode_symbol_impl<B: BitSource>(
+    reader: &mut B,
+    left: &Node,
+    right: &Node,
+) -> Result<u16, Error> {
     use self::Node::*;
 
     match *if reader.read_bit()? { right } else { left } {

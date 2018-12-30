@@ -6,10 +6,10 @@ use byteorder::WriteBytesExt;
 use byteorder::LE;
 use crc;
 use crc::Hasher32;
+use failure::Error;
+use failure::ResultExt;
 use flate2;
 use librezip;
-
-use crate::errors::*;
 
 const RSYNC_MIN: usize = 1024 * 8;
 const RSYNC_MOD: usize = 1024 * 4;
@@ -49,7 +49,7 @@ fn take_rsync<I: Iterator<Item = io::Result<u8>>>(from: &mut I) -> io::Result<Ve
     Ok(buf)
 }
 
-pub fn run<R: Read>(mut reader: R) -> Result<()> {
+pub fn run<R: Read>(mut reader: R) -> Result<(), Error> {
     let orig_header = librezip::gzip::discard_header(&mut reader)?;
 
     let reader = flate2::bufread::DeflateDecoder::new(io::BufReader::new(reader));

@@ -70,9 +70,9 @@ fn print(dictionary: &mut CircularBuffer, codes: &[Code]) -> Result<()> {
         println!();
     }
 
-    let mut refs_1 = AllRefs::with_sixteen(old_dictionary, &decompressed, 4);
-    let mut refs_3 = AllRefs::with_sixteen(old_dictionary, &decompressed, 6);
-    let mut all_refs = AllRefs::with_sixteen(old_dictionary, &decompressed, ::std::u16::MAX);
+    let refs_1 = AllRefs::with_sixteen(old_dictionary, &decompressed, 4);
+    let refs_3 = AllRefs::with_sixteen(old_dictionary, &decompressed, 6);
+    let all_refs = AllRefs::with_sixteen(old_dictionary, &decompressed, ::std::u16::MAX);
 
     // TODO: all_refs.apply_first_byte_bug_rule();
 

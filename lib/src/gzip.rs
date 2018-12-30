@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use errors::*;
+use crate::errors::*;
 
 pub fn discard_header<R: Read>(mut from: R) -> Result<Vec<u8>> {
     let mut whole_thing = Vec::new();

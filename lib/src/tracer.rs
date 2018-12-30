@@ -1,18 +1,18 @@
 use std::u16;
 
-use all_refs::AllRefs;
-use serialise_trace;
-use technique::Config;
-use technique::Technique;
-use trace;
-use Code;
-use Trace;
+use crate::all_refs::AllRefs;
+use crate::serialise_trace;
+use crate::technique::Config;
+use crate::technique::Technique;
+use crate::trace;
+use crate::Code;
+use crate::Trace;
 
 pub fn try_gzip(level: u8, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<Trace> {
-    try(Config::gzip(level), preroll, data, codes)
+    r#try(Config::gzip(level), preroll, data, codes)
 }
 
-fn try(config: Config, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<Trace> {
+fn r#try(config: Config, preroll: &[u8], data: &[u8], codes: &[Code]) -> Vec<Trace> {
     let limit = config.wams.insert_only_below_length.unwrap_or(u16::MAX);
     let all_refs = AllRefs::with_sixteen(preroll, data, limit);
 

@@ -4,7 +4,7 @@ use librezip;
 use librezip::Block;
 use librezip::Code;
 
-use errors::*;
+use crate::errors::*;
 
 pub fn run<R: Read>(mut reader: R) -> Result<()> {
     librezip::gzip::discard_header(&mut reader)?;

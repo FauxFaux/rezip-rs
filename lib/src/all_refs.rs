@@ -4,10 +4,10 @@ use std::iter;
 use cast::u16;
 use cast::usize;
 
-use back_map::BackMap;
-use obscure::obscure;
-use Obscure;
-use Ref;
+use crate::back_map::BackMap;
+use crate::obscure::obscure;
+use crate::Obscure;
+use crate::Ref;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Key {

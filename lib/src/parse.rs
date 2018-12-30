@@ -1,14 +1,14 @@
 use std::io::Read;
 
-use bit::BitCollector;
-use bit::BitReader;
-use code_tree::CodeTree;
-use errors::*;
-use huffman;
+use crate::bit::BitCollector;
+use crate::bit::BitReader;
+use crate::code_tree::CodeTree;
+use crate::errors::*;
+use crate::huffman;
 
-use Block;
-use Code;
-use Ref;
+use crate::Block;
+use crate::Code;
+use crate::Ref;
 
 pub fn parse_deflate<R: Read>(bytes: R) -> BlockIter<R> {
     BlockIter {

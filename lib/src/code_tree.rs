@@ -5,9 +5,9 @@ use cast::u16;
 use cast::usize;
 use itertools::Itertools;
 
-use bit::BitSource;
-use bit::BitVec;
-use errors::*;
+use crate::bit::BitSource;
+use crate::bit::BitVec;
+use crate::errors::*;
 
 pub struct CodeTree {
     left: Node,

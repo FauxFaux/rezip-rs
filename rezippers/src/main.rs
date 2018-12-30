@@ -19,7 +19,7 @@ use std::io::Read;
 use clap::App;
 use clap::Arg;
 
-use errors::*;
+use crate::errors::*;
 
 quick_main!(run);
 

@@ -4,7 +4,7 @@ use std::io::Read;
 use librezip;
 use librezip::CircularBuffer;
 
-use errors::*;
+use crate::errors::*;
 
 pub fn run<R: Read>(mut reader: R) -> Result<()> {
     librezip::gzip::discard_header(&mut reader)?;

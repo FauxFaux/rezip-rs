@@ -47,16 +47,16 @@ pub mod trace;
 pub mod tracer;
 mod wams;
 
-use bit::BitVec;
+use crate::bit::BitVec;
 
-pub use circles::CircularBuffer;
-pub use errors::*;
-pub use parse::parse_deflate;
-pub use serialise::compressed_block;
-pub use serialise::decompressed_block;
-pub use serialise::decompressed_codes;
-pub use technique::Config;
-pub use technique::Technique;
+pub use crate::circles::CircularBuffer;
+pub use crate::errors::*;
+pub use crate::parse::parse_deflate;
+pub use crate::serialise::compressed_block;
+pub use crate::serialise::decompressed_block;
+pub use crate::serialise::decompressed_codes;
+pub use crate::technique::Config;
+pub use crate::technique::Technique;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Ref {

@@ -2,7 +2,7 @@ use std::io::Write;
 
 use cast::usize;
 
-use errors::*;
+use crate::errors::*;
 
 #[derive(Default)]
 pub struct CircularBuffer {

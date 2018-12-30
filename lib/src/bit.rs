@@ -8,7 +8,7 @@ use cast::u16;
 use cast::u8;
 use cast::usize;
 
-use errors::*;
+use crate::errors::*;
 
 pub struct BitReader<R> {
     inner: R,

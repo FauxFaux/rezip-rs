@@ -1,4 +1,4 @@
-use Obscure;
+use crate::Obscure;
 
 type Int = usize;
 

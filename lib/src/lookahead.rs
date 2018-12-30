@@ -1,6 +1,6 @@
-use Code;
-use Looker;
-use Ref;
+use crate::Code;
+use crate::Looker;
+use crate::Ref;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Lookahead {

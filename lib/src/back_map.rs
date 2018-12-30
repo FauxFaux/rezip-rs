@@ -3,7 +3,7 @@ use std::fmt;
 use cast::usize;
 use itertools::Itertools;
 
-use all_refs::Key;
+use crate::all_refs::Key;
 
 const HASH_SIZE: usize = 32 * 1024;
 

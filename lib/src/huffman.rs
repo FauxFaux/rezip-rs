@@ -3,10 +3,10 @@ use std::io::Read;
 
 use cast::usize;
 
-use bit::BitReader;
-use bit::BitSource;
-use code_tree::CodeTree;
-use errors::*;
+use crate::bit::BitReader;
+use crate::bit::BitSource;
+use crate::code_tree::CodeTree;
+use crate::errors::*;
 
 lazy_static! {
     pub static ref FIXED_LENGTH_TREE: CodeTree = {

@@ -9,7 +9,7 @@ use crc::Hasher32;
 use flate2;
 use librezip;
 
-use errors::*;
+use crate::errors::*;
 
 const RSYNC_MIN: usize = 1024 * 8;
 const RSYNC_MOD: usize = 1024 * 4;

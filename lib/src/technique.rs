@@ -2,17 +2,17 @@ use std::u16;
 
 use cast::usize;
 
-use all_refs::AllRefs;
-use lookahead::Lookahead;
-use picker::Picker;
-use wams;
-use wams::WamsOptimisations;
-use Code;
-use DataLen;
-use Guesser;
-use Looker;
-use Obscure;
-use Ref;
+use crate::all_refs::AllRefs;
+use crate::lookahead::Lookahead;
+use crate::picker::Picker;
+use crate::wams;
+use crate::wams::WamsOptimisations;
+use crate::Code;
+use crate::DataLen;
+use crate::Guesser;
+use crate::Looker;
+use crate::Obscure;
+use crate::Ref;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {

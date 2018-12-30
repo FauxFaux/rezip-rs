@@ -6,16 +6,16 @@ version = "0.1.0"
 [dependencies]
 byteorder = "1"
 cast = "0.2"
-error-chain = "0.11"
-itertools = "0.7"
+error-chain = "0.12"
+itertools = "0.8"
 lazy_static = "1"
-more-asserts = "0.1"
-sha2 = "0.7"
+more-asserts = "0.2"
+sha2 = "0.8"
 
 [dev-dependencies]
 maplit = "1"
 pretty_assertions = "0.5"
-rand = "0.4"
+rand = "0.6"
 
 [dev-dependencies.flate2]
 default-features = false

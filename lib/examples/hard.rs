@@ -16,7 +16,7 @@ fn main() {
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
 
-    let mut rng = IsaacRng::from_seed(&[0]);
+    let mut rng = IsaacRng::from_seed([0u8; 32]);
 
     loop {
         let mut buf = [0u8; 8];

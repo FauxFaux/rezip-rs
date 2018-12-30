@@ -1,5 +1,4 @@
 #![feature(const_fn)]
-#![feature(option_filter)]
 #![feature(vec_remove_item)]
 
 extern crate byteorder;

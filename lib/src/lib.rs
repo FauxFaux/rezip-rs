@@ -190,12 +190,14 @@ impl fmt::Debug for Ref {
 
 #[cfg(test)]
 mod tests {
-    use bit::BitWriter;
-    use circles::CircularBuffer;
     use std::io::Cursor;
     use std::io::Read;
     use std::io::Write;
-    use *;
+
+    use crate::bit::BitWriter;
+    use crate::circles::CircularBuffer;
+
+    use super::*;
 
     #[test]
     fn seq_20_round_trip() {

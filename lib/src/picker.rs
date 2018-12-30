@@ -26,7 +26,7 @@ fn drop_far_threes<I: Iterator<Item = Ref>>(candidates: I, cap: u16) -> Option<R
 
 #[cfg(test)]
 mod tests {
-    use Ref;
+    use super::Ref;
 
     #[test]
     fn longest_in_the_right_order() {

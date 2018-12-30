@@ -199,9 +199,10 @@ fn encode_distance<W: Write>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use parse;
     use std::io::Cursor;
+
+    use super::*;
+    use crate::parse;
 
     #[test]
     fn decompress() {

@@ -189,10 +189,10 @@ impl<'p, 'd> fmt::Debug for AllRefs<'p, 'd> {
 mod tests {
     use super::Key;
 
-    use Code;
-    use Ref;
+    use crate::Code;
+    use crate::Ref;
 
-    use Code::Literal as L;
+    use self::Code::Literal as L;
     fn r(dist: u16, run: u16) -> Code {
         Code::Reference(Ref::new(dist, run))
     }

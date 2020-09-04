@@ -18,7 +18,7 @@ pub struct FilterWrite<W: Write> {
 impl<R: Read> Read for FilterRead<R> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         let len = self.inner.read(buf)?;
-        self.hash.input(&buf[0..len]);
+        self.hash.update(&buf[0..len]);
         Ok(len)
     }
 }
@@ -37,14 +37,14 @@ impl<R: Read> FilterRead<R> {
     }
 
     pub fn hash(self) -> Vec<u8> {
-        self.hash.result().into_iter().collect()
+        self.hash.finalize().into_iter().collect()
     }
 }
 
 impl<W: Write> Write for FilterWrite<W> {
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
         let len = self.inner.write(buf)?;
-        self.hash.input(&buf[0..len]);
+        self.hash.update(&buf[0..len]);
         Ok(len)
     }
 
@@ -67,6 +67,6 @@ impl<W: Write> FilterWrite<W> {
     }
 
     pub fn hash(self) -> Vec<u8> {
-        self.hash.result().into_iter().collect()
+        self.hash.finalize().into_iter().collect()
     }
 }

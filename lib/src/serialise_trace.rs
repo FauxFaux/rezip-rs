@@ -3,11 +3,11 @@ use std::io;
 use std::io::Read;
 use std::u16;
 
+use anyhow::bail;
+use anyhow::Error;
 use byteorder::LittleEndian as LE;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use failure::bail;
-use failure::Error;
 use itertools::Itertools;
 
 use crate::Ref;

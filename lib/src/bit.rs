@@ -5,10 +5,10 @@ use std::io::Read;
 use std::io::Write;
 use std::ops::BitOrAssign;
 
-use failure::ensure;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
+use anyhow::ensure;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Error;
 
 pub struct BitReader<R> {
     inner: R,
@@ -85,7 +85,7 @@ impl<R: Read> BitReader<R> {
         let mut buf = vec![0u8; usize::from(len)];
         self.inner
             .read_exact(&mut buf)
-            .with_context(|_| format_err!("reading a length-prefixed {} bytes", len))?;
+            .with_context(|| format_err!("reading a length-prefixed {} bytes", len))?;
 
         Ok(buf)
     }

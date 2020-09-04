@@ -1,7 +1,7 @@
 use std::io::Write;
 
-use failure::ensure;
-use failure::Error;
+use anyhow::ensure;
+use anyhow::Error;
 
 #[derive(Default)]
 pub struct CircularBuffer {

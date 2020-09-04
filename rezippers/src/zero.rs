@@ -2,11 +2,11 @@ use std::io;
 use std::io::Read;
 use std::io::Write;
 
+use anyhow::Error;
 use byteorder::WriteBytesExt;
 use byteorder::LE;
 use crc;
 use crc::Hasher32;
-use failure::Error;
 use flate2;
 use librezip;
 

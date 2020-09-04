@@ -13,9 +13,9 @@ use std::fs;
 use std::io;
 use std::io::Read;
 
+use anyhow::Error;
 use clap::App;
 use clap::Arg;
-use failure::Error;
 
 fn main() -> Result<(), Error> {
     let matches = App::new("rezippers")

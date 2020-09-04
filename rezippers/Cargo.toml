@@ -5,10 +5,10 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+anyhow = "1"
 byteorder = "1"
 clap = "2"
 crc = "1"
-failure = "0.1"
 
 
 [dependencies.flate2]

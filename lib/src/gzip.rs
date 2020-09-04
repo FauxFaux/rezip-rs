@@ -1,7 +1,7 @@
 use std::io::Read;
 
-use failure::ensure;
-use failure::Error;
+use anyhow::ensure;
+use anyhow::Error;
 
 pub fn discard_header<R: Read>(mut from: R) -> Result<Vec<u8>, Error> {
     let mut whole_thing = Vec::new();

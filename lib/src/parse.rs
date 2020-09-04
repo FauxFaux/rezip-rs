@@ -1,8 +1,8 @@
 use std::io::Read;
 
-use failure::bail;
-use failure::ensure;
-use failure::Error;
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Error;
 
 use crate::bit::BitCollector;
 use crate::bit::BitReader;

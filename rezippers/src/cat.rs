@@ -1,7 +1,7 @@
 use std::io;
 use std::io::Read;
 
-use failure::Error;
+use anyhow::Error;
 use librezip;
 use librezip::CircularBuffer;
 

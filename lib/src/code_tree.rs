@@ -2,8 +2,8 @@ use std;
 use std::convert::TryFrom;
 use std::fmt;
 
-use failure::ensure;
-use failure::Error;
+use anyhow::ensure;
+use anyhow::Error;
 use itertools::Itertools;
 
 use crate::bit::BitSource;

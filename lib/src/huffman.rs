@@ -1,10 +1,10 @@
 use std;
 use std::io::Read;
 
-use failure::bail;
-use failure::ensure;
-use failure::err_msg;
-use failure::Error;
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Error;
 use lazy_static::lazy_static;
 
 use crate::bit::BitReader;
@@ -224,9 +224,9 @@ pub fn decode_distance<R: Read>(reader: &mut BitReader<R>, sym: u16) -> Result<u
         let num_extra_bits = (sym / 2 - 1) as u8;
         Ok((((sym % 2 + 2) as u16) << num_extra_bits) + 1 + reader.read_part(num_extra_bits)?)
     } else if sym <= 31 {
-        Err(err_msg("reserved distance symbol"))
+        Err(anyhow!("reserved distance symbol"))
     } else {
-        Err(err_msg("invalid distance symbol"))
+        Err(anyhow!("invalid distance symbol"))
     }
 }
 

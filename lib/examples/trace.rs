@@ -4,8 +4,8 @@ use std::env;
 use std::fs;
 use std::io;
 
-use failure::err_msg;
-use failure::Error;
+use anyhow::anyhow;
+use anyhow::Error;
 
 use librezip::all_refs::AllRefs;
 use librezip::serialise_trace;
@@ -20,7 +20,7 @@ use librezip::Trace;
 fn main() -> Result<(), Error> {
     let input = env::args()
         .nth(1)
-        .ok_or_else(|| err_msg("first argument: input-path.gz"))?;
+        .ok_or_else(|| anyhow!("first argument: input-path.gz"))?;
     let mut reader = io::BufReader::new(fs::File::open(input)?);
     librezip::gzip::discard_header(&mut reader)?;
 

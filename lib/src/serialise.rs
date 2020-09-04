@@ -1,8 +1,8 @@
 use std::io::Write;
 
-use failure::err_msg;
-use failure::Error;
-use failure::ResultExt;
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 
 use crate::bit::BitVec;
 use crate::bit::BitWriter;
@@ -23,7 +23,7 @@ pub fn decompressed_block<W: Write>(
         Uncompressed(ref data) => {
             dictionary.extend(data);
             into.write_all(data)
-                .with_context(|_| err_msg("storing uncompressed block"))?;
+                .with_context(|| anyhow!("storing uncompressed block"))?;
             Ok(())
         }
         FixedHuffman(ref codes) | DynamicHuffman { ref codes, .. } => {
@@ -151,7 +151,7 @@ fn compressed_codes<W: Write>(
                 into.write_vec(
                     length_tree[usize::from(byte)]
                         .as_ref()
-                        .ok_or_else(|| err_msg("invalid literal"))?,
+                        .ok_or_else(|| anyhow!("invalid literal"))?,
                 )?;
             }
             Reference(r) => {
@@ -193,7 +193,7 @@ fn encode_distance<W: Write>(
     if let Some((code, bits, val)) = huffman::encode_distance(dist) {
         let distance_tree = tree
             .as_ref()
-            .ok_or_else(|| err_msg("reference but not distance tree"))?;
+            .ok_or_else(|| anyhow!("reference but not distance tree"))?;
 
         into.write_vec(distance_tree[usize::from(code)].as_ref().unwrap())?;
 

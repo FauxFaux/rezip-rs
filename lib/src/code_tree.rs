@@ -1,8 +1,7 @@
 use std;
+use std::convert::TryFrom;
 use std::fmt;
 
-use cast::u16;
-use cast::usize;
 use failure::ensure;
 use failure::Error;
 use itertools::Itertools;
@@ -20,7 +19,7 @@ impl CodeTree {
         ensure!(canonical_code_lengths.len() >= 2, "too few lengths");
 
         ensure!(
-            canonical_code_lengths.len() <= usize(std::u32::MAX),
+            canonical_code_lengths.len() <= usize::try_from(std::u32::MAX).expect("todo: usize"),
             "too many lengths"
         );
 
@@ -39,7 +38,7 @@ impl CodeTree {
                         .iter()
                         .enumerate()
                         .filter(|&(_, val)| i == *val)
-                        .map(|(pos, _)| Node::Leaf(u16(pos).unwrap())),
+                        .map(|(pos, _)| Node::Leaf(u16::try_from(pos).expect("dict size < 300"))),
                 );
             }
 
@@ -124,8 +123,8 @@ fn fmt(into: &mut fmt::Formatter, prefix: &str, node: &Node) -> fmt::Result {
 fn store_code(into: &mut Vec<Option<BitVec>>, prefix: BitVec, node: &Node) {
     match *node {
         Node::Leaf(sym) => {
-            assert!(into[usize(sym)].is_none(), "duplicate code in tree");
-            into[usize(sym)] = Some(prefix);
+            assert!(into[usize::from(sym)].is_none(), "duplicate code in tree");
+            into[usize::from(sym)] = Some(prefix);
         }
         Node::Internal(ref left, ref right) => {
             store_code(into, plus_bit(&prefix, false), left);

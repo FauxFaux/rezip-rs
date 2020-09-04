@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use cast::usize;
 use failure::ensure;
 use failure::Error;
 use failure::ResultExt;
@@ -22,7 +21,7 @@ impl CircularBuffer {
 
         CircularBuffer {
             idx: 0,
-            data: vec![0; usize(cap)],
+            data: vec![0; usize::from(cap)],
             valid_cap: 0,
         }
     }
@@ -31,7 +30,7 @@ impl CircularBuffer {
         self.data[self.idx] = val;
         self.idx = (self.idx + 1) % self.data.len();
 
-        if (usize(self.valid_cap)) < self.data.len() {
+        if (usize::from(self.valid_cap)) < self.data.len() {
             self.valid_cap += 1;
         }
     }
@@ -57,7 +56,7 @@ impl CircularBuffer {
 
         let mut read_from = (self
             .idx
-            .wrapping_sub(usize(dist))
+            .wrapping_sub(usize::from(dist))
             .wrapping_add(self.data.len()))
             % self.data.len();
 
@@ -77,7 +76,7 @@ impl CircularBuffer {
             dist > 0,
             "distances are one-indexed; the most recent inserted value is 1"
         );
-        debug_assert!(usize(self.valid_cap) <= self.data.len());
+        debug_assert!(usize::from(self.valid_cap) <= self.data.len());
         debug_assert!(dist <= self.valid_cap);
 
         let target = self.idx as isize - (dist as isize);
@@ -101,7 +100,7 @@ impl CircularBuffer {
     pub fn vec(&self) -> Vec<u8> {
         // TODO: optimise
 
-        let mut ret = Vec::with_capacity(usize(self.valid_cap));
+        let mut ret = Vec::with_capacity(usize::from(self.valid_cap));
         for pos in (1..1 + self.valid_cap).rev() {
             ret.push(self.get_at_dist(pos));
         }

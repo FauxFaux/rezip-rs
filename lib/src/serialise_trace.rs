@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::io;
 use std::io::Read;
 use std::u16;
@@ -5,8 +6,6 @@ use std::u16;
 use byteorder::LittleEndian as LE;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use cast::u16;
-use cast::usize;
 use failure::bail;
 use failure::Error;
 use failure::ResultExt;
@@ -45,16 +44,18 @@ pub fn write(traces: &[Trace]) -> Vec<u8> {
                 let mut corrects = traces.peeking_take_while(|x| Trace::Correct == **x).count();
                 let representation_offset = 32_768;
                 let max_representable = u16::MAX - representation_offset;
-                while corrects > usize(max_representable) {
+                while corrects > usize::from(max_representable) {
                     ret.write_u16::<LE>(representation_offset + max_representable)
                         .expect("writing to a vector");
-                    corrects -= usize(max_representable);
+                    corrects -= usize::from(max_representable);
                 }
 
                 assert_ne!(0, corrects);
 
-                ret.write_u16::<LE>(representation_offset + u16(corrects).unwrap())
-                    .expect("writing to a vector");
+                ret.write_u16::<LE>(
+                    representation_offset + u16::try_from(corrects).expect("max < u16::MAX"),
+                )
+                .expect("writing to a vector");
             }
         }
     }

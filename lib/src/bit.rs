@@ -1,12 +1,10 @@
 use std;
+use std::convert::TryFrom;
 use std::fmt;
 use std::io::Read;
 use std::io::Write;
 use std::ops::BitOrAssign;
 
-use cast::u16;
-use cast::u8;
-use cast::usize;
 use failure::ensure;
 use failure::format_err;
 use failure::Error;
@@ -84,7 +82,7 @@ impl<R: Read> BitReader<R> {
             "uncompressed block length validation failed"
         );
 
-        let mut buf = vec![0u8; usize(len)];
+        let mut buf = vec![0u8; usize::from(len)];
         self.inner
             .read_exact(&mut buf)
             .with_context(|_| format_err!("reading a length-prefixed {} bytes", len))?;
@@ -152,17 +150,22 @@ impl<W: Write> BitWriter<W> {
 
     pub fn write_length_prefixed(&mut self, data: &[u8]) -> Result<(), Error> {
         self.align()?;
-        ensure!(data.len() <= usize(std::u16::MAX), "data too long to store");
+        ensure!(
+            data.len() <= usize::from(std::u16::MAX),
+            "data too long to store"
+        );
 
-        self.write_aligned_u16(u16(data.len()).unwrap())?;
-        self.write_aligned_u16(u16(data.len()).unwrap() ^ 0xFFFF)?;
+        self.write_aligned_u16(u16::try_from(data.len()).expect("todo: usize"))?;
+        self.write_aligned_u16(u16::try_from(data.len()).expect("todo: usize") ^ 0xFFFF)?;
         self.inner.write_all(data)?;
         Ok(())
     }
 
     pub fn write_aligned_u16(&mut self, val: u16) -> Result<(), Error> {
-        self.inner
-            .write_all(&[u8(val >> 8).unwrap(), u8(val & 0xFF).unwrap()])?;
+        self.inner.write_all(&[
+            u8::try_from(val >> 8).expect("bitshift"),
+            u8::try_from(val & 0xFF).expect("mask"),
+        ])?;
         Ok(())
     }
 

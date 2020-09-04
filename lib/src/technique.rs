@@ -1,7 +1,5 @@
 use std::u16;
 
-use cast::usize;
-
 use crate::all_refs::AllRefs;
 use crate::lookahead::Lookahead;
 use crate::picker::Picker;
@@ -42,7 +40,7 @@ impl Config {
             } else {
                 Picker::Longest
             },
-            wams: wams::CONFIGURATIONS[usize(level - 1)],
+            wams: wams::CONFIGURATIONS[usize::from(level - 1)],
         }
     }
 
@@ -95,7 +93,7 @@ impl<'t, 'a, 'p, 'd> Scanner<'t, 'a, 'p, 'd> {
 
     pub fn feedback(&mut self, code: Code) {
         let old_pos = self.pos;
-        self.pos += usize(code.emitted_bytes());
+        self.pos += usize::from(code.emitted_bytes());
 
         let limit = match self.technique.config.wams.insert_only_below_length {
             Some(limit) => limit,

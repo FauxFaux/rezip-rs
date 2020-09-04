@@ -1,8 +1,6 @@
+use std::convert::TryFrom;
 use std::fmt;
 use std::iter;
-
-use cast::u16;
-use cast::usize;
 
 use crate::back_map::BackMap;
 use crate::obscure::obscure;
@@ -71,7 +69,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                 self.map.get(key).filter(move |&off| off < pos),
                 obscura.iter().cloned(),
             )
-            .take(usize(self.limit))
+            .take(usize::try_from(self.limit).expect("todo: usize"))
             .filter(move |&off| pos - off <= 32_768)
             .filter(move |&off| {
                 self.get(off) == key.b0
@@ -79,7 +77,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
                     && self.get(off + 2) == key.b2
             })
             .map(move |off| {
-                let dist = u16(pos - off).unwrap();
+                let dist = u16::try_from(pos - off).expect("logically sound");
                 let run = self.possible_run_length_at(pos, dist);
                 Ref::new(dist, run)
             }),
@@ -95,23 +93,28 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     }
 
     fn get_at_dist(&self, data_pos: usize, dist: u16) -> u8 {
-        self.get(data_pos - usize(dist))
+        self.get(data_pos - usize::from(dist))
     }
 
     fn possible_run_length_at(&self, pos: usize, dist: u16) -> u16 {
-        let upcoming_data_len = u16(258.min(self.data_len() - pos)).unwrap();
+        let upcoming_data_len =
+            u16::try_from(258.min(self.data_len() - pos)).expect("logically sound");
         let upcoming_data: Vec<u8> = (0..upcoming_data_len)
-            .map(|i| self.get(pos + usize(i)))
+            .map(|i| self.get(pos + usize::try_from(i).expect("todo: usize")))
             .collect();
 
         for cur in 3..dist.min(upcoming_data_len) {
-            if upcoming_data[usize(cur)] != self.get_at_dist(pos, dist - cur) {
+            if upcoming_data[usize::try_from(cur).expect("todo: usize")]
+                != self.get_at_dist(pos, dist - cur)
+            {
                 return cur;
             }
         }
 
         for cur in dist..upcoming_data_len {
-            if upcoming_data[usize(cur % dist)] != upcoming_data[usize(cur)] {
+            if upcoming_data[usize::try_from(cur % dist).expect("todo: usize")]
+                != upcoming_data[usize::try_from(cur).expect("todo: usize")]
+            {
                 return cur;
             }
         }

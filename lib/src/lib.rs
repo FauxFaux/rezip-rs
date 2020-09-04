@@ -2,7 +2,6 @@
 #![feature(vec_remove_item)]
 
 extern crate byteorder;
-extern crate cast;
 
 extern crate itertools;
 

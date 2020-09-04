@@ -1,6 +1,5 @@
 use std::fmt;
 
-use cast::usize;
 use itertools::Itertools;
 
 use crate::all_refs::Key;
@@ -31,7 +30,7 @@ impl BackMap {
             .enumerate()
         {
             let hash = Key::from(keys).sixteen_hash_16();
-            let hash_entry = &mut table.hash_to_pos[usize(hash)];
+            let hash_entry = &mut table.hash_to_pos[usize::from(hash)];
             let prev_pos = *hash_entry;
             table.pos_to_pos[pos] = prev_pos;
             *hash_entry = pos;
@@ -41,7 +40,7 @@ impl BackMap {
     }
 
     pub fn get(&self, key: Key) -> Chain {
-        let pos = self.hash_to_pos[usize(key.sixteen_hash_16())];
+        let pos = self.hash_to_pos[usize::from(key.sixteen_hash_16())];
 
         Chain {
             next: Some(pos),

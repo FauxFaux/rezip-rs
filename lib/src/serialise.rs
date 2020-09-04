@@ -1,6 +1,5 @@
 use std::io::Write;
 
-use cast::usize;
 use failure::err_msg;
 use failure::Error;
 use failure::ResultExt;
@@ -116,7 +115,7 @@ impl Lengths {
             Code::Reference(r) => {
                 let run = r.run();
                 let run_symbol = huffman::encode_run_length(run);
-                let run_symbol_len = match self.length[usize(run_symbol)] {
+                let run_symbol_len = match self.length[usize::from(run_symbol)] {
                     Some(len) => len,
                     None => return None,
                 };
@@ -150,7 +149,7 @@ fn compressed_codes<W: Write>(
         match *code {
             Literal(byte) => {
                 into.write_vec(
-                    length_tree[usize(byte)]
+                    length_tree[usize::from(byte)]
                         .as_ref()
                         .ok_or_else(|| err_msg("invalid literal"))?,
                 )?;
@@ -196,7 +195,7 @@ fn encode_distance<W: Write>(
             .as_ref()
             .ok_or_else(|| err_msg("reference but not distance tree"))?;
 
-        into.write_vec(distance_tree[usize(code)].as_ref().unwrap())?;
+        into.write_vec(distance_tree[usize::from(code)].as_ref().unwrap())?;
 
         if bits > 0 {
             into.write_bits_val(bits, val)?;

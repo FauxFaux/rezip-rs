@@ -1,7 +1,6 @@
 use std;
 use std::io::Read;
 
-use cast::usize;
 use failure::bail;
 use failure::ensure;
 use failure::err_msg;
@@ -45,14 +44,14 @@ pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<Code
     code_len_code_len[18] = reader.read_part(3)? as u8;
     code_len_code_len[0] = reader.read_part(3)? as u8;
 
-    for i in 0..(usize(num_code_len_codes) - 4) {
+    for i in 0..(usize::from(num_code_len_codes) - 4) {
         let pos = if i % 2 == 0 { 8 + i / 2 } else { 7 - i / 2 };
         code_len_code_len[pos] = reader.read_part(3)? as u8;
     }
 
     let code_len_code = CodeTree::new(&code_len_code_len[..])?;
 
-    let code_lens_len = usize(num_lit_len_codes) + usize(num_distance_codes);
+    let code_lens_len = usize::from(num_lit_len_codes) + usize::from(num_distance_codes);
     let mut code_lens = vec![];
     for _ in 0..code_lens_len {
         code_lens.push(0u8);
@@ -97,8 +96,8 @@ pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<Code
 
     ensure!(run_len == 0, "run exceeds number of codes");
 
-    let lit_len_code = CodeTree::new(&code_lens[0..usize(num_lit_len_codes)])?;
-    let dist_code_len = &code_lens[usize(num_lit_len_codes)..];
+    let lit_len_code = CodeTree::new(&code_lens[0..usize::from(num_lit_len_codes)])?;
+    let dist_code_len = &code_lens[usize::from(num_lit_len_codes)..];
 
     if 1 == dist_code_len.len() && 0 == dist_code_len[0] {
         return Ok((lit_len_code, None));

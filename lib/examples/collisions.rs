@@ -1,15 +1,13 @@
-extern crate cast;
 extern crate librezip;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::u16;
 
-use cast::usize;
 use librezip::all_refs::Key;
 
 fn main() {
-    let mut map = HashMap::with_capacity(usize(u16::MAX));
+    let mut map = HashMap::with_capacity(usize::from(u16::MAX));
 
     for a in b' '..=b'~' {
         for b in b' '..=b'~' {

@@ -7,7 +7,6 @@ use byteorder::LE;
 use crc;
 use crc::Hasher32;
 use failure::Error;
-use failure::ResultExt;
 use flate2;
 use librezip;
 

@@ -8,7 +8,6 @@ use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use failure::bail;
 use failure::Error;
-use failure::ResultExt;
 use itertools::Itertools;
 
 use crate::Ref;

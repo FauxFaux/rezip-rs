@@ -5,6 +5,7 @@ use failure::bail;
 use failure::ensure;
 use failure::err_msg;
 use failure::Error;
+use lazy_static::lazy_static;
 
 use crate::bit::BitReader;
 use crate::bit::BitSource;
@@ -136,12 +137,12 @@ pub fn read_codes<B: BitSource>(reader: &mut B) -> Result<(CodeTree, Option<Code
 
 pub fn encode_run_length(length: u16) -> u16 {
     match length {
-        3...10 => 257 + length - 3,
-        11...18 => 265 + (length - 11) / 2,
-        19...34 => 269 + (length - 19) / 4,
-        35...66 => 273 + (length - 35) / 8,
-        67...130 => 277 + (length - 67) / 16,
-        131...257 => 281 + (length - 131) / 32,
+        3..=10 => 257 + length - 3,
+        11..=18 => 265 + (length - 11) / 2,
+        19..=34 => 269 + (length - 19) / 4,
+        35..=66 => 273 + (length - 35) / 8,
+        67..=130 => 277 + (length - 67) / 16,
+        131..=257 => 281 + (length - 131) / 32,
         258 => 285,
         _ => panic!("insane run length"),
     }
@@ -153,12 +154,12 @@ pub fn encode_run_length(length: u16) -> u16 {
 /// This does not seem like a great API.
 pub fn extra_run_length(length: u16) -> Option<(u8, u16)> {
     match length {
-        3...10 | 258 => None,
-        11...18 => Some((1, (length - 11) % 2)),
-        19...34 => Some((2, (length - 19) % 4)),
-        35...66 => Some((3, (length - 35) % 8)),
-        67...130 => Some((4, (length - 67) % 16)),
-        131...257 => Some((5, (length - 131) % 32)),
+        3..=10 | 258 => None,
+        11..=18 => Some((1, (length - 11) % 2)),
+        19..=34 => Some((2, (length - 19) % 4)),
+        35..=66 => Some((3, (length - 35) % 8)),
+        67..=130 => Some((4, (length - 67) % 16)),
+        131..=257 => Some((5, (length - 131) % 32)),
         _ => panic!("insane run length"),
     }
 }

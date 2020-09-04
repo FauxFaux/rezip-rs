@@ -115,7 +115,6 @@ fn scan_huffman_data<R: Read>(
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
-    use std::io::Read;
 
     use super::*;
 

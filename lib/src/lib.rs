@@ -1,22 +1,3 @@
-#![feature(const_fn)]
-#![feature(vec_remove_item)]
-
-extern crate byteorder;
-
-extern crate itertools;
-
-#[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
-extern crate more_asserts;
-
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
-
-extern crate sha2;
-
 use std::fmt;
 
 pub mod all_refs;
@@ -41,6 +22,9 @@ mod technique;
 pub mod trace;
 pub mod tracer;
 mod wams;
+
+use more_asserts::assert_ge;
+use more_asserts::assert_le;
 
 use crate::bit::BitVec;
 

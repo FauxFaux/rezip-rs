@@ -106,15 +106,15 @@ mod tests {
     #[test]
     fn prefix() {
         use super::shared_prefix;
-        let mut it = [1, 2].into_iter().peekable();
+        let mut it = [1, 2].iter().peekable();
         assert_eq!(&[1, 2], shared_prefix(&[1, 2], &mut it));
         assert!(it.next().is_none());
 
-        let mut it = [1, 2].into_iter().peekable();
+        let mut it = [1, 2].iter().peekable();
         assert_eq!(&[0usize; 0], shared_prefix(&[], &mut it));
         assert_eq!(Some(&1), it.next());
 
-        let mut it = [1, 2].into_iter().peekable();
+        let mut it = [1, 2].iter().peekable();
         assert_eq!(&[1], shared_prefix(&[1, 5, 7], &mut it));
         assert_eq!(Some(&2), it.next());
 

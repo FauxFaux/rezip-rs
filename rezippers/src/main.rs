@@ -16,7 +16,6 @@ use std::io::Read;
 use clap::App;
 use clap::Arg;
 use failure::Error;
-use failure::ResultExt;
 
 fn main() -> Result<(), Error> {
     let matches = App::new("rezippers")
@@ -42,9 +41,9 @@ fn main() -> Result<(), Error> {
     }
 }
 
-fn open_file(matches: &clap::ArgMatches) -> Result<Box<Read>, Error> {
+fn open_file(matches: &clap::ArgMatches) -> Result<impl Read, Error> {
     Ok(match matches.value_of_os("file") {
-        Some(path) => Box::new(io::BufReader::new(fs::File::open(path)?)) as Box<Read>,
-        None => Box::new(io::stdin()) as Box<Read>,
+        Some(path) => Box::new(io::BufReader::new(fs::File::open(path)?)),
+        None => Box::new(io::stdin()) as Box<dyn Read>,
     })
 }

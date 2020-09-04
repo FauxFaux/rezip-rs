@@ -52,7 +52,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
         &'m self,
         pos: usize,
         obscura: &[Obscure],
-    ) -> Option<Box<Iterator<Item = Ref> + 'm>> {
+    ) -> Option<Box<dyn Iterator<Item = Ref> + 'm>> {
         let key = match self.key(pos) {
             Some(key) => key,
             None => return None,
@@ -195,7 +195,6 @@ mod tests {
     use crate::Code;
     use crate::Ref;
 
-    use self::Code::Literal as L;
     fn r(dist: u16, run: u16) -> Code {
         Code::Reference(Ref::new(dist, run))
     }

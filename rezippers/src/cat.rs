@@ -2,7 +2,6 @@ use std::io;
 use std::io::Read;
 
 use failure::Error;
-use failure::ResultExt;
 use librezip;
 use librezip::CircularBuffer;
 

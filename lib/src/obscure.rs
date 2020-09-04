@@ -4,7 +4,7 @@ type Int = usize;
 
 // TODO: O(n^2) -> O(n) by zipping or using the sorted property or something
 // from will be reverse-sorted (5, 4, 2, 1). by will be forward sorted (1, 7), (12, 3), ...
-pub fn obscure<'i, F: 'i, B>(from: F, by: B) -> Box<Iterator<Item = Int> + 'i>
+pub fn obscure<'i, F: 'i, B>(from: F, by: B) -> Box<dyn Iterator<Item = Int> + 'i>
 where
     F: Iterator<Item = Int>,
     B: Iterator<Item = Obscure>,

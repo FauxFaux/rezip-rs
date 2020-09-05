@@ -51,7 +51,7 @@ impl<'p, 'd> AllRefs<'p, 'd> {
     pub fn at<'m>(
         &'m self,
         pos: usize,
-        obscura: &[Obscure],
+        obscura: &'m [Obscure],
     ) -> Option<Box<dyn Iterator<Item = Ref> + 'm>> {
         let key = match self.key(pos) {
             Some(key) => key,

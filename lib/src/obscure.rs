@@ -4,7 +4,7 @@ type Int = usize;
 
 // TODO: O(n^2) -> O(n) by zipping or using the sorted property or something
 // from will be reverse-sorted (5, 4, 2, 1). by will be forward sorted (1, 7), (12, 3), ...
-pub fn obscure<'i, F: 'i, B>(from: F, by: B) -> Box<dyn Iterator<Item = Int> + 'i>
+pub fn obscure<F, B>(from: F, by: B) -> impl Iterator<Item = Int>
 where
     F: Iterator<Item = Int>,
     B: Iterator<Item = Obscure>,
@@ -15,7 +15,7 @@ where
     //assert_reverse_sorted(&from);
     //let from = from.into_iter();
 
-    Box::new(from.filter(move |item| !contains(&by, *item)))
+    from.filter(move |item| !contains(&by, *item))
 }
 
 fn contains(haystack: &[Obscure], needle: Int) -> bool {

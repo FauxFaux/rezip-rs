@@ -8,7 +8,7 @@ edition = "2018"
 anyhow = "1"
 byteorder = "1"
 clap = { version = "4", features = ["cargo", "derive"] }
-crc = "1"
+crc = "3"
 
 
 [dependencies.flate2]

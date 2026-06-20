@@ -5,10 +5,13 @@ use std::io::Write;
 use anyhow::Error;
 use byteorder::WriteBytesExt;
 use byteorder::LE;
-use crc;
-use crc::Hasher32;
+use crc::Crc;
+use crc::CRC_32_ISO_HDLC;
 use flate2;
 use librezip;
+
+/// gzip/zlib use the CRC-32/ISO-HDLC variant (the old `crc` crate's `IEEE`).
+const CRC32: Crc<u32> = Crc::<u32>::new(&CRC_32_ISO_HDLC);
 
 const RSYNC_MIN: usize = 1024 * 8;
 const RSYNC_MOD: usize = 1024 * 4;
@@ -64,7 +67,7 @@ pub fn run<R: Read>(mut reader: R) -> Result<(), Error> {
     writer.write_all(&orig_header)?;
 
     let mut data_len = 0u32;
-    let mut data_csum = crc::crc32::Digest::new(crc::crc32::IEEE);
+    let mut data_csum = CRC32.digest();
 
     loop {
         let buf = take_rsync(&mut reader)?;
@@ -73,7 +76,7 @@ pub fn run<R: Read>(mut reader: R) -> Result<(), Error> {
         }
 
         data_len = data_len.wrapping_add(buf.len() as u32);
-        data_csum.write(&buf);
+        data_csum.update(&buf);
 
         if reader.peek().is_some() {
             // uncompressed block, not end of file
@@ -89,7 +92,7 @@ pub fn run<R: Read>(mut reader: R) -> Result<(), Error> {
         writer.write_all(&buf)?;
     }
 
-    writer.write_u32::<LE>(data_csum.sum32())?;
+    writer.write_u32::<LE>(data_csum.finalize())?;
     writer.write_u32::<LE>(data_len)?;
     Ok(())
 }

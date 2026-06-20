@@ -12,37 +12,37 @@ mod zero;
 use std::fs;
 use std::io;
 use std::io::Read;
+use std::path::PathBuf;
 
 use anyhow::Error;
-use clap::App;
-use clap::Arg;
+use clap::{Parser, Subcommand};
+
+#[derive(Parser)]
+#[command(author, version, about, arg_required_else_help = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Cat { file: Option<PathBuf> },
+    Dump { file: Option<PathBuf> },
+    Zero { file: Option<PathBuf> },
+}
 
 fn main() -> Result<(), Error> {
-    let matches = App::new("rezippers")
-        .setting(clap::AppSettings::SubcommandRequiredElseHelp)
-        .subcommand(
-            clap::SubCommand::with_name("cat").arg(Arg::with_name("file").index(1).required(false)),
-        )
-        .subcommand(
-            clap::SubCommand::with_name("dump")
-                .arg(Arg::with_name("file").index(1).required(false)),
-        )
-        .subcommand(
-            clap::SubCommand::with_name("zero")
-                .arg(Arg::with_name("file").index(1).required(false)),
-        )
-        .get_matches();
+    let cli = Cli::parse();
 
-    match matches.subcommand() {
-        ("cat", Some(matches)) => cat::run(open_file(matches)?),
-        ("dump", Some(matches)) => dump::run(open_file(matches)?),
-        ("zero", Some(matches)) => zero::run(open_file(matches)?),
-        _ => unreachable!(),
+    match cli.command {
+        Command::Cat { file } => cat::run(open_file(file)?),
+        Command::Dump { file } => dump::run(open_file(file)?),
+        Command::Zero { file } => zero::run(open_file(file)?),
     }
 }
 
-fn open_file(matches: &clap::ArgMatches) -> Result<impl Read, Error> {
-    Ok(match matches.value_of_os("file") {
+fn open_file(file: Option<PathBuf>) -> Result<impl Read, Error> {
+    Ok(match file {
         Some(path) => Box::new(io::BufReader::new(fs::File::open(path)?)),
         None => Box::new(io::stdin()) as Box<dyn Read>,
     })

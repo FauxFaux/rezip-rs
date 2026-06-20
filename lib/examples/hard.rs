@@ -1,5 +1,5 @@
 extern crate rand;
-
+use rand::prelude::*;
 use std::io;
 use std::io::Write;
 

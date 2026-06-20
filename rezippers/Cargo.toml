@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 byteorder = "1"
-clap = "2"
+clap = { version = "4", features = ["cargo", "derive"] }
 crc = "1"
 
 

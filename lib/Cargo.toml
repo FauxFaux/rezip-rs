@@ -7,16 +7,16 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 byteorder = "1"
-itertools = "0.9"
+itertools = "0.15"
 lazy_static = "1"
-more-asserts = "0.2"
-sha2 = "0.9"
+more-asserts = "0.3"
+sha2 = "0.11"
 
 [dev-dependencies]
 maplit = "1"
 pretty_assertions = "0.6"
-rand = "0.7"
-rand_chacha = "0.2"
+rand = "0.10"
+rand_chacha = "0.10"
 
 [dev-dependencies.flate2]
 default-features = false

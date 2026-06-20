@@ -2,7 +2,7 @@
 authors = ["Chris West (Faux) <git@goeswhere.com>"]
 name = "rezippers"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow = "1"
